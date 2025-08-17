@@ -1,0 +1,26 @@
+groceries:
+  - "SUPERMARKET"
+  - "GROCERY"
+  - "HIPER"
+transport:
+  - "UBER"
+  - "LYFT"
+  - "TAXI"
+dining:
+  - "PIZZA"
+  - "BURGER"
+  - "SUSHI"
+electronics:
+  - "ELECTRO"
+  - "GADGET"
+books:
+  - "BOOKS"
+  - "LIVRARIA"
+telecom:
+  - "TELCO"
+  - "MOBILE"
+cash:
+  - "ATM"
+misc:
+  - "MARKETPLACE"
+  - "SHOP"

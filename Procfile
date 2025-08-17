@@ -1,0 +1,1 @@
+web: streamlit run app/dashboard.py --server.headless true --server.port $PORT --server.address 0.0.0.0
