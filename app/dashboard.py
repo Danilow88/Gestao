@@ -337,6 +337,37 @@ def init_all_data():
             # Salvar dados padrão no banco
             save_to_database()
         
+        # Carregamento específico por dashboard (CSV com timestamp)
+        # Cada dashboard tenta carregar seus dados específicos primeiro
+        
+        # HQ1 8º Andar
+        if 'hq1_8th_inventory' not in st.session_state or st.session_state.hq1_8th_inventory.empty:
+            load_hq1_data()
+            
+        # Displays/TVs
+        if 'tvs_monitores_data' not in st.session_state or st.session_state.tvs_monitores_data.empty:
+            load_displays_data()
+            
+        # Vendas Spark
+        if 'vendas_data' not in st.session_state or st.session_state.vendas_data.empty:
+            load_vendas_data()
+            
+        # Lixo Eletrônico
+        if 'lixo_eletronico_data' not in st.session_state or st.session_state.lixo_eletronico_data.empty:
+            load_lixo_data()
+            
+        # Movimentações
+        if 'movimentacoes_data' not in st.session_state or st.session_state.movimentacoes_data.empty:
+            load_movimentacoes_data()
+            
+        # Entrada de Estoque
+        if 'entry_inventory' not in st.session_state or st.session_state.entry_inventory.empty:
+            load_entrada_data()
+            
+        # Inventário Unificado
+        if 'inventory_data' not in st.session_state or 'unified' not in st.session_state.inventory_data or st.session_state.inventory_data['unified'].empty:
+            load_inventario_data()
+        
         # Marcar como carregado
         st.session_state.data_loaded = True
     
@@ -2198,7 +2229,7 @@ def render_visual_editor():
         with col_save:
             if st.button("💾 Salvar Configurações", use_container_width=True, type="primary"):
                 st.session_state.theme_config.update(config)
-                auto_save()  # Auto-save após alterações
+                auto_save()  # Configurações usam sistema SQLite
                 st.success("■ Configurações salvas automaticamente!")
                 st.rerun()
         
@@ -3038,8 +3069,10 @@ def render_hq1_8th():
                                     'fornecedor': [fornecedor]
                                 })
                                 st.session_state.hq1_8th_inventory = pd.concat([st.session_state.hq1_8th_inventory, new_item], ignore_index=True)
-                                auto_save()  # Auto-save após adição
-                                st.success("✓ Item adicionado e salvo automaticamente!")
+                                if save_hq1_data():
+                                    st.success("✓ Item adicionado e salvo automaticamente!")
+                                else:
+                                    st.error("× Erro ao salvar item")
                                 st.session_state.show_add_form_hq1_8th = False
                                 st.rerun()
                             else:
@@ -3138,8 +3171,11 @@ def render_hq1_8th():
             # Botão para salvar alterações
             if st.button("● Salvar Alterações HQ1", use_container_width=True, key="save_hq1"):
                 st.session_state.hq1_8th_inventory = edited_data
-                auto_save()  # Auto-save após alterações
-                st.success("✓ Alterações salvas automaticamente no banco de dados!")
+                if save_hq1_data():
+                    st.session_state.hq1_data_last_saved = datetime.now()
+                    st.success("✓ Alterações salvas automaticamente!")
+                else:
+                    st.error("× Erro ao salvar alterações")
                 st.rerun()
         else:
             st.info("ℹ Nenhum item encontrado com os filtros aplicados.")
@@ -3397,7 +3433,20 @@ def render_csv_upload_section(data_key, required_columns, section_title="Upload 
                                 st.session_state[data_key] = pd.concat([st.session_state[data_key], df_upload], ignore_index=True)
                             else:
                                 st.session_state[data_key] = df_upload
-                            auto_save()  # Auto-save após upload
+                            
+                            # Auto-save específico por tipo de dashboard
+                            save_success = False
+                            if data_key == 'hq1_8th_inventory':
+                                save_success = save_hq1_data()
+                            elif data_key == 'tvs_monitores_data':
+                                save_success = save_displays_data()
+                            elif data_key == 'vendas_data':
+                                save_success = save_vendas_data()
+                            elif data_key == 'entry_inventory':
+                                save_success = save_entrada_data()
+                            
+                            if not save_success:
+                                st.error("× Erro ao salvar dados após upload")
                             
                             st.success(f"🎉 {len(df_upload)} itens importados com sucesso!")
                             st.rerun()
@@ -4675,8 +4724,10 @@ def render_tvs_monitores():
                                 'po': [po]
                             })
                             st.session_state.tvs_monitores_data = pd.concat([st.session_state.tvs_monitores_data, new_item], ignore_index=True)
-                            auto_save()  # Auto-save após adição
-                            st.success("✓ Display adicionado e salvo automaticamente!")
+                            if save_displays_data():
+                                st.success("✓ Display adicionado e salvo automaticamente!")
+                            else:
+                                st.error("× Erro ao salvar display")
                             st.session_state.show_add_form_displays = False
                             st.rerun()
                         else:
@@ -4796,8 +4847,11 @@ def render_tvs_monitores():
             with col_save:
                 if st.button("✓ Salvar Alterações", use_container_width=True, key="save_displays"):
                     st.session_state.tvs_monitores_data = edited_data
-                    auto_save()  # Auto-save após alterações
-                    st.success("✓ Alterações salvas automaticamente no banco de dados!")
+                    if save_displays_data():
+                        st.session_state.displays_data_last_saved = datetime.now()
+                        st.success("✓ Alterações salvas automaticamente!")
+                    else:
+                        st.error("× Erro ao salvar alterações")
                     st.session_state.show_edit_mode_displays = False
                     st.rerun()
             
@@ -4902,8 +4956,10 @@ def render_vendas_spark():
                                 'po': [po]
                             })
                             st.session_state.vendas_data = pd.concat([st.session_state.vendas_data, new_item], ignore_index=True)
-                            auto_save()  # Auto-save após adição
-                            st.success("✓ Venda registrada e salva automaticamente!")
+                            if save_vendas_data():
+                                st.success("✓ Venda registrada e salva automaticamente!")
+                            else:
+                                st.error("× Erro ao salvar venda")
                             st.session_state.show_add_form_vendas = False
                             st.rerun()
                         else:
@@ -5027,8 +5083,11 @@ def render_vendas_spark():
             with col_save:
                 if st.button("✓ Salvar Alterações", use_container_width=True, key="save_vendas"):
                     st.session_state.vendas_data = edited_data
-                    auto_save()  # Auto-save após alterações
-                    st.success("✓ Alterações salvas automaticamente no banco de dados!")
+                    if save_vendas_data():
+                        st.session_state.vendas_data_last_saved = datetime.now()
+                        st.success("✓ Alterações salvas automaticamente!")
+                    else:
+                        st.error("× Erro ao salvar alterações")
                     st.session_state.show_edit_mode_vendas = False
                     st.rerun()
             
@@ -5145,8 +5204,11 @@ def render_lixo_eletronico():
         with col_save:
             if st.button("✓ Salvar", use_container_width=True, key="save_lixo"):
                 st.session_state.lixo_eletronico_data = edited_data
-                auto_save()  # Auto-save após alterações
-                st.success("✓ Alterações salvas automaticamente no banco de dados!")
+                if save_lixo_data():
+                    st.session_state.lixo_data_last_saved = datetime.now()
+                    st.success("✓ Alterações salvas automaticamente!")
+                else:
+                    st.error("× Erro ao salvar alterações")
                 st.session_state.show_edit_mode_lixo = False
                 st.rerun()
         with col_cancel:
@@ -5569,9 +5631,10 @@ def render_barcode_entry():
                     
                     # Adicionar ao inventário
                     st.session_state.entry_inventory = pd.concat([st.session_state.entry_inventory, new_item], ignore_index=True)
-                    auto_save()  # Auto-save após adição
-                    
-                    st.success(f"✓ Item '{item_nome}' adicionado e salvo automaticamente!")
+                    if save_entrada_data():
+                        st.success(f"✓ Item '{item_nome}' adicionado e salvo automaticamente!")
+                    else:
+                        st.error("× Erro ao salvar item")
                     st.info(f"▬ Tag: {tag} | Nota Fiscal: {nota_fiscal}")
                     
                     # Limpar campos preenchidos automaticamente
@@ -5654,8 +5717,11 @@ def render_barcode_entry():
         with col_action1:
             if st.button("💾 Salvar Alterações", use_container_width=True):
                 st.session_state.entry_inventory = edited_entries
-                auto_save()  # Auto-save após alterações
-                st.success("✓ Alterações salvas automaticamente no banco de dados!")
+                if save_entrada_data():
+                    st.session_state.entrada_data_last_saved = datetime.now()
+                    st.success("✓ Alterações salvas automaticamente!")
+                else:
+                    st.error("× Erro ao salvar alterações")
         
         with col_action2:
             if st.button("📤 Exportar CSV", use_container_width=True):
@@ -5802,8 +5868,11 @@ def render_movements():
         with col_save:
             if st.button("✓ Salvar", use_container_width=True, key="save_mov"):
                 st.session_state.movimentacoes_data = edited_data
-                auto_save()  # Auto-save após alterações
-                st.success("✓ Alterações salvas automaticamente no banco de dados!")
+                if save_movimentacoes_data():
+                    st.session_state.movimentacoes_data_last_saved = datetime.now()
+                    st.success("✓ Alterações salvas automaticamente!")
+                else:
+                    st.error("× Erro ao salvar alterações")
                 st.session_state.show_edit_mode_mov = False
                 st.rerun()
         with col_cancel:
@@ -7226,6 +7295,234 @@ def save_estoque_data():
     except Exception as e:
         st.error(f"Erro ao salvar dados de estoque: {e}")
         return False
+
+# ========================================================================================
+# SISTEMA DE SALVAMENTO INDIVIDUAL POR DASHBOARD (COMO CONTROLE DE GADGETS)
+# ========================================================================================
+
+def save_hq1_data():
+    """Salva os dados de HQ1 8º andar em arquivo CSV"""
+    try:
+        if 'hq1_8th_inventory' in st.session_state and not st.session_state.hq1_8th_inventory.empty:
+            filename = f"hq1_8th_inventory_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.hq1_8th_inventory.to_csv(filename, index=False)
+            st.session_state.hq1_data_last_saved = datetime.now()
+            return True
+        else:
+            filename = f"hq1_8th_inventory_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=['item', 'categoria', 'tag', 'estado', 'valor', 'nota_fiscal', 'data_entrada', 'fornecedor']).to_csv(filename, index=False)
+            st.session_state.hq1_data_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados HQ1: {e}")
+        return False
+
+def load_hq1_data():
+    """Carrega os dados de HQ1 8º andar salvos"""
+    try:
+        files = glob.glob("hq1_8th_inventory_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            if 'data_entrada' in df.columns:
+                df['data_entrada'] = pd.to_datetime(df['data_entrada'], errors='coerce')
+            st.session_state.hq1_8th_inventory = df
+            return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados HQ1: {e}")
+    return False
+
+def save_displays_data():
+    """Salva os dados de displays em arquivo CSV"""
+    try:
+        if 'tvs_monitores_data' in st.session_state and not st.session_state.tvs_monitores_data.empty:
+            filename = f"displays_data_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.tvs_monitores_data.to_csv(filename, index=False)
+            st.session_state.displays_data_last_saved = datetime.now()
+            return True
+        else:
+            filename = f"displays_data_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=['tipo', 'marca', 'modelo', 'tag', 'local', 'valor', 'estado', 'nota_fiscal', 'data_entrada', 'fornecedor', 'po']).to_csv(filename, index=False)
+            st.session_state.displays_data_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados displays: {e}")
+        return False
+
+def load_displays_data():
+    """Carrega os dados de displays salvos"""
+    try:
+        files = glob.glob("displays_data_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            if 'data_entrada' in df.columns:
+                df['data_entrada'] = pd.to_datetime(df['data_entrada'], errors='coerce')
+            st.session_state.tvs_monitores_data = df
+            return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados displays: {e}")
+    return False
+
+def save_vendas_data():
+    """Salva os dados de vendas em arquivo CSV"""
+    try:
+        if 'vendas_data' in st.session_state and not st.session_state.vendas_data.empty:
+            filename = f"vendas_spark_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.vendas_data.to_csv(filename, index=False)
+            st.session_state.vendas_data_last_saved = datetime.now()
+            return True
+        else:
+            filename = f"vendas_spark_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=['data_venda', 'cliente', 'item', 'categoria', 'quantidade', 'valor_unitario', 'valor_total', 'desconto_perc', 'status', 'nota_fiscal', 'po']).to_csv(filename, index=False)
+            st.session_state.vendas_data_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados vendas: {e}")
+        return False
+
+def load_vendas_data():
+    """Carrega os dados de vendas salvos"""
+    try:
+        files = glob.glob("vendas_spark_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            if 'data_venda' in df.columns:
+                df['data_venda'] = pd.to_datetime(df['data_venda'], errors='coerce')
+            st.session_state.vendas_data = df
+            return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados vendas: {e}")
+    return False
+
+def save_lixo_data():
+    """Salva os dados de lixo eletrônico em arquivo CSV"""
+    try:
+        if 'lixo_eletronico_data' in st.session_state and not st.session_state.lixo_eletronico_data.empty:
+            filename = f"lixo_eletronico_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.lixo_eletronico_data.to_csv(filename, index=False)
+            st.session_state.lixo_data_last_saved = datetime.now()
+            return True
+        else:
+            filename = f"lixo_eletronico_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=['item', 'categoria', 'data_descarte', 'responsavel', 'motivo', 'status']).to_csv(filename, index=False)
+            st.session_state.lixo_data_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados lixo eletrônico: {e}")
+        return False
+
+def load_lixo_data():
+    """Carrega os dados de lixo eletrônico salvos"""
+    try:
+        files = glob.glob("lixo_eletronico_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            if 'data_descarte' in df.columns:
+                df['data_descarte'] = pd.to_datetime(df['data_descarte'], errors='coerce')
+            st.session_state.lixo_eletronico_data = df
+            return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados lixo eletrônico: {e}")
+    return False
+
+def save_movimentacoes_data():
+    """Salva os dados de movimentações em arquivo CSV"""
+    try:
+        if 'movimentacoes_data' in st.session_state and not st.session_state.movimentacoes_data.empty:
+            filename = f"movimentacoes_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.movimentacoes_data.to_csv(filename, index=False)
+            st.session_state.movimentacoes_data_last_saved = datetime.now()
+            return True
+        else:
+            filename = f"movimentacoes_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=['data_movimentacao', 'tipo', 'item', 'origem', 'destino', 'responsavel', 'observacoes']).to_csv(filename, index=False)
+            st.session_state.movimentacoes_data_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados movimentações: {e}")
+        return False
+
+def load_movimentacoes_data():
+    """Carrega os dados de movimentações salvos"""
+    try:
+        files = glob.glob("movimentacoes_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            if 'data_movimentacao' in df.columns:
+                df['data_movimentacao'] = pd.to_datetime(df['data_movimentacao'], errors='coerce')
+            st.session_state.movimentacoes_data = df
+            return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados movimentações: {e}")
+    return False
+
+def save_entrada_data():
+    """Salva os dados de entrada de estoque em arquivo CSV"""
+    try:
+        if 'entry_inventory' in st.session_state and not st.session_state.entry_inventory.empty:
+            filename = f"entrada_estoque_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.entry_inventory.to_csv(filename, index=False)
+            st.session_state.entrada_data_last_saved = datetime.now()
+            return True
+        else:
+            filename = f"entrada_estoque_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=['data_entrada', 'item_nome', 'categoria', 'quantidade', 'valor', 'nota_fiscal', 'tag', 'fornecedor', 'status', 'observacoes', 'po']).to_csv(filename, index=False)
+            st.session_state.entrada_data_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados entrada: {e}")
+        return False
+
+def load_entrada_data():
+    """Carrega os dados de entrada de estoque salvos"""
+    try:
+        files = glob.glob("entrada_estoque_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            if 'data_entrada' in df.columns:
+                df['data_entrada'] = pd.to_datetime(df['data_entrada'], errors='coerce')
+            st.session_state.entry_inventory = df
+            return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados entrada: {e}")
+    return False
+
+def save_inventario_data():
+    """Salva os dados de inventário unificado em arquivo CSV"""
+    try:
+        if 'inventory_data' in st.session_state and 'unified' in st.session_state.inventory_data and not st.session_state.inventory_data['unified'].empty:
+            filename = f"inventario_unificado_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.inventory_data['unified'].to_csv(filename, index=False)
+            st.session_state.inventario_data_last_saved = datetime.now()
+            return True
+        else:
+            filename = f"inventario_unificado_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=['tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria']).to_csv(filename, index=False)
+            st.session_state.inventario_data_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados inventário: {e}")
+        return False
+
+def load_inventario_data():
+    """Carrega os dados de inventário unificado salvos"""
+    try:
+        files = glob.glob("inventario_unificado_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            if 'inventory_data' not in st.session_state:
+                st.session_state.inventory_data = {}
+            st.session_state.inventory_data['unified'] = df
+            return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados inventário: {e}")
+    return False
 
 def load_estoque_data():
     """Carrega os dados de estoque salvos"""
@@ -9359,8 +9656,11 @@ def render_categoria_table(df_categoria, categoria_nome):
                     for col in df_updated.columns:
                         unified_data.loc[original_idx, col] = row[col]
                 
-                auto_save()  # Auto-save após alterações
-                st.success(f"✅ Alterações salvas automaticamente para {categoria_nome}!")
+                if save_inventario_data():
+                    st.session_state.inventario_data_last_saved = datetime.now()
+                    st.success(f"✅ Alterações salvas automaticamente para {categoria_nome}!")
+                else:
+                    st.error("× Erro ao salvar alterações")
                 st.rerun()
     
     # Formulário de edição
@@ -9477,8 +9777,11 @@ def render_edit_form(df_categoria, categoria_nome):
                 unified_data.loc[original_idx, 'nota_fiscal'] = new_nota_fiscal
                 unified_data.loc[original_idx, 'uso'] = new_uso
                 
-                auto_save()  # Auto-save após edição
-                st.success(f"✅ Item {new_tag} atualizado e salvo automaticamente!")
+                if save_inventario_data():
+                    st.session_state.inventario_data_last_saved = datetime.now()
+                    st.success(f"✅ Item {new_tag} atualizado e salvo automaticamente!")
+                else:
+                    st.error("× Erro ao salvar alterações")
                 st.session_state[f'show_edit_form_{categoria_nome}'] = False
                 st.rerun()
         
@@ -9693,9 +9996,10 @@ def render_add_form():
             unified_data = st.session_state.inventory_data['unified']
             new_row = pd.DataFrame([novo_item])
             st.session_state.inventory_data['unified'] = pd.concat([unified_data, new_row], ignore_index=True)
-            auto_save()  # Auto-save após adição
-            
-            st.success(f"✅ Item {new_tag} - {new_item} adicionado e salvo automaticamente!")
+            if save_inventario_data():
+                st.success(f"✅ Item {new_tag} - {new_item} adicionado e salvo automaticamente!")
+            else:
+                st.error("× Erro ao salvar item")
             st.session_state['show_add_form'] = False
             st.rerun()
     
