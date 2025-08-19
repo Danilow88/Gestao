@@ -376,7 +376,7 @@ def init_all_data():
             # Se não houver CSV, inicializar estrutura vazia
             st.session_state.inventory_data['unified'] = pd.DataFrame(columns=[
                 'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
-                'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+                'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria', 'local'
             ])
         
         # Marcar como carregado
@@ -1739,11 +1739,141 @@ def is_super_admin(email):
     return email == "danilo.fukuyama.digisystem@nubank.com.br"
 
 # ========================================================================================
+# SISTEMA DE IDIOMAS
+# ========================================================================================
+
+def init_language_system():
+    """Inicializa o sistema de idiomas"""
+    if 'language' not in st.session_state:
+        st.session_state.language = 'pt'
+    
+    if 'translations' not in st.session_state:
+        st.session_state.translations = {
+            'pt': {
+                'app_title': 'Gestão de Estoque',
+                'language_selection': 'Selecionar Idioma',
+                'login': 'Login',
+                'forgot_password': 'Esqueci a Senha',
+                'request_access': 'Solicitar Acesso',
+                'unified_inventory': 'Estoque Unificado',
+                'gadgets_control': 'Controle de Gadgets',
+                'import_csv': 'Importar CSV',
+                'location': 'Local',
+                'item': 'Item',
+                'model': 'Modelo',
+                'brand': 'Marca',
+                'value': 'Valor',
+                'quantity': 'Quantidade',
+                'sector': 'Setor',
+                'supplier': 'Fornecedor',
+                'category': 'Categoria',
+                'upload_file': 'Carregar arquivo CSV',
+                'auto_translate': 'Tradução automática ativada',
+                'processing': 'Processando...',
+                'success_import': 'Importação realizada com sucesso!',
+                'error_import': 'Erro na importação'
+            },
+            'en': {
+                'app_title': 'Inventory Management',
+                'language_selection': 'Select Language',
+                'login': 'Login',
+                'forgot_password': 'Forgot Password',
+                'request_access': 'Request Access',
+                'unified_inventory': 'Unified Inventory',
+                'gadgets_control': 'Gadgets Control',
+                'import_csv': 'Import CSV',
+                'location': 'Location',
+                'item': 'Item',
+                'model': 'Model',
+                'brand': 'Brand',
+                'value': 'Value',
+                'quantity': 'Quantity',
+                'sector': 'Sector',
+                'supplier': 'Supplier',
+                'category': 'Category',
+                'upload_file': 'Upload CSV file',
+                'auto_translate': 'Auto-translation enabled',
+                'processing': 'Processing...',
+                'success_import': 'Import completed successfully!',
+                'error_import': 'Import error'
+            },
+            'es': {
+                'app_title': 'Gestión de Inventario',
+                'language_selection': 'Seleccionar Idioma',
+                'login': 'Iniciar Sesión',
+                'forgot_password': 'Olvidé la Contraseña',
+                'request_access': 'Solicitar Acceso',
+                'unified_inventory': 'Inventario Unificado',
+                'gadgets_control': 'Control de Gadgets',
+                'import_csv': 'Importar CSV',
+                'location': 'Ubicación',
+                'item': 'Artículo',
+                'model': 'Modelo',
+                'brand': 'Marca',
+                'value': 'Valor',
+                'quantity': 'Cantidad',
+                'sector': 'Sector',
+                'supplier': 'Proveedor',
+                'category': 'Categoría',
+                'upload_file': 'Subir archivo CSV',
+                'auto_translate': 'Traducción automática activada',
+                'processing': 'Procesando...',
+                'success_import': '¡Importación completada con éxito!',
+                'error_import': 'Error en la importación'
+            }
+        }
+
+def get_text(key):
+    """Obtém texto traduzido baseado no idioma selecionado"""
+    language = st.session_state.get('language', 'pt')
+    return st.session_state.translations.get(language, {}).get(key, key)
+
+def render_language_selector():
+    """Renderiza seletor de idioma no início da aplicação"""
+    if 'language_selected' not in st.session_state:
+        st.session_state.language_selected = False
+    
+    if not st.session_state.language_selected:
+        st.markdown("""
+        <div style="text-align: center; margin: 3rem 0;">
+            <h1 style="color: #9333EA; margin-bottom: 2rem; font-size: 2.5rem;">🌍 Language Selection</h1>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        
+        with col2:
+            st.markdown("### Selecione seu idioma / Select your language / Selecciona tu idioma")
+            
+            language_options = {
+                'pt': '🇧🇷 Português',
+                'en': '🇺🇸 English', 
+                'es': '🇪🇸 Español'
+            }
+            
+            selected_lang = st.selectbox(
+                "Idioma / Language / Idioma:",
+                options=['pt', 'en', 'es'],
+                format_func=lambda x: language_options[x],
+                index=0
+            )
+            
+            if st.button("Continuar / Continue / Continuar", use_container_width=True, type="primary"):
+                st.session_state.language = selected_lang
+                st.session_state.language_selected = True
+                st.rerun()
+        
+        return False
+    
+    return True
+
+# ========================================================================================
 # INICIALIZAÇÃO DA SESSÃO
 # ========================================================================================
 
-# Inicializar sistema de usuários
+# Inicializar sistema de usuários e idiomas
 init_user_system()
+init_language_system()
 
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 'dashboard'
@@ -1757,13 +1887,13 @@ if 'inventory_data' not in st.session_state:
 
 def render_login_page():
     """Renderiza a página de login"""
-    st.markdown("""
+    st.markdown(f"""
     <div style="text-align: center; margin: 2rem 0;">
-        <h1 style="color: #9333EA; margin: 0.5rem 0 0 0; font-size: 2.5rem; font-weight: 700;">Gestão de Estoque</h1>
+        <h1 style="color: #9333EA; margin: 0.5rem 0 0 0; font-size: 2.5rem; font-weight: 700;">{get_text('app_title')}</h1>
     </div>
     """, unsafe_allow_html=True)
     
-    tab1, tab2, tab3 = st.tabs(["● Login", "🔑 Esqueci a Senha", "◉ Solicitar Acesso"])
+    tab1, tab2, tab3 = st.tabs([f"● {get_text('login')}", f"🔑 {get_text('forgot_password')}", f"◉ {get_text('request_access')}"])
 
     with tab1:
         st.subheader("Fazer Login")
@@ -1921,7 +2051,7 @@ def render_admin_users():
         st.divider()
         
         # Reset manual de senha (apenas para super admin)
-        st.write("### <i class='fas fa-cog'></i> Reset Manual de Senha", unsafe_allow_html=True)
+        st.markdown("### <i class='fas fa-cog'></i> Reset Manual de Senha", unsafe_allow_html=True)
         st.info("🛡️ Como Super Admin, você pode resetar a senha de qualquer usuário")
         
         with st.form("manual_password_reset"):
@@ -1929,7 +2059,7 @@ def render_admin_users():
             
             with col1:
                 users_list = list(st.session_state.users_db.keys())
-                selected_user = st.selectbox("<i class='fas fa-user'></i> Selecionar Usuário", users_list)
+                selected_user = st.selectbox("👤 Selecionar Usuário", users_list)
             
             with col2:
                 reset_type = st.radio("🔑 Tipo de Reset", 
@@ -2024,6 +2154,35 @@ def render_visual_editor():
             }
         
         config = st.session_state.advanced_visual_config
+        
+        # Garantir que todas as chaves existam
+        default_keys = {
+            'background_color': '#000000',
+            'primary_color': '#000000', 
+            'accent_color': '#9333EA',
+            'text_color': '#FFFFFF',
+            'background_image': None,
+            'company_logo': None,
+            'font_family': 'Inter',
+            'font_size': '16px',
+            'header_font_size': '2.5rem',
+            'button_style': 'rounded_solid',
+            'button_position': 'center',
+            'button_format': 'pill',
+            'dashboard_title': 'Gestão de Estoque',
+            'logo_position': 'sidebar_top',
+            'logo_size': '150px',
+            'custom_icons': {},
+            'graph_style': 'modern',
+            'card_style': 'solid_purple',
+            'remove_gradients': True,
+            'sidebar_style': 'clean',
+            'solid_background': True
+        }
+        
+        for key, default_value in default_keys.items():
+            if key not in config:
+                config[key] = default_value
         
         # Tabs secundárias para organizar melhor
         subtab1, subtab2, subtab3, subtab4 = st.tabs(["■ Cores & Fundo", "✎ Texto & Fontes", "● Botões & Layout", "▬ Gráficos & Cards"])
@@ -2125,7 +2284,7 @@ def render_visual_editor():
                 
                 st.markdown("**Nomes das Seções:**")
                 config['inventory_name'] = st.text_input("■ Nome da Seção Inventário", config.get('inventory_name', 'Inventário'))
-                config['printers_name'] = st.text_input("<i class='fas fa-print'></i> Nome da Seção Impressoras", config.get('printers_name', 'Impressoras'))
+                config['printers_name'] = st.text_input("🖨️ Nome da Seção Impressoras", config.get('printers_name', 'Impressoras'))
                 config['reports_name'] = st.text_input("▬ Nome da Seção Relatórios", config.get('reports_name', 'Relatórios'))
         
         with subtab3:
@@ -2289,7 +2448,10 @@ def render_visual_editor():
         card_bg = config['primary_color'] if config.get('remove_gradients', True) else f"linear-gradient(135deg, {config['primary_color']}, {config['accent_color']})"
         main_bg = config['background_color'] if config.get('solid_background', True) else f"linear-gradient(135deg, {config['background_color']}, {config['primary_color']})"
         
-        preview_style = f"""
+        # Renderizar preview diretamente
+        logo_section = f'<div style="text-align: center; margin-bottom: 1rem;"><img src="{config["company_logo"]}" width="{config.get("logo_size", "150px")}" style="border-radius: 8px;"></div>' if config.get('company_logo') else ''
+        
+        st.markdown(f"""
         <div style="
             background: {main_bg};
             color: {config['text_color']};
@@ -2299,17 +2461,17 @@ def render_visual_editor():
             border-radius: 12px;
             margin: 1rem 0;
             min-height: 300px;
+            border: 2px solid {config['accent_color']};
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
         ">
-            <!-- Logo da empresa se existir -->
-            {f'<div style="text-align: center; margin-bottom: 1rem;"><img src="{config["company_logo"]}" width="{config.get("logo_size", "150px")}" style="border-radius: 8px;"></div>' if config.get('company_logo') else ''}
+            {logo_section}
             
             <h1 style="font-size: {config['header_font_size']}; margin: 0 0 1rem 0; text-align: center;">{config['dashboard_title']}</h1>
-            <p style="margin: 0 0 2rem 0; text-align: center; opacity: 0.9;">{config.get('subtitle', 'Sistema Inteligente de Controle')}</p>
+            <p style="margin: 0 0 2rem 0; text-align: center; opacity: 0.9;">Sistema Inteligente de Controle</p>
             
-            <!-- Card de exemplo como na foto -->
             <div style="
                 background: {card_bg};
-                border-radius: {config['card_border_radius']};
+                border-radius: {button_border_radius};
                 padding: 1.5rem;
                 margin: 1rem 0;
                 border: 1px solid rgba(255, 255, 255, 0.1);
@@ -2322,7 +2484,6 @@ def render_visual_editor():
                 <p style="margin: 0.5rem 0; opacity: 0.8;">IP: 172.25.61.53 | Serial: X3B7034483 | Modelo: HP LaserJet</p>
                 <p style="margin: 0.5rem 0;">Status: <span style="color: #9333EA;">ONLINE</span> | Papercut: ✓ | Status Manual: Ativo</p>
                 
-                <!-- Botões de exemplo -->
                 <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
                     <button style="
                         background: {config['accent_color']};
@@ -2357,12 +2518,26 @@ def render_visual_editor():
                 </div>
             </div>
             
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 2rem;">
+                <div style="background: {card_bg}; padding: 1rem; border-radius: {button_border_radius}; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+                    <h4 style="margin: 0 0 0.5rem 0; color: {config['accent_color']};">📊 Dashboard</h4>
+                    <p style="margin: 0; opacity: 0.8; font-size: 0.9rem;">Visão geral</p>
+                </div>
+                <div style="background: {card_bg}; padding: 1rem; border-radius: {button_border_radius}; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+                    <h4 style="margin: 0 0 0.5rem 0; color: {config['accent_color']};">📦 Inventário</h4>
+                    <p style="margin: 0; opacity: 0.8; font-size: 0.9rem;">Gestão de estoque</p>
+                </div>
+                <div style="background: {card_bg}; padding: 1rem; border-radius: {button_border_radius}; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+                    <h4 style="margin: 0 0 0.5rem 0; color: {config['accent_color']};">👥 Usuários</h4>
+                    <p style="margin: 0; opacity: 0.8; font-size: 0.9rem;">Administração</p>
+                </div>
+            </div>
+            
             <p style="text-align: center; margin-top: 2rem; opacity: 0.7; font-size: 0.9rem;">
-                Preview do design como na sua foto
+                🎨 Preview em tempo real do seu tema personalizado
             </p>
         </div>
-        """
-        st.markdown(preview_style, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
         
         # Botões de ação
         col_save, col_apply, col_reset, col_export = st.columns(4)
@@ -2919,6 +3094,11 @@ def render_inventory_table(data, title, key_prefix):
     """Renderiza uma tabela de inventário com funcionalidade de edição"""
     st.subheader(title)
     
+    # Garantir que a coluna 'local' existe
+    if 'local' not in data.columns:
+        data = data.copy()
+        data['local'] = 'N/A'
+    
     # Controles de Ação
     col_btn1, col_btn2, col_btn3 = st.columns(3)
     
@@ -2960,6 +3140,7 @@ def render_inventory_table(data, title, key_prefix):
                     po = st.text_input("▬ PO", placeholder="PO-YYYY-###")
                     data_compra = st.date_input("⌚ Data de Compra")
                     uso = st.text_input("◎ Uso", placeholder="Finalidade do item")
+                    local = st.text_input(f"📍 {get_text('location')}", placeholder="Ex: Depósito Central, Sede SP")
                 
                     col_submit, col_cancel = st.columns(2)
                     
@@ -2977,6 +3158,7 @@ def render_inventory_table(data, title, key_prefix):
                                 'fornecedor': [fornecedor],
                                 'po': [po],
                                 'uso': [uso],
+                                'local': [local or 'N/A'],
                                 'qtd': [1],
                                 'avenue': ['A1'],
                                 'street': ['Rua Principal'],
@@ -3062,6 +3244,7 @@ def render_inventory_table(data, title, key_prefix):
                     "street": st.column_config.TextColumn("Street", width="medium"),
                     "shelf": st.column_config.TextColumn("Shelf", width="medium"),
                     "box": st.column_config.TextColumn("Box", width="small"),
+                    "local": st.column_config.TextColumn(f"{get_text('location')}", width="medium"),
                     "conferido": st.column_config.CheckboxColumn("Conferido")
                 },
                 key=f"{key_prefix}_editor"
@@ -3728,7 +3911,7 @@ def debug_vpn_connection():
     # Teste manual de impressora
     st.write("**Teste Manual de Impressora:**")
     test_ip = st.text_input("Digite um IP de impressora para testar:", value="172.25.61.81")
-    if st.button("<i class='fas fa-print'></i> Testar Impressora", unsafe_allow_html=True):
+    if st.button("🖨️ Testar Impressora"):
         if test_ip:
             st.write(f"Testando impressora {test_ip}...")
             result = get_printer_status_fast(test_ip)
@@ -4546,7 +4729,7 @@ def render_impressoras():
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    modelo = st.text_input("<i class='fas fa-print'></i> Modelo", placeholder="Ex: HP LaserJet Pro 404n")
+                    modelo = st.text_input("🖨️ Modelo", placeholder="Ex: HP LaserJet Pro 404n")
                     marca = st.selectbox("🏷️ Marca", ["HP", "Canon", "Epson", "Brother", "Samsung", "Xerox", "Kyocera", "Lexmark", "Outros"])
                     tag = st.text_input("🏷️ Tag/Código", placeholder="Ex: IMP007")
                     tipo = st.selectbox("▬ Tipo", ["Laser", "Jato de Tinta", "EcoTank", "Multifuncional", "Térmica", "Matricial"])
@@ -4561,7 +4744,7 @@ def render_impressoras():
                     po = st.text_input("▬ PO", placeholder="Ex: PO-IMP-007")
                     ip_rede = st.text_input("🌐 IP da Rede", placeholder="Ex: 192.168.1.107 ou N/A")
                     contador_paginas = st.number_input("▬ Contador de Páginas", min_value=0, value=0)
-                    responsavel = st.text_input("<i class='fas fa-user'></i> Responsável", placeholder="Ex: TI Central")
+                    responsavel = st.text_input("👤 Responsável", placeholder="Ex: TI Central")
                 
                 col_submit, col_cancel = st.columns(2)
                 
@@ -4673,7 +4856,7 @@ def render_impressoras():
             col_login, col_senha = st.columns(2)
 
             with col_login:
-                st.info(f"**<i class='fas fa-user'></i> Login:** {local_data['info']['login']}", unsafe_allow_html=True)
+                st.markdown(f"ℹ️ **<i class='fas fa-user'></i> Login:** {local_data['info']['login']}", unsafe_allow_html=True)
 
             with col_senha:
                 st.info(f"**🔒 Senha:** {local_data['info']['senha']}")
@@ -5082,7 +5265,7 @@ def render_vendas_spark():
                     data_venda = st.date_input("⌚ Data da Venda")
                     item = st.text_input("▣ Item", placeholder="Nome do item vendido")
                     tag_original = st.text_input("▣ Tag Original", placeholder="SPK###")
-                    comprador = st.text_input("<i class='fas fa-user'></i> Comprador", placeholder="Nome do comprador")
+                    comprador = st.text_input("👤 Comprador", placeholder="Nome do comprador")
                     valor_original = st.number_input("$ Valor Original", min_value=0.0, format="%.2f")
                 
                 with col2:
@@ -5653,7 +5836,7 @@ def render_barcode_entry():
             
             except Exception as e:
                 # Fallback se houver algum erro com WebRTC
-                st.info("<i class='fas fa-mobile-alt'></i> Use o upload de imagem abaixo para scanner de códigos", unsafe_allow_html=True)
+                st.markdown("ℹ️ <i class='fas fa-mobile-alt'></i> Use o upload de imagem abaixo para scanner de códigos", unsafe_allow_html=True)
                 if st.button("■ Gerar Código", use_container_width=True):
                     codigo_gerado = f"GEN-{pd.Timestamp.now().strftime('%Y%m%d%H%M%S')}"
                     st.session_state.codigo_nf_capturado = codigo_gerado
@@ -7193,7 +7376,7 @@ def render_agente_matt():
 
     # 🎯 CONFIGURAÇÕES DE ORÇAMENTO E PREFERÊNCIAS
     st.divider()
-    st.subheader("<i class='fas fa-bullseye'></i> Configurações de Orçamento Matt 2.0", unsafe_allow_html=True)
+    st.markdown("## <i class='fas fa-bullseye'></i> Configurações de Orçamento Matt 2.0", unsafe_allow_html=True)
     
     # Configurações de orçamento em colunas
     col_config1, col_config2 = st.columns(2)
@@ -7391,13 +7574,118 @@ def render_controle_gadgets():
         st.warning("⚠️ **Status dos Dados:** Nenhum registro encontrado. Registre algumas perdas primeiro.")
     
     # Tabs principais
-    tab_registro, tab_analises, tab_estoque, tab_matt, tab_config = st.tabs([
-        "✎ Registrar Perdas", 
+    tab_registro, tab_import, tab_analises, tab_estoque, tab_matt, tab_config = st.tabs([
+        "✎ Registrar Perdas",
+        f"📊 {get_text('import_csv')}", 
         "▬ Análises & Gráficos", 
         "■ Controle de Estoque",
         "◉ Agente Matt",
         "● Configurações"
     ])
+    
+    with tab_import:
+        st.markdown(f"### 📊 {get_text('import_csv')} - Controle de Gadgets")
+        st.markdown(f"**{get_text('auto_translate')}** - Importe dados de perdas em qualquer formato CSV")
+        
+        uploaded_gadgets_file = st.file_uploader(
+            get_text('upload_file'),
+            type=['csv'],
+            help="Carregue dados de perdas de gadgets em formato CSV",
+            key="gadgets_csv_upload"
+        )
+        
+        if uploaded_gadgets_file is not None:
+            try:
+                # Ler o CSV
+                df_gadgets_uploaded = pd.read_csv(uploaded_gadgets_file)
+                
+                st.success(f"📁 Arquivo carregado: {len(df_gadgets_uploaded)} linhas")
+                
+                # Mostrar preview antes da tradução
+                st.markdown("**Preview do arquivo original:**")
+                st.dataframe(df_gadgets_uploaded.head(), use_container_width=True)
+                
+                # Traduzir colunas para o formato de gadgets
+                def translate_gadgets_csv(df):
+                    """Traduz CSV para formato de controle de gadgets"""
+                    df.columns = df.columns.str.lower().str.strip().str.replace(' ', '_')
+                    
+                    column_mapping = {
+                        'data': 'data', 'date': 'data', 'fecha': 'data',
+                        'item_id': 'item_id', 'id': 'item_id', 'codigo': 'item_id',
+                        'name': 'name', 'nome': 'name', 'item': 'name', 'producto': 'name',
+                        'description': 'description', 'descricao': 'description', 'desc': 'description',
+                        'building': 'building', 'predio': 'building', 'edificio': 'building',
+                        'andar': 'andar', 'floor': 'andar', 'piso': 'andar',
+                        'quantidade': 'quantidade', 'quantity': 'quantidade', 'qty': 'quantidade', 'cantidad': 'quantidade',
+                        'cost': 'cost', 'custo': 'cost', 'preco': 'cost', 'valor': 'cost', 'price': 'cost',
+                        'valor_total': 'valor_total', 'total': 'valor_total', 'total_value': 'valor_total',
+                        'periodo': 'periodo', 'period': 'periodo', 'periodo': 'periodo',
+                        'observacoes': 'observacoes', 'obs': 'observacoes', 'notes': 'observacoes', 'notas': 'observacoes'
+                    }
+                    
+                    # Mapear colunas
+                    new_columns = {}
+                    for col in df.columns:
+                        mapped_col = column_mapping.get(col, col)
+                        new_columns[col] = mapped_col
+                    
+                    df = df.rename(columns=new_columns)
+                    
+                    # Garantir colunas obrigatórias
+                    required_cols = ['data', 'item_id', 'name', 'description', 'building', 'andar', 'quantidade', 'cost', 'valor_total', 'periodo', 'observacoes']
+                    
+                    for col in required_cols:
+                        if col not in df.columns:
+                            if col == 'data':
+                                df[col] = pd.Timestamp.now().strftime('%Y-%m-%d')
+                            elif col in ['quantidade', 'cost', 'valor_total']:
+                                df[col] = 1 if col == 'quantidade' else 0
+                            elif col == 'periodo':
+                                df[col] = f"{pd.Timestamp.now().strftime('%Y-%m')}"
+                            else:
+                                df[col] = ''
+                    
+                    return df
+                
+                df_gadgets_translated = translate_gadgets_csv(df_gadgets_uploaded)
+                
+                st.markdown("**Preview após tradução automática:**")
+                st.dataframe(df_gadgets_translated.head(), use_container_width=True)
+                
+                col_gadgets1, col_gadgets2 = st.columns(2)
+                
+                with col_gadgets1:
+                    if st.button("✅ Importar perdas", type="primary", use_container_width=True, key="import_gadgets_btn"):
+                        with st.spinner(get_text('processing')):
+                            # Adicionar aos dados existentes
+                            if 'gadgets_data' not in st.session_state:
+                                st.session_state.gadgets_data = pd.DataFrame(columns=[
+                                    'data', 'item_id', 'name', 'description', 'building', 'andar', 
+                                    'quantidade', 'cost', 'valor_total', 'periodo', 'observacoes'
+                                ])
+                            
+                            combined_gadgets = pd.concat([st.session_state.gadgets_data, df_gadgets_translated], ignore_index=True)
+                            st.session_state.gadgets_data = combined_gadgets
+                            
+                            # Salvar automaticamente
+                            save_gadgets_data()
+                            
+                            st.success(f"✅ {get_text('success_import')} - {len(df_gadgets_translated)} registros de perdas adicionados!")
+                            time.sleep(1)
+                            st.rerun()
+                
+                with col_gadgets2:
+                    if st.button("🔄 Substituir perdas", use_container_width=True, key="replace_gadgets_btn"):
+                        with st.spinner(get_text('processing')):
+                            st.session_state.gadgets_data = df_gadgets_translated
+                            save_gadgets_data()
+                            st.success(f"✅ Dados de perdas substituídos! {len(df_gadgets_translated)} registros carregados")
+                            time.sleep(1)
+                            st.rerun()
+                            
+            except Exception as e:
+                st.error(f"{get_text('error_import')}: {e}")
     
     with tab_registro:
         render_registro_perdas()
@@ -7660,7 +7948,7 @@ def save_inventario_data():
             return True
         else:
             filename = f"inventario_unificado_{datetime.now().strftime('%Y%m%d')}.csv"
-            pd.DataFrame(columns=['tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria']).to_csv(filename, index=False)
+            pd.DataFrame(columns=['tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria', 'local']).to_csv(filename, index=False)
             st.session_state.inventario_data_last_saved = datetime.now()
             return True
     except Exception as e:
@@ -7676,9 +7964,9 @@ def load_inventario_data():
             latest_file = max(files, key=lambda x: x.split('_')[-1])
             df = pd.read_csv(latest_file)
             
-            # Garantir que o DataFrame tenha as colunas necessárias
+            # Garantir que o DataFrame tenha as colunas necessárias (incluindo campo 'local')
             required_columns = ['tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
-                              'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria']
+                              'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria', 'local']
             
             # Adicionar colunas faltantes se necessário
             for col in required_columns:
@@ -9778,9 +10066,121 @@ def show_gaming_loading_screen():
     # Pausar para mostrar a animação
     time.sleep(3)
 
+def translate_csv_columns(df, target_language='pt'):
+    """Traduz automaticamente as colunas de um CSV para o idioma selecionado"""
+    column_mapping = {
+        'pt': {
+            'tag': 'tag', 'itens': 'itens', 'item': 'itens', 'name': 'itens', 'nome': 'itens',
+            'modelo': 'modelo', 'model': 'modelo', 'marca': 'marca', 'brand': 'marca',
+            'valor': 'valor', 'value': 'valor', 'price': 'valor', 'preco': 'valor',
+            'qtd': 'qtd', 'quantity': 'qtd', 'quantidade': 'qtd', 'qty': 'qtd',
+            'prateleira': 'prateleira', 'shelf': 'prateleira', 'rua': 'rua', 'street': 'rua',
+            'setor': 'setor', 'sector': 'setor', 'box': 'box', 'conferido': 'conferido', 'checked': 'conferido',
+            'fornecedor': 'fornecedor', 'supplier': 'fornecedor', 'proveedor': 'fornecedor',
+            'po': 'po', 'nota_fiscal': 'nota_fiscal', 'invoice': 'nota_fiscal', 'factura': 'nota_fiscal',
+            'uso': 'uso', 'use': 'uso', 'categoria': 'categoria', 'category': 'categoria',
+            'local': 'local', 'location': 'local', 'ubicacion': 'local', 'lugar': 'local'
+        }
+    }
+    
+    # Normalizar nomes das colunas (minúsculas, sem espaços)
+    df.columns = df.columns.str.lower().str.strip().str.replace(' ', '_')
+    
+    # Mapear colunas para padrão português
+    mapping = column_mapping.get(target_language, column_mapping['pt'])
+    new_columns = {}
+    
+    for col in df.columns:
+        mapped_col = mapping.get(col, col)
+        new_columns[col] = mapped_col
+    
+    df = df.rename(columns=new_columns)
+    
+    # Garantir que todas as colunas obrigatórias existam
+    required_columns = ['tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
+                       'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria', 'local']
+    
+    for col in required_columns:
+        if col not in df.columns:
+            if col == 'categoria':
+                df[col] = 'importado'
+            elif col == 'conferido':
+                df[col] = True
+            elif col in ['valor', 'qtd']:
+                df[col] = 0
+            else:
+                df[col] = ''
+    
+    return df
+
 def render_inventario_unificado():
     """Renderiza o inventário unificado organizado por categorias"""
-    st.markdown("## ▬ Inventário Unificado por Categorias")
+    st.markdown(f"## ▬ {get_text('unified_inventory')}")
+    
+    # Seção de importação CSV
+    with st.expander(f"📊 {get_text('import_csv')}", expanded=False):
+        st.markdown(f"**{get_text('auto_translate')}** - Suporta qualquer formato de planilha CSV")
+        
+        uploaded_file = st.file_uploader(
+            get_text('upload_file'),
+            type=['csv'],
+            help="Carregue um arquivo CSV em qualquer formato. As colunas serão traduzidas automaticamente."
+        )
+        
+        if uploaded_file is not None:
+            try:
+                # Ler o CSV
+                df_uploaded = pd.read_csv(uploaded_file)
+                
+                st.success(f"📁 Arquivo carregado: {len(df_uploaded)} linhas")
+                
+                # Mostrar preview antes da tradução
+                st.markdown("**Preview do arquivo original:**")
+                st.dataframe(df_uploaded.head(), use_container_width=True)
+                
+                # Traduzir colunas
+                df_translated = translate_csv_columns(df_uploaded, st.session_state.get('language', 'pt'))
+                
+                st.markdown("**Preview após tradução automática:**")
+                st.dataframe(df_translated.head(), use_container_width=True)
+                
+                col_import1, col_import2 = st.columns(2)
+                
+                with col_import1:
+                    if st.button("✅ Importar dados", type="primary", use_container_width=True):
+                        with st.spinner(get_text('processing')):
+                            # Adicionar aos dados existentes
+                            if 'inventory_data' not in st.session_state:
+                                st.session_state.inventory_data = {}
+                            
+                            if 'unified' in st.session_state.inventory_data and not st.session_state.inventory_data['unified'].empty:
+                                # Combinar com dados existentes
+                                combined_df = pd.concat([st.session_state.inventory_data['unified'], df_translated], ignore_index=True)
+                            else:
+                                combined_df = df_translated
+                            
+                            st.session_state.inventory_data['unified'] = combined_df
+                            
+                            # Salvar automaticamente
+                            save_inventario_data()
+                            
+                            st.success(f"✅ {get_text('success_import')} - {len(df_translated)} itens adicionados!")
+                            time.sleep(1)
+                            st.rerun()
+                
+                with col_import2:
+                    if st.button("🔄 Substituir dados", use_container_width=True):
+                        with st.spinner(get_text('processing')):
+                            st.session_state.inventory_data['unified'] = df_translated
+                            save_inventario_data()
+                            st.success(f"✅ Dados substituídos! {len(df_translated)} itens carregados")
+                            time.sleep(1)
+                            st.rerun()
+                            
+            except Exception as e:
+                st.error(f"{get_text('error_import')}: {e}")
+    
+    st.divider()
     
     # SEMPRE verificar e carregar dados do CSV no início da renderização
     should_load = False
@@ -9801,10 +10201,10 @@ def render_inventario_unificado():
             st.rerun()
         else:
             st.info("📝 Nenhum arquivo CSV encontrado. Inventário iniciará vazio.")
-            # Inicializar dados vazios
+            # Inicializar dados vazios (incluindo campo 'local')
             st.session_state.inventory_data['unified'] = pd.DataFrame(columns=[
                 'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
-                'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+                'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria', 'local'
             ])
     
     # Obter dados unificados
@@ -9813,10 +10213,10 @@ def render_inventario_unificado():
     # Se ainda estiver vazio após tentativa de carregamento
     if unified_data.empty:
         st.info("📝 Inventário vazio. Adicione itens usando o formulário abaixo.")
-        # Continuar com dados vazios para mostrar interface
+        # Continuar com dados vazios para mostrar interface (incluindo campo 'local')
         unified_data = pd.DataFrame(columns=[
             'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
-            'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+            'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria', 'local'
         ])
     
     # Métricas gerais
@@ -9974,21 +10374,25 @@ def render_categoria_table(df_categoria, categoria_nome):
     elif status_filtro == 'Pendentes':
         df_exibicao = df_exibicao[df_exibicao['conferido'] == False]
     
-    # Tabela principal com colunas organizadas
+    # Garantir que a coluna 'local' existe
+    if 'local' not in df_exibicao.columns:
+        df_exibicao['local'] = 'N/A'
+    
+    # Tabela principal com colunas organizadas (incluindo 'local')
     df_display = df_exibicao[[
         'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd',
-        'prateleira', 'rua', 'setor', 'box', 'conferido',
+        'prateleira', 'rua', 'setor', 'box', 'local', 'conferido',
         'fornecedor', 'po', 'nota_fiscal', 'uso'
     ]].copy()
     
     # Renomear colunas para melhor visualização
     df_display.columns = [
         'Tag', 'Item', 'Modelo', 'Marca', 'Valor (R$)', 'Qtd',
-        'Prateleira', 'Rua', 'Setor', 'Caixa', 'Conferido',
+        'Prateleira', 'Rua', 'Setor', 'Caixa', f'{get_text("location")}', 'Conferido',
         'Fornecedor', 'PO', 'Nota Fiscal', 'Uso'
     ]
     
-    # Configurar tipos de coluna
+    # Configurar tipos de coluna (incluindo 'local')
     column_config = {
         'Tag': st.column_config.TextColumn('Tag', width='small'),
         'Item': st.column_config.TextColumn('Item', width='medium'),
@@ -10000,6 +10404,7 @@ def render_categoria_table(df_categoria, categoria_nome):
         'Rua': st.column_config.TextColumn('Rua', width='small'),
         'Setor': st.column_config.TextColumn('Setor', width='medium'),
         'Caixa': st.column_config.TextColumn('Caixa', width='small'),
+        f'{get_text("location")}': st.column_config.TextColumn(f'{get_text("location")}', width='medium'),
         'Conferido': st.column_config.CheckboxColumn('Conferido'),
         'Fornecedor': st.column_config.TextColumn('Fornecedor', width='medium'),
         'PO': st.column_config.TextColumn('PO', width='small'),
@@ -10036,7 +10441,7 @@ def render_categoria_table(df_categoria, categoria_nome):
                 df_updated = edited_data.copy()
                 df_updated.columns = [
                     'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd',
-                    'prateleira', 'rua', 'setor', 'box', 'conferido',
+                    'prateleira', 'rua', 'setor', 'box', 'local', 'conferido',
                     'fornecedor', 'po', 'nota_fiscal', 'uso'
                 ]
                 
@@ -10328,6 +10733,7 @@ def render_add_form():
             new_setor = setor_choice
         
         new_box = st.text_input("Caixa", placeholder="Ex: Caixa L1", key="add_box")
+        new_local = st.text_input(f"📍 {get_text('location')}", placeholder="Ex: Depósito Central, Sede SP, Filial RJ", key="add_local")
         new_fornecedor = st.text_input("Fornecedor", placeholder="Ex: Dell Brasil", key="add_fornecedor")
         new_po = st.text_input("PO", placeholder="Ex: PO-TEC-009", key="add_po")
         new_nota_fiscal = st.text_input("Nota Fiscal", placeholder="Ex: NF-012345", key="add_nota_fiscal")
@@ -10383,6 +10789,7 @@ def render_add_form():
                 'rua': new_rua,
                 'setor': new_setor,
                 'box': new_box or "N/A",
+                'local': new_local or "N/A",
                 'conferido': new_conferido
             }
             
@@ -16619,6 +17026,10 @@ def main():
     # Tela de loading com tema de video game
     if 'loading_complete' not in st.session_state or not st.session_state.loading_complete:
         render_gaming_loading_screen()
+        return
+    
+    # Seleção de idioma primeiro
+    if not render_language_selector():
         return
     
     # Inicializar todos os dados do sistema com persistência automática
