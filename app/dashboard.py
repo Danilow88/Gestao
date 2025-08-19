@@ -27,6 +27,8 @@ import hashlib
 import secrets
 import urllib.parse
 import re
+import sqlite3
+import glob
 # Para PaperCut web scraping (bs4 opcional - não essencial)
 try:
     from bs4 import BeautifulSoup  # type: ignore
@@ -71,7 +73,314 @@ except ImportError:
 # Scanner sempre ativo - bibliotecas instaladas
 BARCODE_SCANNER_AVAILABLE = True
 
+# Arquivo de persistência de dados
+DATABASE_FILE = "dashboard_database.db"
+
 st.set_page_config(page_title="Nubank - Gestão de Estoque", layout="wide", page_icon="■")
+
+# ========================================================================================
+# SISTEMA DE BANCO DE DADOS SQLITE - PERSISTÊNCIA AUTOMÁTICA
+# ========================================================================================
+
+def init_database():
+    """Inicializa o banco de dados SQLite"""
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        
+        # Tabela para estoque principal
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS estoque_data (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_name TEXT NOT NULL,
+            quantidade_atual INTEGER NOT NULL,
+            quantidade_minima INTEGER NOT NULL,
+            preco_unitario REAL NOT NULL,
+            fornecedor TEXT,
+            ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
+        
+        # Tabela para estoque Spark
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS spark_estoque_data (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            estoque INTEGER NOT NULL,
+            status TEXT,
+            prioridade TEXT,
+            valor REAL,
+            nota_fiscal TEXT,
+            data_entrada TIMESTAMP,
+            fornecedor TEXT,
+            ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
+        
+        # Tabela para códigos de barras
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS scanned_barcodes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            data TEXT NOT NULL,
+            type TEXT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
+        
+        # Tabela para configurações do sistema
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS system_config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            config_key TEXT UNIQUE NOT NULL,
+            config_value TEXT NOT NULL,
+            ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
+        
+        # Tabela para usuários
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            nome TEXT NOT NULL,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'user',
+            status TEXT NOT NULL DEFAULT 'pendente',
+            data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            aprovado_por TEXT
+        )
+        ''')
+        
+        # Tabela para perdas de gadgets
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS gadgets_perdas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            data_perda DATE NOT NULL,
+            predio TEXT NOT NULL,
+            andar TEXT NOT NULL,
+            tipo_item TEXT NOT NULL,
+            nome_item TEXT NOT NULL,
+            quantidade INTEGER NOT NULL,
+            valor_unitario REAL NOT NULL,
+            valor_total REAL NOT NULL,
+            observacoes TEXT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        st.error(f"❌ Erro ao inicializar banco de dados: {e}")
+        return False
+
+def save_to_database():
+    """Salva todos os dados do session_state no banco de dados automaticamente"""
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        
+        # Limpar dados existentes
+        cursor.execute('DELETE FROM estoque_data')
+        cursor.execute('DELETE FROM spark_estoque_data')
+        cursor.execute('DELETE FROM scanned_barcodes')
+        cursor.execute('DELETE FROM system_config')
+        cursor.execute('DELETE FROM users')
+        
+        # Salvar estoque principal
+        if 'estoque_data' in st.session_state and not st.session_state.estoque_data.empty:
+            for _, row in st.session_state.estoque_data.iterrows():
+                cursor.execute('''
+                INSERT INTO estoque_data (item_name, quantidade_atual, quantidade_minima, preco_unitario, fornecedor, ultima_atualizacao)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ''', (row['item_name'], row['quantidade_atual'], row['quantidade_minima'], 
+                      row['preco_unitario'], row.get('fornecedor', ''), 
+                      row.get('ultima_atualizacao', datetime.now().isoformat())))
+        
+        # Salvar estoque Spark
+        if 'spark_estoque_data' in st.session_state and not st.session_state.spark_estoque_data.empty:
+            for _, row in st.session_state.spark_estoque_data.iterrows():
+                cursor.execute('''
+                INSERT INTO spark_estoque_data (nome, estoque, status, prioridade, valor, nota_fiscal, data_entrada, fornecedor)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (row.get('Nome', ''), row.get('Estoque', 0), row.get('Status', ''), 
+                      row.get('Prioridade', ''), row.get('valor', 0), row.get('nota_fiscal', ''),
+                      row.get('data_entrada', ''), row.get('fornecedor', '')))
+        
+        # Salvar códigos de barras
+        if 'scanned_barcode' in st.session_state:
+            for barcode in st.session_state.scanned_barcode:
+                cursor.execute('''
+                INSERT INTO scanned_barcodes (data, type)
+                VALUES (?, ?)
+                ''', (barcode.get('data', ''), barcode.get('type', '')))
+        
+        # Salvar configurações do sistema
+        configs = {
+            'theme_config': json.dumps(st.session_state.get('theme_config', {})),
+            'advanced_visual_config': json.dumps(st.session_state.get('advanced_visual_config', {})),
+            'matt_budget': str(st.session_state.get('matt_budget', 1000)),
+            'gadgets_preferidos': json.dumps(st.session_state.get('gadgets_preferidos', [])),
+            'matt_limite_qty': str(st.session_state.get('matt_limite_qty', 5)),
+            'matt_percentual_extra': str(st.session_state.get('matt_percentual_extra', 10))
+        }
+        
+        for key, value in configs.items():
+            cursor.execute('''
+            INSERT OR REPLACE INTO system_config (config_key, config_value)
+            VALUES (?, ?)
+            ''', (key, value))
+        
+        # Salvar usuários
+        if 'users_db' in st.session_state:
+            for email, user_data in st.session_state.users_db.items():
+                cursor.execute('''
+                INSERT INTO users (email, nome, password_hash, role, status, data_registro, aprovado_por)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (email, user_data.get('nome', ''), user_data.get('password_hash', ''),
+                      user_data.get('role', 'user'), user_data.get('status', 'pendente'),
+                      user_data.get('data_registro', datetime.now().isoformat()),
+                      user_data.get('aprovado_por', '')))
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        st.error(f"❌ Erro ao salvar no banco de dados: {e}")
+        return False
+
+def load_from_database():
+    """Carrega todos os dados do banco de dados para o session_state"""
+    try:
+        if not Path(DATABASE_FILE).exists():
+            return False
+            
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        
+        # Carregar estoque principal
+        cursor.execute('SELECT * FROM estoque_data')
+        estoque_rows = cursor.fetchall()
+        if estoque_rows:
+            estoque_columns = ['id', 'item_name', 'quantidade_atual', 'quantidade_minima', 
+                              'preco_unitario', 'fornecedor', 'ultima_atualizacao']
+            estoque_df = pd.DataFrame(estoque_rows, columns=estoque_columns)
+            estoque_df = estoque_df.drop('id', axis=1)  # Remover coluna ID
+            st.session_state.estoque_data = estoque_df
+        
+        # Carregar estoque Spark
+        cursor.execute('SELECT * FROM spark_estoque_data')
+        spark_rows = cursor.fetchall()
+        if spark_rows:
+            spark_columns = ['id', 'nome', 'estoque', 'status', 'prioridade', 'valor',
+                           'nota_fiscal', 'data_entrada', 'fornecedor', 'ultima_atualizacao']
+            spark_df = pd.DataFrame(spark_rows, columns=spark_columns)
+            # Renomear colunas para match com o formato esperado
+            spark_df = spark_df.rename(columns={'nome': 'Nome', 'estoque': 'Estoque', 
+                                              'status': 'Status', 'prioridade': 'Prioridade'})
+            spark_df = spark_df.drop(['id', 'ultima_atualizacao'], axis=1)
+            st.session_state.spark_estoque_data = spark_df
+        
+        # Carregar códigos de barras
+        cursor.execute('SELECT data, type FROM scanned_barcodes')
+        barcode_rows = cursor.fetchall()
+        if barcode_rows:
+            st.session_state.scanned_barcode = [{'data': row[0], 'type': row[1]} for row in barcode_rows]
+        
+        # Carregar configurações
+        cursor.execute('SELECT config_key, config_value FROM system_config')
+        config_rows = cursor.fetchall()
+        for key, value in config_rows:
+            if key in ['theme_config', 'advanced_visual_config', 'gadgets_preferidos']:
+                st.session_state[key] = json.loads(value)
+            elif key in ['matt_budget', 'matt_limite_qty', 'matt_percentual_extra']:
+                st.session_state[key] = int(float(value))
+        
+        # Carregar usuários
+        cursor.execute('SELECT * FROM users')
+        user_rows = cursor.fetchall()
+        if user_rows:
+            users_db = {}
+            user_columns = ['id', 'email', 'nome', 'password_hash', 'role', 'status', 'data_registro', 'aprovado_por']
+            for row in user_rows:
+                user_data = dict(zip(user_columns, row))
+                email = user_data.pop('email')
+                user_data.pop('id')  # Remover ID
+                users_db[email] = user_data
+            st.session_state.users_db = users_db
+        
+        conn.close()
+        return True
+    except Exception as e:
+        st.error(f"❌ Erro ao carregar do banco de dados: {e}")
+        return False
+
+def auto_save():
+    """Salvamento automático silencioso"""
+    try:
+        save_to_database()
+    except Exception:
+        pass  # Falha silenciosa para não interromper a UX
+
+def init_all_data():
+    """Inicializa todos os dados do sistema com persistência automática"""
+    # Verificar se é a primeira execução da sessão
+    if 'data_loaded' not in st.session_state:
+        # Inicializar banco de dados
+        init_database()
+        
+        # Carregar dados salvos do banco
+        if not load_from_database():
+            # Se não houver dados no banco, inicializar dados padrão
+            init_default_data()
+            # Salvar dados padrão no banco
+            save_to_database()
+        
+        # Marcar como carregado
+        st.session_state.data_loaded = True
+    
+    # Inicializar dados padrão se não existirem
+    init_user_system()
+    
+    # Inicializar configurações de tema
+    if 'theme_config' not in st.session_state:
+        st.session_state.theme_config = DEFAULT_THEME.copy()
+
+def init_default_data():
+    """Inicializa dados padrão caso não existam no banco"""
+    if 'estoque_data' not in st.session_state:
+        st.session_state.estoque_data = pd.DataFrame({
+            'item_name': ['Mouse', 'Teclado', 'Adaptador USB-C', 'Headset'],
+            'quantidade_atual': [25, 15, 30, 10],
+            'quantidade_minima': [10, 5, 15, 5],
+            'preco_unitario': [45.0, 120.0, 25.0, 80.0],
+            'fornecedor': ['Tech Corp', 'KeyBoard Inc', 'USB Solutions', 'Audio Pro'],
+            'ultima_atualizacao': [datetime.now().strftime('%Y-%m-%d')] * 4
+        })
+    
+    if 'spark_estoque_data' not in st.session_state:
+        st.session_state.spark_estoque_data = pd.DataFrame({
+            'Nome': ['Display LED', 'Cabo HDMI', 'Suporte Monitor'],
+            'Estoque': [8, 25, 12],
+            'Status': ['Baixo', 'Ok', 'Ok'],
+            'Prioridade': ['Alta', 'Média', 'Baixa']
+        })
+    
+    if 'scanned_barcode' not in st.session_state:
+        st.session_state.scanned_barcode = []
+        
+    if 'matt_budget' not in st.session_state:
+        st.session_state.matt_budget = 1000
+        
+    if 'gadgets_preferidos' not in st.session_state:
+        st.session_state.gadgets_preferidos = []
+        
+    if 'matt_limite_qty' not in st.session_state:
+        st.session_state.matt_limite_qty = 5
+        
+    if 'matt_percentual_extra' not in st.session_state:
+        st.session_state.matt_percentual_extra = 10
 
 # ========================================================================================
 # MAPEAMENTO DE ÍCONES PARA ESTILO MINIMALISTA (FOTO)
@@ -2903,7 +3212,8 @@ def render_hq1_8th():
                                     'fornecedor': [fornecedor]
                                 })
                                 st.session_state.spark_estoque_data = pd.concat([st.session_state.spark_estoque_data, new_item], ignore_index=True)
-                                st.success("✓ Item adicionado com sucesso!")
+                                auto_save()  # Auto-save após adição
+                                st.success("✓ Item adicionado e salvo automaticamente!")
                                 st.session_state.show_add_form_spark = False
                                 st.rerun()
                             else:
@@ -3002,7 +3312,8 @@ def render_hq1_8th():
             # Botão para salvar alterações
             if st.button("● Salvar Alterações Spark", use_container_width=True, key="save_spark"):
                 st.session_state.spark_estoque_data = edited_data
-                st.success("✓ Alterações salvas com sucesso!")
+                auto_save()  # Auto-save após alterações
+                st.success("✓ Alterações salvas automaticamente no banco de dados!")
                 st.rerun()
         else:
             st.info("ℹ Nenhum item encontrado com os filtros aplicados.")
@@ -6878,8 +7189,12 @@ def init_estoque_data():
             })
 
 def save_estoque_data():
-    """Salva os dados de estoque em arquivo CSV"""
+    """Salva os dados de estoque no banco de dados e CSV backup"""
     try:
+        # Salvar no banco de dados principal
+        auto_save()
+        
+        # Backup em CSV
         if not st.session_state.estoque_data.empty:
             filename = f"estoque_gadgets_{datetime.now().strftime('%Y%m%d')}.csv"
             st.session_state.estoque_data.to_csv(filename, index=False)
@@ -7045,10 +7360,10 @@ def render_controle_estoque():
                     'preco_unitario': [260.0, 360.0, 90.0, 31.90],
                     'fornecedor': ['Plantronics', 'Geonav', 'Logitech', 'Microsoft'],
                     'ultima_atualizacao': [datetime.now().strftime('%d/%m/%Y %H:%M')] * 4
-                })
-                save_estoque_data()
+                 })
+                auto_save()  # Auto-save após reset
                 st.session_state.confirm_reset_estoque = False
-                st.success("● Estoque resetado para valores padrão!")
+                st.success("● Estoque resetado e salvo automaticamente!")
                 st.rerun()
             else:
                 st.session_state.confirm_reset_estoque = True
@@ -8345,10 +8660,10 @@ def render_config_gadgets():
                 # Validar colunas obrigatórias
                 required_columns = ['item_name', 'quantidade_atual', 'quantidade_minima', 'preco_unitario']
                 if all(col in df_estoque.columns for col in required_columns):
-                    st.session_state.estoque_data = df_estoque
-                    save_estoque_data()
-                    st.success("● Estoque carregado e salvo com sucesso!")
-                    st.dataframe(df_estoque, use_container_width=True)
+                     st.session_state.estoque_data = df_estoque
+                     auto_save()  # Auto-save após carregamento
+                     st.success("● Estoque carregado e salvo automaticamente no banco de dados!")
+                     st.dataframe(df_estoque, use_container_width=True)
                 else:
                     st.error(f"× CSV deve conter as colunas: {', '.join(required_columns)}")
             except Exception as e:
@@ -15474,6 +15789,9 @@ def render_historico_consultas_sefaz():
 
 def main():
     """Função principal do app"""
+    # Inicializar todos os dados do sistema com persistência automática
+    init_all_data()
+    
     apply_nubank_theme()
     
     # Verificar autenticação
