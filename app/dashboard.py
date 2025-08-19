@@ -71,7 +71,250 @@ except ImportError:
 # Scanner sempre ativo - bibliotecas instaladas
 BARCODE_SCANNER_AVAILABLE = True
 
+# Arquivo de persistência de dados
+DATA_PERSISTENCE_FILE = "dashboard_data.json"
+
 st.set_page_config(page_title="Nubank - Gestão de Estoque", layout="wide", page_icon="■")
+
+# ========================================================================================
+# SISTEMA DE PERSISTÊNCIA DE DADOS
+# ========================================================================================
+
+def save_all_data():
+    """Salva todos os dados do dashboard em um arquivo JSON"""
+    try:
+        data_to_save = {
+            'timestamp': datetime.now().isoformat(),
+            'estoque_data': st.session_state.get('estoque_data', pd.DataFrame()).to_dict('records') if 'estoque_data' in st.session_state else [],
+            'spark_estoque_data': st.session_state.get('spark_estoque_data', pd.DataFrame()).to_dict('records') if 'spark_estoque_data' in st.session_state else [],
+            'scanned_barcode': st.session_state.get('scanned_barcode', []),
+            'theme_config': st.session_state.get('theme_config', {}),
+            'advanced_visual_config': st.session_state.get('advanced_visual_config', {}),
+            'users_db': st.session_state.get('users_db', {}),
+            'usuarios_pendentes': st.session_state.get('usuarios_pendentes', {}),
+            'matt_budget': st.session_state.get('matt_budget', 1000),
+            'gadgets_preferidos': st.session_state.get('gadgets_preferidos', []),
+            'matt_limite_qty': st.session_state.get('matt_limite_qty', 5),
+            'matt_percentual_extra': st.session_state.get('matt_percentual_extra', 10)
+        }
+        
+        with open(DATA_PERSISTENCE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data_to_save, f, ensure_ascii=False, indent=2, default=str)
+        
+        return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados: {e}")
+        return False
+
+def load_all_data():
+    """Carrega todos os dados salvos do arquivo JSON"""
+    try:
+        if Path(DATA_PERSISTENCE_FILE).exists():
+            with open(DATA_PERSISTENCE_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # Restaurar DataFrames
+            if 'estoque_data' in data and data['estoque_data']:
+                st.session_state.estoque_data = pd.DataFrame(data['estoque_data'])
+            
+            if 'spark_estoque_data' in data and data['spark_estoque_data']:
+                st.session_state.spark_estoque_data = pd.DataFrame(data['spark_estoque_data'])
+            
+            # Restaurar outros dados
+            if 'scanned_barcode' in data:
+                st.session_state.scanned_barcode = data['scanned_barcode']
+            
+            if 'theme_config' in data:
+                st.session_state.theme_config = data['theme_config']
+                
+            if 'advanced_visual_config' in data:
+                st.session_state.advanced_visual_config = data['advanced_visual_config']
+                
+            if 'users_db' in data:
+                st.session_state.users_db = data['users_db']
+                
+            if 'usuarios_pendentes' in data:
+                st.session_state.usuarios_pendentes = data['usuarios_pendentes']
+                
+            if 'matt_budget' in data:
+                st.session_state.matt_budget = data['matt_budget']
+                
+            if 'gadgets_preferidos' in data:
+                st.session_state.gadgets_preferidos = data['gadgets_preferidos']
+                
+            if 'matt_limite_qty' in data:
+                st.session_state.matt_limite_qty = data['matt_limite_qty']
+                
+            if 'matt_percentual_extra' in data:
+                st.session_state.matt_percentual_extra = data['matt_percentual_extra']
+            
+            return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados: {e}")
+        return False
+    
+    return False
+
+def show_gaming_loading(title="CARREGANDO DADOS", subtitle="Aguarde enquanto sincronizamos..."):
+    """Exibe tela de loading com tema de video game"""
+    
+    # CSS para animações de video game
+    st.markdown("""
+    <style>
+    @keyframes pulse {
+        0% { opacity: 0.6; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.05); }
+        100% { opacity: 0.6; transform: scale(1); }
+    }
+    
+    @keyframes loading-bar {
+        0% { width: 0%; }
+        100% { width: 100%; }
+    }
+    
+    @keyframes glow {
+        0% { box-shadow: 0 0 5px #9333EA; }
+        50% { box-shadow: 0 0 20px #9333EA, 0 0 30px #9333EA; }
+        100% { box-shadow: 0 0 5px #9333EA; }
+    }
+    
+    @keyframes typewriter {
+        from { width: 0; }
+        to { width: 100%; }
+    }
+    
+    .gaming-loading-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: 'Courier New', monospace;
+    }
+    
+    .gaming-title {
+        color: #9333EA;
+        font-size: 4rem;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 2rem;
+        animation: pulse 2s infinite;
+        text-shadow: 0 0 20px #9333EA;
+        letter-spacing: 0.2em;
+    }
+    
+    .gaming-subtitle {
+        color: #FFFFFF;
+        font-size: 1.5rem;
+        text-align: center;
+        margin-bottom: 3rem;
+        overflow: hidden;
+        white-space: nowrap;
+        width: 0;
+        animation: typewriter 3s steps(40, end) forwards;
+    }
+    
+    .loading-bar-container {
+        width: 60%;
+        height: 20px;
+        background: #333333;
+        border: 2px solid #9333EA;
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+        animation: glow 2s infinite;
+    }
+    
+    .loading-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #9333EA 0%, #C084FC 50%, #9333EA 100%);
+        animation: loading-bar 3s ease-in-out forwards;
+        position: relative;
+    }
+    
+    .loading-bar::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+        animation: shimmer 1.5s infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { left: -100%; }
+        100% { left: 100%; }
+    }
+    
+    .gaming-status {
+        color: #FFFFFF;
+        font-size: 1.2rem;
+        margin-top: 2rem;
+        text-align: center;
+        opacity: 0.8;
+    }
+    
+    .pixel-loading {
+        display: flex;
+        gap: 5px;
+        margin-top: 2rem;
+    }
+    
+    .pixel-dot {
+        width: 15px;
+        height: 15px;
+        background: #9333EA;
+        animation: pixel-bounce 1.4s infinite ease-in-out both;
+    }
+    
+    .pixel-dot:nth-child(1) { animation-delay: -0.32s; }
+    .pixel-dot:nth-child(2) { animation-delay: -0.16s; }
+    .pixel-dot:nth-child(3) { animation-delay: 0; }
+    
+    @keyframes pixel-bounce {
+        0%, 80%, 100% {
+            transform: scale(0);
+        } 40% {
+            transform: scale(1);
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Container principal do loading
+    loading_placeholder = st.empty()
+    
+    loading_html = f"""
+    <div class="gaming-loading-container">
+        <div class="gaming-title">{title}</div>
+        <div class="gaming-subtitle">{subtitle}</div>
+        <div class="loading-bar-container">
+            <div class="loading-bar"></div>
+        </div>
+        <div class="gaming-status">Sincronizando dados do sistema...</div>
+        <div class="pixel-loading">
+            <div class="pixel-dot"></div>
+            <div class="pixel-dot"></div>
+            <div class="pixel-dot"></div>
+        </div>
+    </div>
+    """
+    
+    loading_placeholder.markdown(loading_html, unsafe_allow_html=True)
+    
+    # Simular processo de carregamento
+    time.sleep(3)
+    
+    # Limpar loading
+    loading_placeholder.empty()
 
 # ========================================================================================
 # MAPEAMENTO DE ÍCONES PARA ESTILO MINIMALISTA (FOTO)
@@ -1290,9 +1533,58 @@ def init_user_system():
     if 'current_user' not in st.session_state:
         st.session_state.current_user = None
     
-    # Inicializar configurações de tema
+def init_all_data():
+    """Inicializa todos os dados do sistema com carregamento automático"""
+    # Verificar se é a primeira execução da sessão
+    if 'data_loaded' not in st.session_state:
+        # Exibir loading apenas na primeira vez
+        show_gaming_loading("INICIALIZANDO SISTEMA", "Carregando dados salvos...")
+        
+        # Tentar carregar dados salvos
+        load_all_data()
+        
+        # Marcar como carregado
+        st.session_state.data_loaded = True
+    
+    # Inicializar dados padrão se não existirem
+    init_user_system()
+    
+    # Inicializar outros dados importantes
     if 'theme_config' not in st.session_state:
         st.session_state.theme_config = DEFAULT_THEME.copy()
+    
+    if 'estoque_data' not in st.session_state:
+        st.session_state.estoque_data = pd.DataFrame({
+            'item_name': ['Mouse', 'Teclado', 'Adaptador USB-C', 'Headset'],
+            'quantidade_atual': [25, 15, 30, 10],
+            'quantidade_minima': [10, 5, 15, 5],
+            'preco_unitario': [45.0, 120.0, 25.0, 80.0],
+            'fornecedor': ['Tech Corp', 'KeyBoard Inc', 'USB Solutions', 'Audio Pro'],
+            'ultima_atualizacao': [datetime.now().strftime('%Y-%m-%d')] * 4
+        })
+    
+    if 'spark_estoque_data' not in st.session_state:
+        st.session_state.spark_estoque_data = pd.DataFrame({
+            'Nome': ['Display LED', 'Cabo HDMI', 'Suporte Monitor'],
+            'Estoque': [8, 25, 12],
+            'Status': ['Baixo', 'Ok', 'Ok'],
+            'Prioridade': ['Alta', 'Média', 'Baixa']
+        })
+    
+    if 'scanned_barcode' not in st.session_state:
+        st.session_state.scanned_barcode = []
+        
+    if 'matt_budget' not in st.session_state:
+        st.session_state.matt_budget = 1000
+        
+    if 'gadgets_preferidos' not in st.session_state:
+        st.session_state.gadgets_preferidos = []
+        
+    if 'matt_limite_qty' not in st.session_state:
+        st.session_state.matt_limite_qty = 5
+        
+    if 'matt_percentual_extra' not in st.session_state:
+        st.session_state.matt_percentual_extra = 10
 
 def is_admin(email):
     """Verifica se o usuário é administrador"""
@@ -2903,6 +3195,7 @@ def render_hq1_8th():
                                     'fornecedor': [fornecedor]
                                 })
                                 st.session_state.spark_estoque_data = pd.concat([st.session_state.spark_estoque_data, new_item], ignore_index=True)
+                                save_all_data()  # Salvar dados automaticamente
                                 st.success("✓ Item adicionado com sucesso!")
                                 st.session_state.show_add_form_spark = False
                                 st.rerun()
@@ -3002,6 +3295,7 @@ def render_hq1_8th():
             # Botão para salvar alterações
             if st.button("● Salvar Alterações Spark", use_container_width=True, key="save_spark"):
                 st.session_state.spark_estoque_data = edited_data
+                save_all_data()  # Salvar dados automaticamente
                 st.success("✓ Alterações salvas com sucesso!")
                 st.rerun()
         else:
@@ -6697,7 +6991,7 @@ def render_agente_matt():
         • Gadgets Prioritários: {gadgets_texto} (+{percentual_extra}% do orçamento cada)
         • Limite por Item: {limite_por_item} unidades
         """)
-    
+
     # Chat IA avançado
     st.divider()
     st.subheader("💬 Chat IA com Matt 2.0")
@@ -6938,7 +7232,7 @@ def atualizar_estoque_por_perdas(perdas_df):
     
     # Salvar alterações no estoque
     if items_atualizados:
-        save_estoque_data()
+        save_all_data()  # Salvar dados automaticamente
         return items_atualizados
     return []
 
@@ -7028,7 +7322,7 @@ def render_controle_estoque():
     with col_save:
         if st.button("💾 Salvar Estoque", type="primary", use_container_width=True):
             st.session_state.estoque_data = df_estoque_editavel
-            if save_estoque_data():
+            if save_all_data():
                 st.success("● Estoque salvo com sucesso!")
                 st.rerun()
             else:
@@ -7046,7 +7340,7 @@ def render_controle_estoque():
                     'fornecedor': ['Plantronics', 'Geonav', 'Logitech', 'Microsoft'],
                     'ultima_atualizacao': [datetime.now().strftime('%d/%m/%Y %H:%M')] * 4
                 })
-                save_estoque_data()
+                save_all_data()  # Salvar dados automaticamente
                 st.session_state.confirm_reset_estoque = False
                 st.success("● Estoque resetado para valores padrão!")
                 st.rerun()
@@ -8346,7 +8640,7 @@ def render_config_gadgets():
                 required_columns = ['item_name', 'quantidade_atual', 'quantidade_minima', 'preco_unitario']
                 if all(col in df_estoque.columns for col in required_columns):
                     st.session_state.estoque_data = df_estoque
-                    save_estoque_data()
+                    save_all_data()  # Salvar dados automaticamente
                     st.success("● Estoque carregado e salvo com sucesso!")
                     st.dataframe(df_estoque, use_container_width=True)
                 else:
@@ -15474,6 +15768,9 @@ def render_historico_consultas_sefaz():
 
 def main():
     """Função principal do app"""
+    # Inicializar todos os dados do sistema
+    init_all_data()
+    
     apply_nubank_theme()
     
     # Verificar autenticação
