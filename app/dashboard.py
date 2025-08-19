@@ -1719,6 +1719,25 @@ def authenticate_user(email, password):
             return False, "Senha incorreta"
     return False, "Usuário não encontrado ou não aprovado"
 
+def reset_user_password(email, new_password):
+    """Reseta a senha de um usuário (apenas para super admin)"""
+    if email in st.session_state.users_db:
+        password_hash = hash_password(new_password)
+        st.session_state.users_db[email]['password_hash'] = password_hash
+        save_to_database()  # Salvar no banco
+        return True, "Senha resetada com sucesso!"
+    return False, "Usuário não encontrado"
+
+def generate_temp_password():
+    """Gera uma senha temporária"""
+    import random
+    import string
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+
+def is_super_admin(email):
+    """Verifica se o usuário é o super admin"""
+    return email == "danilo.fukuyama.digisystem@nubank.com.br"
+
 # ========================================================================================
 # INICIALIZAÇÃO DA SESSÃO
 # ========================================================================================
@@ -1744,7 +1763,7 @@ def render_login_page():
     </div>
     """, unsafe_allow_html=True)
     
-    tab1, tab2 = st.tabs(["● Login", "◉ Solicitar Acesso"])
+    tab1, tab2, tab3 = st.tabs(["● Login", "🔑 Esqueci a Senha", "◉ Solicitar Acesso"])
 
     with tab1:
         st.subheader("Fazer Login")
@@ -1767,6 +1786,34 @@ def render_login_page():
                         st.error(f"× {message}")
 
     with tab2:
+        st.subheader("🔑 Recuperar Senha")
+        st.info("→ Digite seu email para solicitar o reset de senha ao administrador")
+        
+        with st.form("forgot_password_form"):
+            email_reset = st.text_input("@ Email", placeholder="seu.email@empresa.com")
+            
+            if st.form_submit_button("📧 Solicitar Reset de Senha", use_container_width=True):
+                if not email_reset:
+                    st.error("× Digite seu email")
+                elif email_reset in st.session_state.users_db:
+                    # Adicionar à lista de resets pendentes
+                    if 'password_resets' not in st.session_state:
+                        st.session_state.password_resets = {}
+                    
+                    st.session_state.password_resets[email_reset] = {
+                        'requested_at': datetime.now().isoformat(),
+                        'status': 'pending'
+                    }
+                    save_to_database()
+                    
+                    st.success("✓ Solicitação de reset enviada!")
+                    st.info("📧 O administrador foi notificado e processará sua solicitação em breve")
+                elif email_reset in st.session_state.usuarios_pendentes:
+                    st.warning("⧖ Sua conta ainda está pendente de aprovação")
+                else:
+                    st.error("× Email não encontrado no sistema")
+
+    with tab3:
         st.subheader("Solicitar Acesso ao Sistema")
         st.info("→ Para acessar o sistema, você precisa de aprovação do administrador")
         
@@ -1832,6 +1879,89 @@ def render_admin_users():
                             st.rerun()
     else:
         st.info("⊙ Nenhuma solicitação pendente")
+    
+    st.divider()
+    
+    # Solicitações de reset de senha (apenas para super admin)
+    if is_super_admin(st.session_state.current_user):
+        if 'password_resets' in st.session_state and st.session_state.password_resets:
+            st.write("### 🔑 Solicitações de Reset de Senha")
+            
+            for email, reset_data in st.session_state.password_resets.items():
+                if reset_data['status'] == 'pending':
+                    with st.expander(f"🔑 Reset solicitado por: {email}"):
+                        st.write(f"**Solicitado em:** {reset_data['requested_at']}")
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            if st.button("🔄 Gerar Nova Senha", key=f"reset_{email}"):
+                                temp_password = generate_temp_password()
+                                success, message = reset_user_password(email, temp_password)
+                                
+                                if success:
+                                    st.session_state.password_resets[email]['status'] = 'completed'
+                                    st.session_state.password_resets[email]['completed_at'] = datetime.now().isoformat()
+                                    save_to_database()
+                                    
+                                    st.success(f"✅ {message}")
+                                    st.info(f"🔑 **Nova senha temporária:** `{temp_password}`")
+                                    st.warning("⚠️ Informe a nova senha ao usuário e peça para alterá-la no primeiro login")
+                                    st.rerun()
+                                else:
+                                    st.error(f"❌ {message}")
+                        
+                        with col2:
+                            if st.button("❌ Ignorar Solicitação", key=f"ignore_{email}"):
+                                st.session_state.password_resets[email]['status'] = 'ignored'
+                                save_to_database()
+                                st.warning("Solicitação ignorada")
+                                st.rerun()
+        
+        st.divider()
+        
+        # Reset manual de senha (apenas para super admin)
+        st.write("### 🔧 Reset Manual de Senha")
+        st.info("🛡️ Como Super Admin, você pode resetar a senha de qualquer usuário")
+        
+        with st.form("manual_password_reset"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                users_list = list(st.session_state.users_db.keys())
+                selected_user = st.selectbox("👤 Selecionar Usuário", users_list)
+            
+            with col2:
+                reset_type = st.radio("🔑 Tipo de Reset", 
+                                    ["Gerar senha temporária", "Definir senha específica"])
+            
+            if reset_type == "Definir senha específica":
+                new_password = st.text_input("🔐 Nova Senha", type="password", 
+                                           help="Mínimo 6 caracteres")
+            
+            if st.form_submit_button("🔄 Resetar Senha", use_container_width=True):
+                if reset_type == "Gerar senha temporária":
+                    temp_password = generate_temp_password()
+                    success, message = reset_user_password(selected_user, temp_password)
+                    
+                    if success:
+                        st.success(f"✅ {message}")
+                        st.info(f"🔑 **Nova senha temporária:** `{temp_password}`")
+                        st.warning("⚠️ Informe a nova senha ao usuário")
+                    else:
+                        st.error(f"❌ {message}")
+                
+                else:  # Senha específica
+                    if not new_password or len(new_password) < 6:
+                        st.error("❌ A senha deve ter pelo menos 6 caracteres")
+                    else:
+                        success, message = reset_user_password(selected_user, new_password)
+                        
+                        if success:
+                            st.success(f"✅ {message}")
+                            st.info("🔑 Nova senha definida com sucesso")
+                        else:
+                            st.error(f"❌ {message}")
     
     st.divider()
     
@@ -9484,6 +9614,172 @@ def render_upload_dados():
                     st.markdown(f"- *Opcionais:* {optional_cols}")
                 st.markdown("")
 
+def show_gaming_loading_screen():
+    """Mostra tela de loading estilo videogame"""
+    st.markdown("""
+    <style>
+    @keyframes matrix-rain {
+        0% { transform: translateY(-100vh) }
+        100% { transform: translateY(100vh) }
+    }
+    
+    @keyframes pixel-bounce {
+        0%, 100% { transform: translateY(0px) }
+        50% { transform: translateY(-20px) }
+    }
+    
+    @keyframes neon-glow {
+        0%, 100% { text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00 }
+        50% { text-shadow: 0 0 20px #00ff00, 0 0 30px #00ff00, 0 0 40px #00ff00 }
+    }
+    
+    @keyframes data-stream {
+        0% { width: 0% }
+        100% { width: 100% }
+    }
+    
+    .gaming-loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background: linear-gradient(135deg, #000000 0%, #1a0033 50%, #000000 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: 'Courier New', monospace;
+        overflow: hidden;
+    }
+    
+    .matrix-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        color: #00ff00;
+        font-size: 10px;
+        opacity: 0.1;
+        pointer-events: none;
+        animation: matrix-rain 3s linear infinite;
+    }
+    
+    .loading-title {
+        color: #00ff00;
+        font-size: 3rem;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 2rem;
+        animation: neon-glow 2s ease-in-out infinite;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+    }
+    
+    .loading-subtitle {
+        color: #9333EA;
+        font-size: 1.2rem;
+        margin-bottom: 3rem;
+        text-align: center;
+        opacity: 0.8;
+    }
+    
+    .pixel-art {
+        font-size: 2rem;
+        color: #00ff00;
+        animation: pixel-bounce 1s ease-in-out infinite;
+        margin-bottom: 2rem;
+    }
+    
+    .progress-bar-container {
+        width: 60%;
+        height: 20px;
+        background: #333;
+        border: 2px solid #00ff00;
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+        box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    }
+    
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #00ff00, #33ff33, #00ff00);
+        animation: data-stream 3s ease-in-out;
+        border-radius: 8px;
+        box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.3);
+    }
+    
+    .loading-text {
+        color: #00ff00;
+        font-size: 1rem;
+        margin-top: 1rem;
+        text-align: center;
+        letter-spacing: 2px;
+    }
+    
+    .status-messages {
+        margin-top: 2rem;
+        color: #9333EA;
+        font-size: 0.9rem;
+        text-align: center;
+        line-height: 1.6;
+    }
+    
+    .glitch {
+        animation: glitch 0.3s ease-in-out infinite;
+    }
+    
+    @keyframes glitch {
+        0% { transform: translateX(0) }
+        25% { transform: translateX(-2px) }
+        50% { transform: translateX(2px) }
+        75% { transform: translateX(-1px) }
+        100% { transform: translateX(0) }
+    }
+    </style>
+    
+    <div class="gaming-loader">
+        <div class="matrix-bg">
+            01001001 01001110 01010110 01000101<br>
+            01001110 01010100 01000001 01010010<br>
+            01001001 01001111 00100000 01000100<br>
+            01000001 01010100 01000001 01000010<br>
+            01000001 01010011 01000101 00100000<br>
+        </div>
+        
+        <div class="loading-title glitch">LOADING INVENTORY</div>
+        <div class="loading-subtitle">▤ Sistema de Gestão Avançada ▤</div>
+        
+        <div class="pixel-art">
+            ███████<br>
+            ██   ██<br>
+            ███████<br>
+            ██   ██<br>
+            ███████
+        </div>
+        
+        <div class="progress-bar-container">
+            <div class="progress-bar"></div>
+        </div>
+        
+        <div class="loading-text">CARREGANDO DADOS...</div>
+        
+        <div class="status-messages">
+            > Inicializando sistema neural...<br>
+            > Conectando ao banco de dados...<br>
+            > Carregando inventário unificado...<br>
+            > Sincronizando dados em tempo real...<br>
+            > ████████████ 100% COMPLETO ████████████
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Pausar para mostrar a animação
+    time.sleep(3)
+
 def render_inventario_unificado():
     """Renderiza o inventário unificado organizado por categorias"""
     st.markdown("## ▬ Inventário Unificado por Categorias")
@@ -9500,18 +9796,18 @@ def render_inventario_unificado():
         should_load = True
     
     if should_load:
-        with st.spinner("🔄 Carregando dados do inventário..."):
-            if load_inventario_data():
-                st.success("✅ Dados do inventário carregados do CSV com sucesso!")
-                time.sleep(1)  # Pequena pausa para mostrar a mensagem
-                st.rerun()
-            else:
-                st.info("📝 Nenhum arquivo CSV encontrado. Inventário iniciará vazio.")
-                # Inicializar dados vazios
-                st.session_state.inventory_data['unified'] = pd.DataFrame(columns=[
-                    'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
-                    'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
-                ])
+        show_gaming_loading_screen()
+        if load_inventario_data():
+            st.success("✅ Inventário carregado com sucesso!")
+            time.sleep(0.5)
+            st.rerun()
+        else:
+            st.info("📝 Nenhum arquivo CSV encontrado. Inventário iniciará vazio.")
+            # Inicializar dados vazios
+            st.session_state.inventory_data['unified'] = pd.DataFrame(columns=[
+                'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
+                'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+            ])
     
     # Obter dados unificados
     unified_data = st.session_state.inventory_data['unified']
