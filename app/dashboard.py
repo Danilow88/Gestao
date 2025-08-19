@@ -364,9 +364,20 @@ def init_all_data():
         if 'entry_inventory' not in st.session_state or st.session_state.entry_inventory.empty:
             load_entrada_data()
             
-        # Inventário Unificado
-        if 'inventory_data' not in st.session_state or 'unified' not in st.session_state.inventory_data or st.session_state.inventory_data['unified'].empty:
-            load_inventario_data()
+        # Inventário Unificado - Forçar carregamento do CSV
+        if 'inventory_data' not in st.session_state:
+            st.session_state.inventory_data = {}
+        
+        # Sempre tentar carregar dados do CSV na inicialização
+        if load_inventario_data():
+            # Dados carregados com sucesso do CSV
+            pass
+        elif 'unified' not in st.session_state.inventory_data:
+            # Se não houver CSV, inicializar estrutura vazia
+            st.session_state.inventory_data['unified'] = pd.DataFrame(columns=[
+                'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
+                'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+            ])
         
         # Marcar como carregado
         st.session_state.data_loaded = True
@@ -7531,26 +7542,52 @@ def load_inventario_data():
     try:
         files = glob.glob("inventario_unificado_*.csv")
         if files:
+            # Encontrar arquivo mais recente
             latest_file = max(files, key=lambda x: x.split('_')[-1])
             df = pd.read_csv(latest_file)
             
-            # Debug: mostrar informações do carregamento
-            if hasattr(st, 'sidebar'):
-                st.sidebar.success(f"📁 Inventário carregado: {latest_file} ({len(df)} itens)")
+            # Garantir que o DataFrame tenha as colunas necessárias
+            required_columns = ['tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
+                              'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria']
             
+            # Adicionar colunas faltantes se necessário
+            for col in required_columns:
+                if col not in df.columns:
+                    if col == 'categoria':
+                        df[col] = 'techstop'  # Categoria padrão
+                    elif col == 'conferido':
+                        df[col] = True
+                    elif col in ['valor', 'qtd']:
+                        df[col] = 0
+                    else:
+                        df[col] = ''
+            
+            # Garantir estrutura de inventory_data
             if 'inventory_data' not in st.session_state:
                 st.session_state.inventory_data = {}
+            
             st.session_state.inventory_data['unified'] = df
+            
+            # Feedback de sucesso
+            print(f"✅ Inventário carregado: {latest_file} ({len(df)} itens)")
+            if hasattr(st, 'session_state') and hasattr(st.session_state, 'get'):
+                if hasattr(st, 'sidebar'):
+                    st.sidebar.success(f"📁 Inventário carregado: {latest_file} ({len(df)} itens)")
+            
             return True
         else:
             # Debug: avisar se não há arquivos
-            if hasattr(st, 'sidebar'):
-                st.sidebar.warning("⚠️ Nenhum arquivo de inventário encontrado")
+            print("⚠️ Nenhum arquivo de inventário encontrado")
+            if hasattr(st, 'session_state') and hasattr(st.session_state, 'get'):
+                if hasattr(st, 'sidebar'):
+                    st.sidebar.info("📝 Nenhum arquivo de inventário encontrado - usando dados padrão")
     except Exception as e:
-        if hasattr(st, 'sidebar'):
-            st.sidebar.error(f"× Erro ao carregar inventário: {e}")
-        else:
-            print(f"Erro ao carregar inventário: {e}")
+        error_msg = f"× Erro ao carregar inventário: {e}"
+        print(error_msg)
+        if hasattr(st, 'session_state') and hasattr(st.session_state, 'get'):
+            if hasattr(st, 'sidebar'):
+                st.sidebar.error(error_msg)
+    
     return False
 
 def load_estoque_data():
@@ -9451,23 +9488,30 @@ def render_inventario_unificado():
     """Renderiza o inventário unificado organizado por categorias"""
     st.markdown("## ▬ Inventário Unificado por Categorias")
     
-    # Verificar se os dados existem, senão carregar
-    if ('inventory_data' not in st.session_state or 
-        'unified' not in st.session_state.inventory_data or 
-        st.session_state.inventory_data['unified'].empty):
-        st.info("🔄 Carregando dados do inventário...")
-        if load_inventario_data():
-            st.success("✓ Dados carregados com sucesso!")
-            st.rerun()
-        else:
-            st.warning("⚠️ Nenhum dado de inventário encontrado. Inicializando dados padrão...")
-            # Inicializar dados vazios para evitar erro
-            if 'inventory_data' not in st.session_state:
-                st.session_state.inventory_data = {}
-            st.session_state.inventory_data['unified'] = pd.DataFrame(columns=[
-                'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
-                'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
-            ])
+    # SEMPRE verificar e carregar dados do CSV no início da renderização
+    should_load = False
+    
+    if 'inventory_data' not in st.session_state:
+        st.session_state.inventory_data = {}
+        should_load = True
+    elif 'unified' not in st.session_state.inventory_data:
+        should_load = True
+    elif st.session_state.inventory_data['unified'].empty:
+        should_load = True
+    
+    if should_load:
+        with st.spinner("🔄 Carregando dados do inventário..."):
+            if load_inventario_data():
+                st.success("✅ Dados do inventário carregados do CSV com sucesso!")
+                time.sleep(1)  # Pequena pausa para mostrar a mensagem
+                st.rerun()
+            else:
+                st.info("📝 Nenhum arquivo CSV encontrado. Inventário iniciará vazio.")
+                # Inicializar dados vazios
+                st.session_state.inventory_data['unified'] = pd.DataFrame(columns=[
+                    'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
+                    'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+                ])
     
     # Obter dados unificados
     unified_data = st.session_state.inventory_data['unified']
