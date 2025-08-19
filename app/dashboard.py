@@ -2523,15 +2523,32 @@ def render_dashboard():
     # Métricas principais usando cards customizados
     col1, col2, col3, col4 = st.columns(4)
     
-    # Usar dados unificados
-    unified_data = st.session_state.inventory_data['unified']
-    total_items = len(unified_data)
-    total_conferidos = unified_data['conferido'].sum()
-    percentual_conferido = (total_conferidos / total_items * 100) if total_items > 0 else 0
+    # Verificar e usar dados unificados
+    if ('inventory_data' not in st.session_state or 
+        'unified' not in st.session_state.inventory_data or 
+        st.session_state.inventory_data['unified'].empty):
+        # Carregar dados se não estiverem disponíveis
+        load_inventario_data()
     
-    # Métricas por categoria
-    categorias = unified_data['categoria'].value_counts()
-    total_valor = unified_data['valor'].sum()
+    # Usar dados unificados com fallback para dados vazios
+    if ('inventory_data' in st.session_state and 
+        'unified' in st.session_state.inventory_data and 
+        not st.session_state.inventory_data['unified'].empty):
+        unified_data = st.session_state.inventory_data['unified']
+        total_items = len(unified_data)
+        total_conferidos = unified_data['conferido'].sum()
+        percentual_conferido = (total_conferidos / total_items * 100) if total_items > 0 else 0
+        
+        # Métricas por categoria
+        categorias = unified_data['categoria'].value_counts()
+        total_valor = unified_data['valor'].sum()
+    else:
+        # Dados vazios como fallback
+        total_items = 0
+        total_conferidos = 0
+        percentual_conferido = 0
+        categorias = pd.Series(dtype=int)
+        total_valor = 0
     
     with col1:
         st.markdown(f"""
@@ -7516,12 +7533,24 @@ def load_inventario_data():
         if files:
             latest_file = max(files, key=lambda x: x.split('_')[-1])
             df = pd.read_csv(latest_file)
+            
+            # Debug: mostrar informações do carregamento
+            if hasattr(st, 'sidebar'):
+                st.sidebar.success(f"📁 Inventário carregado: {latest_file} ({len(df)} itens)")
+            
             if 'inventory_data' not in st.session_state:
                 st.session_state.inventory_data = {}
             st.session_state.inventory_data['unified'] = df
             return True
+        else:
+            # Debug: avisar se não há arquivos
+            if hasattr(st, 'sidebar'):
+                st.sidebar.warning("⚠️ Nenhum arquivo de inventário encontrado")
     except Exception as e:
-        st.error(f"Erro ao carregar dados inventário: {e}")
+        if hasattr(st, 'sidebar'):
+            st.sidebar.error(f"× Erro ao carregar inventário: {e}")
+        else:
+            print(f"Erro ao carregar inventário: {e}")
     return False
 
 def load_estoque_data():
@@ -9422,16 +9451,43 @@ def render_inventario_unificado():
     """Renderiza o inventário unificado organizado por categorias"""
     st.markdown("## ▬ Inventário Unificado por Categorias")
     
+    # Verificar se os dados existem, senão carregar
+    if ('inventory_data' not in st.session_state or 
+        'unified' not in st.session_state.inventory_data or 
+        st.session_state.inventory_data['unified'].empty):
+        st.info("🔄 Carregando dados do inventário...")
+        if load_inventario_data():
+            st.success("✓ Dados carregados com sucesso!")
+            st.rerun()
+        else:
+            st.warning("⚠️ Nenhum dado de inventário encontrado. Inicializando dados padrão...")
+            # Inicializar dados vazios para evitar erro
+            if 'inventory_data' not in st.session_state:
+                st.session_state.inventory_data = {}
+            st.session_state.inventory_data['unified'] = pd.DataFrame(columns=[
+                'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
+                'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+            ])
+    
     # Obter dados unificados
     unified_data = st.session_state.inventory_data['unified']
+    
+    # Se ainda estiver vazio após tentativa de carregamento
+    if unified_data.empty:
+        st.info("📝 Inventário vazio. Adicione itens usando o formulário abaixo.")
+        # Continuar com dados vazios para mostrar interface
+        unified_data = pd.DataFrame(columns=[
+            'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
+            'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+        ])
     
     # Métricas gerais
     col_metrics1, col_metrics2, col_metrics3, col_metrics4 = st.columns(4)
     
     total_items = len(unified_data)
-    total_valor = unified_data['valor'].sum()
-    total_conferidos = unified_data['conferido'].sum()
-    categorias_count = len(unified_data['categoria'].unique())
+    total_valor = unified_data['valor'].sum() if not unified_data.empty else 0
+    total_conferidos = unified_data['conferido'].sum() if not unified_data.empty else 0
+    categorias_count = len(unified_data['categoria'].unique()) if not unified_data.empty else 0
     
     with col_metrics1:
         st.markdown(f"""
