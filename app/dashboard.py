@@ -337,6 +337,48 @@ def init_all_data():
             # Salvar dados padrão no banco
             save_to_database()
         
+        # Carregamento específico por dashboard (CSV com timestamp)
+        # Cada dashboard tenta carregar seus dados específicos primeiro
+        
+        # HQ1 8º Andar
+        if 'hq1_8th_inventory' not in st.session_state or st.session_state.hq1_8th_inventory.empty:
+            load_hq1_data()
+            
+        # Displays/TVs
+        if 'tvs_monitores_data' not in st.session_state or st.session_state.tvs_monitores_data.empty:
+            load_displays_data()
+            
+        # Vendas Spark
+        if 'vendas_data' not in st.session_state or st.session_state.vendas_data.empty:
+            load_vendas_data()
+            
+        # Lixo Eletrônico
+        if 'lixo_eletronico_data' not in st.session_state or st.session_state.lixo_eletronico_data.empty:
+            load_lixo_data()
+            
+        # Movimentações
+        if 'movimentacoes_data' not in st.session_state or st.session_state.movimentacoes_data.empty:
+            load_movimentacoes_data()
+            
+        # Entrada de Estoque
+        if 'entry_inventory' not in st.session_state or st.session_state.entry_inventory.empty:
+            load_entrada_data()
+            
+        # Inventário Unificado - Forçar carregamento do CSV
+        if 'inventory_data' not in st.session_state:
+            st.session_state.inventory_data = {}
+        
+        # Sempre tentar carregar dados do CSV na inicialização
+        if load_inventario_data():
+            # Dados carregados com sucesso do CSV
+            pass
+        elif 'unified' not in st.session_state.inventory_data:
+            # Se não houver CSV, inicializar estrutura vazia
+            st.session_state.inventory_data['unified'] = pd.DataFrame(columns=[
+                'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
+                'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+            ])
+        
         # Marcar como carregado
         st.session_state.data_loaded = True
     
@@ -2198,7 +2240,8 @@ def render_visual_editor():
         with col_save:
             if st.button("💾 Salvar Configurações", use_container_width=True, type="primary"):
                 st.session_state.theme_config.update(config)
-                st.success("■ Configurações salvas!")
+                auto_save()  # Configurações usam sistema SQLite
+                st.success("■ Configurações salvas automaticamente!")
                 st.rerun()
         
         with col_apply:
@@ -2303,7 +2346,8 @@ def render_visual_editor():
                             new_data[row['Local']]['impressoras'].append(printer_data)
                         
                         st.session_state.impressoras_data = new_data
-                        st.success("💾 Dados das impressoras salvos!")
+                        auto_save()  # Auto-save após alterações
+                        st.success("💾 Dados das impressoras salvos automaticamente!")
                         st.rerun()
                 
                 with col_reload:
@@ -2311,7 +2355,8 @@ def render_visual_editor():
                         csv_data = load_impressoras_from_csv()
                         if csv_data:
                             st.session_state.impressoras_data = csv_data
-                            st.success("● Dados recarregados do CSV!")
+                            auto_save()  # Auto-save após recarregamento
+                            st.success("● Dados recarregados do CSV e salvos automaticamente!")
                             st.rerun()
                         else:
                             st.error("× Erro ao carregar CSV")
@@ -2489,15 +2534,32 @@ def render_dashboard():
     # Métricas principais usando cards customizados
     col1, col2, col3, col4 = st.columns(4)
     
-    # Usar dados unificados
-    unified_data = st.session_state.inventory_data['unified']
-    total_items = len(unified_data)
-    total_conferidos = unified_data['conferido'].sum()
-    percentual_conferido = (total_conferidos / total_items * 100) if total_items > 0 else 0
+    # Verificar e usar dados unificados
+    if ('inventory_data' not in st.session_state or 
+        'unified' not in st.session_state.inventory_data or 
+        st.session_state.inventory_data['unified'].empty):
+        # Carregar dados se não estiverem disponíveis
+        load_inventario_data()
     
-    # Métricas por categoria
-    categorias = unified_data['categoria'].value_counts()
-    total_valor = unified_data['valor'].sum()
+    # Usar dados unificados com fallback para dados vazios
+    if ('inventory_data' in st.session_state and 
+        'unified' in st.session_state.inventory_data and 
+        not st.session_state.inventory_data['unified'].empty):
+        unified_data = st.session_state.inventory_data['unified']
+        total_items = len(unified_data)
+        total_conferidos = unified_data['conferido'].sum()
+        percentual_conferido = (total_conferidos / total_items * 100) if total_items > 0 else 0
+        
+        # Métricas por categoria
+        categorias = unified_data['categoria'].value_counts()
+        total_valor = unified_data['valor'].sum()
+    else:
+        # Dados vazios como fallback
+        total_items = 0
+        total_conferidos = 0
+        percentual_conferido = 0
+        categorias = pd.Series(dtype=int)
+        total_valor = 0
     
     with col1:
         st.markdown(f"""
@@ -3035,7 +3097,10 @@ def render_hq1_8th():
                                     'fornecedor': [fornecedor]
                                 })
                                 st.session_state.hq1_8th_inventory = pd.concat([st.session_state.hq1_8th_inventory, new_item], ignore_index=True)
-                                st.success("✓ Item adicionado com sucesso!")
+                                if save_hq1_data():
+                                    st.success("✓ Item adicionado e salvo automaticamente!")
+                                else:
+                                    st.error("× Erro ao salvar item")
                                 st.session_state.show_add_form_hq1_8th = False
                                 st.rerun()
                             else:
@@ -3134,7 +3199,11 @@ def render_hq1_8th():
             # Botão para salvar alterações
             if st.button("● Salvar Alterações HQ1", use_container_width=True, key="save_hq1"):
                 st.session_state.hq1_8th_inventory = edited_data
-                st.success("✓ Alterações salvas com sucesso!")
+                if save_hq1_data():
+                    st.session_state.hq1_data_last_saved = datetime.now()
+                    st.success("✓ Alterações salvas automaticamente!")
+                else:
+                    st.error("× Erro ao salvar alterações")
                 st.rerun()
         else:
             st.info("ℹ Nenhum item encontrado com os filtros aplicados.")
@@ -3392,6 +3461,20 @@ def render_csv_upload_section(data_key, required_columns, section_title="Upload 
                                 st.session_state[data_key] = pd.concat([st.session_state[data_key], df_upload], ignore_index=True)
                             else:
                                 st.session_state[data_key] = df_upload
+                            
+                            # Auto-save específico por tipo de dashboard
+                            save_success = False
+                            if data_key == 'hq1_8th_inventory':
+                                save_success = save_hq1_data()
+                            elif data_key == 'tvs_monitores_data':
+                                save_success = save_displays_data()
+                            elif data_key == 'vendas_data':
+                                save_success = save_vendas_data()
+                            elif data_key == 'entry_inventory':
+                                save_success = save_entrada_data()
+                            
+                            if not save_success:
+                                st.error("× Erro ao salvar dados após upload")
                             
                             st.success(f"🎉 {len(df_upload)} itens importados com sucesso!")
                             st.rerun()
@@ -4669,7 +4752,10 @@ def render_tvs_monitores():
                                 'po': [po]
                             })
                             st.session_state.tvs_monitores_data = pd.concat([st.session_state.tvs_monitores_data, new_item], ignore_index=True)
-                            st.success("✓ Display adicionado com sucesso!")
+                            if save_displays_data():
+                                st.success("✓ Display adicionado e salvo automaticamente!")
+                            else:
+                                st.error("× Erro ao salvar display")
                             st.session_state.show_add_form_displays = False
                             st.rerun()
                         else:
@@ -4789,7 +4875,11 @@ def render_tvs_monitores():
             with col_save:
                 if st.button("✓ Salvar Alterações", use_container_width=True, key="save_displays"):
                     st.session_state.tvs_monitores_data = edited_data
-                    st.success("✓ Alterações salvas com sucesso!")
+                    if save_displays_data():
+                        st.session_state.displays_data_last_saved = datetime.now()
+                        st.success("✓ Alterações salvas automaticamente!")
+                    else:
+                        st.error("× Erro ao salvar alterações")
                     st.session_state.show_edit_mode_displays = False
                     st.rerun()
             
@@ -4894,7 +4984,10 @@ def render_vendas_spark():
                                 'po': [po]
                             })
                             st.session_state.vendas_data = pd.concat([st.session_state.vendas_data, new_item], ignore_index=True)
-                            st.success("✓ Venda registrada com sucesso!")
+                            if save_vendas_data():
+                                st.success("✓ Venda registrada e salva automaticamente!")
+                            else:
+                                st.error("× Erro ao salvar venda")
                             st.session_state.show_add_form_vendas = False
                             st.rerun()
                         else:
@@ -5018,7 +5111,11 @@ def render_vendas_spark():
             with col_save:
                 if st.button("✓ Salvar Alterações", use_container_width=True, key="save_vendas"):
                     st.session_state.vendas_data = edited_data
-                    st.success("✓ Alterações salvas com sucesso!")
+                    if save_vendas_data():
+                        st.session_state.vendas_data_last_saved = datetime.now()
+                        st.success("✓ Alterações salvas automaticamente!")
+                    else:
+                        st.error("× Erro ao salvar alterações")
                     st.session_state.show_edit_mode_vendas = False
                     st.rerun()
             
@@ -5135,7 +5232,11 @@ def render_lixo_eletronico():
         with col_save:
             if st.button("✓ Salvar", use_container_width=True, key="save_lixo"):
                 st.session_state.lixo_eletronico_data = edited_data
-                st.success("✓ Alterações salvas!")
+                if save_lixo_data():
+                    st.session_state.lixo_data_last_saved = datetime.now()
+                    st.success("✓ Alterações salvas automaticamente!")
+                else:
+                    st.error("× Erro ao salvar alterações")
                 st.session_state.show_edit_mode_lixo = False
                 st.rerun()
         with col_cancel:
@@ -5558,8 +5659,10 @@ def render_barcode_entry():
                     
                     # Adicionar ao inventário
                     st.session_state.entry_inventory = pd.concat([st.session_state.entry_inventory, new_item], ignore_index=True)
-                    
-                    st.success(f"✓ Item '{item_nome}' adicionado com sucesso!")
+                    if save_entrada_data():
+                        st.success(f"✓ Item '{item_nome}' adicionado e salvo automaticamente!")
+                    else:
+                        st.error("× Erro ao salvar item")
                     st.info(f"▬ Tag: {tag} | Nota Fiscal: {nota_fiscal}")
                     
                     # Limpar campos preenchidos automaticamente
@@ -5642,7 +5745,11 @@ def render_barcode_entry():
         with col_action1:
             if st.button("💾 Salvar Alterações", use_container_width=True):
                 st.session_state.entry_inventory = edited_entries
-                st.success("✓ Alterações salvas no histórico!")
+                if save_entrada_data():
+                    st.session_state.entrada_data_last_saved = datetime.now()
+                    st.success("✓ Alterações salvas automaticamente!")
+                else:
+                    st.error("× Erro ao salvar alterações")
         
         with col_action2:
             if st.button("📤 Exportar CSV", use_container_width=True):
@@ -5789,7 +5896,11 @@ def render_movements():
         with col_save:
             if st.button("✓ Salvar", use_container_width=True, key="save_mov"):
                 st.session_state.movimentacoes_data = edited_data
-                st.success("✓ Alterações salvas!")
+                if save_movimentacoes_data():
+                    st.session_state.movimentacoes_data_last_saved = datetime.now()
+                    st.success("✓ Alterações salvas automaticamente!")
+                else:
+                    st.error("× Erro ao salvar alterações")
                 st.session_state.show_edit_mode_mov = False
                 st.rerun()
         with col_cancel:
@@ -7213,6 +7324,272 @@ def save_estoque_data():
         st.error(f"Erro ao salvar dados de estoque: {e}")
         return False
 
+# ========================================================================================
+# SISTEMA DE SALVAMENTO INDIVIDUAL POR DASHBOARD (COMO CONTROLE DE GADGETS)
+# ========================================================================================
+
+def save_hq1_data():
+    """Salva os dados de HQ1 8º andar em arquivo CSV"""
+    try:
+        if 'hq1_8th_inventory' in st.session_state and not st.session_state.hq1_8th_inventory.empty:
+            filename = f"hq1_8th_inventory_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.hq1_8th_inventory.to_csv(filename, index=False)
+            st.session_state.hq1_data_last_saved = datetime.now()
+            return True
+        else:
+            filename = f"hq1_8th_inventory_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=['item', 'categoria', 'tag', 'estado', 'valor', 'nota_fiscal', 'data_entrada', 'fornecedor']).to_csv(filename, index=False)
+            st.session_state.hq1_data_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados HQ1: {e}")
+        return False
+
+def load_hq1_data():
+    """Carrega os dados de HQ1 8º andar salvos"""
+    try:
+        files = glob.glob("hq1_8th_inventory_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            if 'data_entrada' in df.columns:
+                df['data_entrada'] = pd.to_datetime(df['data_entrada'], errors='coerce')
+            st.session_state.hq1_8th_inventory = df
+            return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados HQ1: {e}")
+    return False
+
+def save_displays_data():
+    """Salva os dados de displays em arquivo CSV"""
+    try:
+        if 'tvs_monitores_data' in st.session_state and not st.session_state.tvs_monitores_data.empty:
+            filename = f"displays_data_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.tvs_monitores_data.to_csv(filename, index=False)
+            st.session_state.displays_data_last_saved = datetime.now()
+            return True
+        else:
+            filename = f"displays_data_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=['tipo', 'marca', 'modelo', 'tag', 'local', 'valor', 'estado', 'nota_fiscal', 'data_entrada', 'fornecedor', 'po']).to_csv(filename, index=False)
+            st.session_state.displays_data_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados displays: {e}")
+        return False
+
+def load_displays_data():
+    """Carrega os dados de displays salvos"""
+    try:
+        files = glob.glob("displays_data_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            if 'data_entrada' in df.columns:
+                df['data_entrada'] = pd.to_datetime(df['data_entrada'], errors='coerce')
+            st.session_state.tvs_monitores_data = df
+            return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados displays: {e}")
+    return False
+
+def save_vendas_data():
+    """Salva os dados de vendas em arquivo CSV"""
+    try:
+        if 'vendas_data' in st.session_state and not st.session_state.vendas_data.empty:
+            filename = f"vendas_spark_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.vendas_data.to_csv(filename, index=False)
+            st.session_state.vendas_data_last_saved = datetime.now()
+            return True
+        else:
+            filename = f"vendas_spark_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=['data_venda', 'cliente', 'item', 'categoria', 'quantidade', 'valor_unitario', 'valor_total', 'desconto_perc', 'status', 'nota_fiscal', 'po']).to_csv(filename, index=False)
+            st.session_state.vendas_data_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados vendas: {e}")
+        return False
+
+def load_vendas_data():
+    """Carrega os dados de vendas salvos"""
+    try:
+        files = glob.glob("vendas_spark_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            if 'data_venda' in df.columns:
+                df['data_venda'] = pd.to_datetime(df['data_venda'], errors='coerce')
+            st.session_state.vendas_data = df
+            return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados vendas: {e}")
+    return False
+
+def save_lixo_data():
+    """Salva os dados de lixo eletrônico em arquivo CSV"""
+    try:
+        if 'lixo_eletronico_data' in st.session_state and not st.session_state.lixo_eletronico_data.empty:
+            filename = f"lixo_eletronico_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.lixo_eletronico_data.to_csv(filename, index=False)
+            st.session_state.lixo_data_last_saved = datetime.now()
+            return True
+        else:
+            filename = f"lixo_eletronico_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=['item', 'categoria', 'data_descarte', 'responsavel', 'motivo', 'status']).to_csv(filename, index=False)
+            st.session_state.lixo_data_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados lixo eletrônico: {e}")
+        return False
+
+def load_lixo_data():
+    """Carrega os dados de lixo eletrônico salvos"""
+    try:
+        files = glob.glob("lixo_eletronico_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            if 'data_descarte' in df.columns:
+                df['data_descarte'] = pd.to_datetime(df['data_descarte'], errors='coerce')
+            st.session_state.lixo_eletronico_data = df
+            return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados lixo eletrônico: {e}")
+    return False
+
+def save_movimentacoes_data():
+    """Salva os dados de movimentações em arquivo CSV"""
+    try:
+        if 'movimentacoes_data' in st.session_state and not st.session_state.movimentacoes_data.empty:
+            filename = f"movimentacoes_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.movimentacoes_data.to_csv(filename, index=False)
+            st.session_state.movimentacoes_data_last_saved = datetime.now()
+            return True
+        else:
+            filename = f"movimentacoes_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=['data_movimentacao', 'tipo', 'item', 'origem', 'destino', 'responsavel', 'observacoes']).to_csv(filename, index=False)
+            st.session_state.movimentacoes_data_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados movimentações: {e}")
+        return False
+
+def load_movimentacoes_data():
+    """Carrega os dados de movimentações salvos"""
+    try:
+        files = glob.glob("movimentacoes_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            if 'data_movimentacao' in df.columns:
+                df['data_movimentacao'] = pd.to_datetime(df['data_movimentacao'], errors='coerce')
+            st.session_state.movimentacoes_data = df
+            return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados movimentações: {e}")
+    return False
+
+def save_entrada_data():
+    """Salva os dados de entrada de estoque em arquivo CSV"""
+    try:
+        if 'entry_inventory' in st.session_state and not st.session_state.entry_inventory.empty:
+            filename = f"entrada_estoque_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.entry_inventory.to_csv(filename, index=False)
+            st.session_state.entrada_data_last_saved = datetime.now()
+            return True
+        else:
+            filename = f"entrada_estoque_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=['data_entrada', 'item_nome', 'categoria', 'quantidade', 'valor', 'nota_fiscal', 'tag', 'fornecedor', 'status', 'observacoes', 'po']).to_csv(filename, index=False)
+            st.session_state.entrada_data_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados entrada: {e}")
+        return False
+
+def load_entrada_data():
+    """Carrega os dados de entrada de estoque salvos"""
+    try:
+        files = glob.glob("entrada_estoque_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            if 'data_entrada' in df.columns:
+                df['data_entrada'] = pd.to_datetime(df['data_entrada'], errors='coerce')
+            st.session_state.entry_inventory = df
+            return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados entrada: {e}")
+    return False
+
+def save_inventario_data():
+    """Salva os dados de inventário unificado em arquivo CSV"""
+    try:
+        if 'inventory_data' in st.session_state and 'unified' in st.session_state.inventory_data and not st.session_state.inventory_data['unified'].empty:
+            filename = f"inventario_unificado_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.inventory_data['unified'].to_csv(filename, index=False)
+            st.session_state.inventario_data_last_saved = datetime.now()
+            return True
+        else:
+            filename = f"inventario_unificado_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=['tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria']).to_csv(filename, index=False)
+            st.session_state.inventario_data_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados inventário: {e}")
+        return False
+
+def load_inventario_data():
+    """Carrega os dados de inventário unificado salvos"""
+    try:
+        files = glob.glob("inventario_unificado_*.csv")
+        if files:
+            # Encontrar arquivo mais recente
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            
+            # Garantir que o DataFrame tenha as colunas necessárias
+            required_columns = ['tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
+                              'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria']
+            
+            # Adicionar colunas faltantes se necessário
+            for col in required_columns:
+                if col not in df.columns:
+                    if col == 'categoria':
+                        df[col] = 'techstop'  # Categoria padrão
+                    elif col == 'conferido':
+                        df[col] = True
+                    elif col in ['valor', 'qtd']:
+                        df[col] = 0
+                    else:
+                        df[col] = ''
+            
+            # Garantir estrutura de inventory_data
+            if 'inventory_data' not in st.session_state:
+                st.session_state.inventory_data = {}
+            
+            st.session_state.inventory_data['unified'] = df
+            
+            # Feedback de sucesso
+            print(f"✅ Inventário carregado: {latest_file} ({len(df)} itens)")
+            if hasattr(st, 'session_state') and hasattr(st.session_state, 'get'):
+                if hasattr(st, 'sidebar'):
+                    st.sidebar.success(f"📁 Inventário carregado: {latest_file} ({len(df)} itens)")
+            
+            return True
+        else:
+            # Debug: avisar se não há arquivos
+            print("⚠️ Nenhum arquivo de inventário encontrado")
+            if hasattr(st, 'session_state') and hasattr(st.session_state, 'get'):
+                if hasattr(st, 'sidebar'):
+                    st.sidebar.info("📝 Nenhum arquivo de inventário encontrado - usando dados padrão")
+    except Exception as e:
+        error_msg = f"× Erro ao carregar inventário: {e}"
+        print(error_msg)
+        if hasattr(st, 'session_state') and hasattr(st.session_state, 'get'):
+            if hasattr(st, 'sidebar'):
+                st.sidebar.error(error_msg)
+    
+    return False
+
 def load_estoque_data():
     """Carrega os dados de estoque salvos"""
     try:
@@ -7381,6 +7758,7 @@ def render_controle_estoque():
                 'ultima_atualizacao': [datetime.now().strftime('%d/%m/%Y %H:%M')]
             })
             st.session_state.estoque_data = pd.concat([st.session_state.estoque_data, nova_linha], ignore_index=True)
+            auto_save()  # Auto-save após adição
             st.rerun()
     
     st.divider()
@@ -9110,16 +9488,50 @@ def render_inventario_unificado():
     """Renderiza o inventário unificado organizado por categorias"""
     st.markdown("## ▬ Inventário Unificado por Categorias")
     
+    # SEMPRE verificar e carregar dados do CSV no início da renderização
+    should_load = False
+    
+    if 'inventory_data' not in st.session_state:
+        st.session_state.inventory_data = {}
+        should_load = True
+    elif 'unified' not in st.session_state.inventory_data:
+        should_load = True
+    elif st.session_state.inventory_data['unified'].empty:
+        should_load = True
+    
+    if should_load:
+        with st.spinner("🔄 Carregando dados do inventário..."):
+            if load_inventario_data():
+                st.success("✅ Dados do inventário carregados do CSV com sucesso!")
+                time.sleep(1)  # Pequena pausa para mostrar a mensagem
+                st.rerun()
+            else:
+                st.info("📝 Nenhum arquivo CSV encontrado. Inventário iniciará vazio.")
+                # Inicializar dados vazios
+                st.session_state.inventory_data['unified'] = pd.DataFrame(columns=[
+                    'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
+                    'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+                ])
+    
     # Obter dados unificados
     unified_data = st.session_state.inventory_data['unified']
+    
+    # Se ainda estiver vazio após tentativa de carregamento
+    if unified_data.empty:
+        st.info("📝 Inventário vazio. Adicione itens usando o formulário abaixo.")
+        # Continuar com dados vazios para mostrar interface
+        unified_data = pd.DataFrame(columns=[
+            'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
+            'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+        ])
     
     # Métricas gerais
     col_metrics1, col_metrics2, col_metrics3, col_metrics4 = st.columns(4)
     
     total_items = len(unified_data)
-    total_valor = unified_data['valor'].sum()
-    total_conferidos = unified_data['conferido'].sum()
-    categorias_count = len(unified_data['categoria'].unique())
+    total_valor = unified_data['valor'].sum() if not unified_data.empty else 0
+    total_conferidos = unified_data['conferido'].sum() if not unified_data.empty else 0
+    categorias_count = len(unified_data['categoria'].unique()) if not unified_data.empty else 0
     
     with col_metrics1:
         st.markdown(f"""
@@ -9344,7 +9756,11 @@ def render_categoria_table(df_categoria, categoria_nome):
                     for col in df_updated.columns:
                         unified_data.loc[original_idx, col] = row[col]
                 
-                st.success(f"✅ Alterações salvas para {categoria_nome}!")
+                if save_inventario_data():
+                    st.session_state.inventario_data_last_saved = datetime.now()
+                    st.success(f"✅ Alterações salvas automaticamente para {categoria_nome}!")
+                else:
+                    st.error("× Erro ao salvar alterações")
                 st.rerun()
     
     # Formulário de edição
@@ -9461,7 +9877,11 @@ def render_edit_form(df_categoria, categoria_nome):
                 unified_data.loc[original_idx, 'nota_fiscal'] = new_nota_fiscal
                 unified_data.loc[original_idx, 'uso'] = new_uso
                 
-                st.success(f"✅ Item {new_tag} atualizado com sucesso!")
+                if save_inventario_data():
+                    st.session_state.inventario_data_last_saved = datetime.now()
+                    st.success(f"✅ Item {new_tag} atualizado e salvo automaticamente!")
+                else:
+                    st.error("× Erro ao salvar alterações")
                 st.session_state[f'show_edit_form_{categoria_nome}'] = False
                 st.rerun()
         
@@ -9676,8 +10096,10 @@ def render_add_form():
             unified_data = st.session_state.inventory_data['unified']
             new_row = pd.DataFrame([novo_item])
             st.session_state.inventory_data['unified'] = pd.concat([unified_data, new_row], ignore_index=True)
-            
-            st.success(f"✅ Item {new_tag} - {new_item} adicionado com sucesso!")
+            if save_inventario_data():
+                st.success(f"✅ Item {new_tag} - {new_item} adicionado e salvo automaticamente!")
+            else:
+                st.error("× Erro ao salvar item")
             st.session_state['show_add_form'] = False
             st.rerun()
     
