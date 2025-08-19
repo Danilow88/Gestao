@@ -1719,6 +1719,25 @@ def authenticate_user(email, password):
             return False, "Senha incorreta"
     return False, "Usuário não encontrado ou não aprovado"
 
+def reset_user_password(email, new_password):
+    """Reseta a senha de um usuário (apenas para super admin)"""
+    if email in st.session_state.users_db:
+        password_hash = hash_password(new_password)
+        st.session_state.users_db[email]['password_hash'] = password_hash
+        save_to_database()  # Salvar no banco
+        return True, "Senha resetada com sucesso!"
+    return False, "Usuário não encontrado"
+
+def generate_temp_password():
+    """Gera uma senha temporária"""
+    import random
+    import string
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+
+def is_super_admin(email):
+    """Verifica se o usuário é o super admin"""
+    return email == "danilo.fukuyama.digisystem@nubank.com.br"
+
 # ========================================================================================
 # INICIALIZAÇÃO DA SESSÃO
 # ========================================================================================
@@ -1744,7 +1763,7 @@ def render_login_page():
     </div>
     """, unsafe_allow_html=True)
     
-    tab1, tab2 = st.tabs(["● Login", "◉ Solicitar Acesso"])
+    tab1, tab2, tab3 = st.tabs(["● Login", "🔑 Esqueci a Senha", "◉ Solicitar Acesso"])
 
     with tab1:
         st.subheader("Fazer Login")
@@ -1767,6 +1786,34 @@ def render_login_page():
                         st.error(f"× {message}")
 
     with tab2:
+        st.subheader("🔑 Recuperar Senha")
+        st.info("→ Digite seu email para solicitar o reset de senha ao administrador")
+        
+        with st.form("forgot_password_form"):
+            email_reset = st.text_input("@ Email", placeholder="seu.email@empresa.com")
+            
+            if st.form_submit_button("📧 Solicitar Reset de Senha", use_container_width=True):
+                if not email_reset:
+                    st.error("× Digite seu email")
+                elif email_reset in st.session_state.users_db:
+                    # Adicionar à lista de resets pendentes
+                    if 'password_resets' not in st.session_state:
+                        st.session_state.password_resets = {}
+                    
+                    st.session_state.password_resets[email_reset] = {
+                        'requested_at': datetime.now().isoformat(),
+                        'status': 'pending'
+                    }
+                    save_to_database()
+                    
+                    st.success("✓ Solicitação de reset enviada!")
+                    st.info("📧 O administrador foi notificado e processará sua solicitação em breve")
+                elif email_reset in st.session_state.usuarios_pendentes:
+                    st.warning("⧖ Sua conta ainda está pendente de aprovação")
+                else:
+                    st.error("× Email não encontrado no sistema")
+
+    with tab3:
         st.subheader("Solicitar Acesso ao Sistema")
         st.info("→ Para acessar o sistema, você precisa de aprovação do administrador")
         
@@ -1832,6 +1879,89 @@ def render_admin_users():
                             st.rerun()
     else:
         st.info("⊙ Nenhuma solicitação pendente")
+    
+    st.divider()
+    
+    # Solicitações de reset de senha (apenas para super admin)
+    if is_super_admin(st.session_state.current_user):
+        if 'password_resets' in st.session_state and st.session_state.password_resets:
+            st.write("### 🔑 Solicitações de Reset de Senha")
+            
+            for email, reset_data in st.session_state.password_resets.items():
+                if reset_data['status'] == 'pending':
+                    with st.expander(f"🔑 Reset solicitado por: {email}"):
+                        st.write(f"**Solicitado em:** {reset_data['requested_at']}")
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            if st.button("🔄 Gerar Nova Senha", key=f"reset_{email}"):
+                                temp_password = generate_temp_password()
+                                success, message = reset_user_password(email, temp_password)
+                                
+                                if success:
+                                    st.session_state.password_resets[email]['status'] = 'completed'
+                                    st.session_state.password_resets[email]['completed_at'] = datetime.now().isoformat()
+                                    save_to_database()
+                                    
+                                    st.success(f"✅ {message}")
+                                    st.info(f"🔑 **Nova senha temporária:** `{temp_password}`")
+                                    st.warning("⚠️ Informe a nova senha ao usuário e peça para alterá-la no primeiro login")
+                                    st.rerun()
+                                else:
+                                    st.error(f"❌ {message}")
+                        
+                        with col2:
+                            if st.button("❌ Ignorar Solicitação", key=f"ignore_{email}"):
+                                st.session_state.password_resets[email]['status'] = 'ignored'
+                                save_to_database()
+                                st.warning("Solicitação ignorada")
+                                st.rerun()
+        
+        st.divider()
+        
+        # Reset manual de senha (apenas para super admin)
+        st.write("### <i class='fas fa-cog'></i> Reset Manual de Senha", unsafe_allow_html=True)
+        st.info("🛡️ Como Super Admin, você pode resetar a senha de qualquer usuário")
+        
+        with st.form("manual_password_reset"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                users_list = list(st.session_state.users_db.keys())
+                selected_user = st.selectbox("<i class='fas fa-user'></i> Selecionar Usuário", users_list)
+            
+            with col2:
+                reset_type = st.radio("🔑 Tipo de Reset", 
+                                    ["Gerar senha temporária", "Definir senha específica"])
+            
+            if reset_type == "Definir senha específica":
+                new_password = st.text_input("🔐 Nova Senha", type="password", 
+                                           help="Mínimo 6 caracteres")
+            
+            if st.form_submit_button("🔄 Resetar Senha", use_container_width=True):
+                if reset_type == "Gerar senha temporária":
+                    temp_password = generate_temp_password()
+                    success, message = reset_user_password(selected_user, temp_password)
+                    
+                    if success:
+                        st.success(f"✅ {message}")
+                        st.info(f"🔑 **Nova senha temporária:** `{temp_password}`")
+                        st.warning("⚠️ Informe a nova senha ao usuário")
+                    else:
+                        st.error(f"❌ {message}")
+                
+                else:  # Senha específica
+                    if not new_password or len(new_password) < 6:
+                        st.error("❌ A senha deve ter pelo menos 6 caracteres")
+                    else:
+                        success, message = reset_user_password(selected_user, new_password)
+                        
+                        if success:
+                            st.success(f"✅ {message}")
+                            st.info("🔑 Nova senha definida com sucesso")
+                        else:
+                            st.error(f"❌ {message}")
     
     st.divider()
     
@@ -1995,7 +2125,7 @@ def render_visual_editor():
                 
                 st.markdown("**Nomes das Seções:**")
                 config['inventory_name'] = st.text_input("■ Nome da Seção Inventário", config.get('inventory_name', 'Inventário'))
-                config['printers_name'] = st.text_input("🖨️ Nome da Seção Impressoras", config.get('printers_name', 'Impressoras'))
+                config['printers_name'] = st.text_input("<i class='fas fa-print'></i> Nome da Seção Impressoras", config.get('printers_name', 'Impressoras'))
                 config['reports_name'] = st.text_input("▬ Nome da Seção Relatórios", config.get('reports_name', 'Relatórios'))
         
         with subtab3:
@@ -2267,7 +2397,7 @@ def render_visual_editor():
             )
     
     with tab_impressoras:
-        st.markdown("### 🖨️ Editor de Impressoras")
+        st.markdown("### <i class='fas fa-print'></i> Editor de Impressoras", unsafe_allow_html=True)
         
         # Carregar dados das impressoras
         if 'impressoras_data' not in st.session_state:
@@ -3598,7 +3728,7 @@ def debug_vpn_connection():
     # Teste manual de impressora
     st.write("**Teste Manual de Impressora:**")
     test_ip = st.text_input("Digite um IP de impressora para testar:", value="172.25.61.81")
-    if st.button("🖨️ Testar Impressora"):
+    if st.button("<i class='fas fa-print'></i> Testar Impressora", unsafe_allow_html=True):
         if test_ip:
             st.write(f"Testando impressora {test_ip}...")
             result = get_printer_status_fast(test_ip)
@@ -4201,12 +4331,12 @@ def render_impressoras():
     st.markdown("""
     <style>
     .printer-header {
-        background: linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%);
+        background: linear-gradient(135deg, #6a1b9a 0%, #9c27b0 100%);
         padding: 20px;
         border-radius: 15px;
         margin-bottom: 20px;
-        border: 2px solid #4CAF50;
-        box-shadow: 0 8px 32px rgba(76, 175, 80, 0.3);
+        border: 2px solid #9c27b0;
+        box-shadow: 0 8px 32px rgba(156, 39, 176, 0.3);
     }
     .printer-metric {
         background: rgba(255, 255, 255, 0.1);
@@ -4218,7 +4348,7 @@ def render_impressoras():
         color: white;
         margin: 10px 0;
     }
-    .printer-status-active { color: #4CAF50; font-weight: bold; }
+    .printer-status-active { color: #9c27b0; font-weight: bold; }
     .printer-status-maintenance { color: #FF9800; font-weight: bold; }
     .printer-status-inactive { color: #F44336; font-weight: bold; }
     </style>
@@ -4416,7 +4546,7 @@ def render_impressoras():
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    modelo = st.text_input("🖨️ Modelo", placeholder="Ex: HP LaserJet Pro 404n")
+                    modelo = st.text_input("<i class='fas fa-print'></i> Modelo", placeholder="Ex: HP LaserJet Pro 404n")
                     marca = st.selectbox("🏷️ Marca", ["HP", "Canon", "Epson", "Brother", "Samsung", "Xerox", "Kyocera", "Lexmark", "Outros"])
                     tag = st.text_input("🏷️ Tag/Código", placeholder="Ex: IMP007")
                     tipo = st.selectbox("▬ Tipo", ["Laser", "Jato de Tinta", "EcoTank", "Multifuncional", "Térmica", "Matricial"])
@@ -4431,7 +4561,7 @@ def render_impressoras():
                     po = st.text_input("▬ PO", placeholder="Ex: PO-IMP-007")
                     ip_rede = st.text_input("🌐 IP da Rede", placeholder="Ex: 192.168.1.107 ou N/A")
                     contador_paginas = st.number_input("▬ Contador de Páginas", min_value=0, value=0)
-                    responsavel = st.text_input("👤 Responsável", placeholder="Ex: TI Central")
+                    responsavel = st.text_input("<i class='fas fa-user'></i> Responsável", placeholder="Ex: TI Central")
                 
                 col_submit, col_cancel = st.columns(2)
                 
@@ -4483,7 +4613,7 @@ def render_impressoras():
         st.markdown(f"""
         <div class="printer-metric">
             <div style="font-size: 2rem; font-weight: bold;">{total_impressoras}</div>
-            <div style="font-size: 0.9rem; opacity: 0.8;">🖨️ Total</div>
+            <div style="font-size: 0.9rem; opacity: 0.8;"><i class='fas fa-print'></i> Total</div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -4543,7 +4673,7 @@ def render_impressoras():
             col_login, col_senha = st.columns(2)
 
             with col_login:
-                st.info(f"**👤 Login:** {local_data['info']['login']}")
+                st.info(f"**<i class='fas fa-user'></i> Login:** {local_data['info']['login']}", unsafe_allow_html=True)
 
             with col_senha:
                 st.info(f"**🔒 Senha:** {local_data['info']['senha']}")
@@ -4590,7 +4720,7 @@ def render_impressoras():
                     </div>
                 """, unsafe_allow_html=True)
 
-            st.markdown("### 🖨️ Lista de Impressoras")
+            st.markdown("### <i class='fas fa-print'></i> Lista de Impressoras", unsafe_allow_html=True)
 
             # Cards das impressoras
             for i, printer in enumerate(local_data["impressoras"]):
@@ -4952,7 +5082,7 @@ def render_vendas_spark():
                     data_venda = st.date_input("⌚ Data da Venda")
                     item = st.text_input("▣ Item", placeholder="Nome do item vendido")
                     tag_original = st.text_input("▣ Tag Original", placeholder="SPK###")
-                    comprador = st.text_input("👤 Comprador", placeholder="Nome do comprador")
+                    comprador = st.text_input("<i class='fas fa-user'></i> Comprador", placeholder="Nome do comprador")
                     valor_original = st.number_input("$ Valor Original", min_value=0.0, format="%.2f")
                 
                 with col2:
@@ -5523,7 +5653,7 @@ def render_barcode_entry():
             
             except Exception as e:
                 # Fallback se houver algum erro com WebRTC
-                st.info("📱 Use o upload de imagem abaixo para scanner de códigos")
+                st.info("<i class='fas fa-mobile-alt'></i> Use o upload de imagem abaixo para scanner de códigos", unsafe_allow_html=True)
                 if st.button("■ Gerar Código", use_container_width=True):
                     codigo_gerado = f"GEN-{pd.Timestamp.now().strftime('%Y%m%d%H%M%S')}"
                     st.session_state.codigo_nf_capturado = codigo_gerado
@@ -6398,7 +6528,7 @@ def process_matt_response(user_message):
                     if budget < 1000:
                         budget *= 1000
                     st.session_state.matt_budget = budget
-                    return f"💰 **Budget definido com sucesso!** R$ {budget:,.2f} configurado para suas análises e recomendações."
+                    return f"<i class='fas fa-dollar-sign'></i> **Budget definido com sucesso!** R$ {budget:,.2f} configurado para suas análises e recomendações."
                 except:
                     pass
         
@@ -6430,9 +6560,9 @@ def process_matt_response(user_message):
             
             st.session_state.gadgets_preferidos = gadgets_atuais
             texto_gadgets = ", ".join(gadgets_encontrados)
-            return f"🎯 **Gadgets prioritários definidos!** {texto_gadgets} agora receberão preferência nas recomendações."
+            return f"<i class='fas fa-bullseye'></i> **Gadgets prioritários definidos!** {texto_gadgets} agora receberão preferência nas recomendações."
         
-        return """🎯 **CONFIGURAÇÕES MATT 2.0**
+        return """<i class='fas fa-bullseye'></i> **CONFIGURAÇÕES MATT 2.0**
 
 Para configurar suas preferências, use comandos como:
 • "Definir budget de R$ 80.000"
@@ -6440,9 +6570,9 @@ Para configurar suas preferências, use comandos como:
 • "Limitar quantidade para 15 por item"
 
 **📊 Configurações atuais:**
-• 💰 Budget: R$ {0:,.2f}
-• 🎯 Gadgets prioritários: {1}
-• 📦 Limite por item: {2} unidades
+• <i class='fas fa-dollar-sign'></i> Budget: R$ {0:,.2f}
+• <i class='fas fa-bullseye'></i> Gadgets prioritários: {1}
+• <i class='fas fa-box'></i> Limite por item: {2} unidades
 • 🔥 % Extra prioritário: {3}%
 
 **💡 Dica:** Use as configurações acima na interface visual ou converse comigo diretamente!
@@ -6479,7 +6609,7 @@ Para configurar suas preferências, use comandos como:
 • ▬ Análises detalhadas e insights personalizados
 • $ Otimização de orçamentos e estratégias financeiras  
 • ■ Gestão inteligente de estoque e alertas preditivos
-• 🛒 Recomendações de compras baseadas em IA
+• <i class='fas fa-shopping-cart'></i> Recomendações de compras baseadas em IA
 • ▲ Tendências, padrões e análises preditivas
 • 🤖 Qualquer questão sobre gestão de gadgets!
 
@@ -6647,10 +6777,10 @@ Assim que você registrar perdas, minha IA será capaz de:
         
         return f"""🎯 **SUAS CONFIGURAÇÕES MATT 2.0**
 
-📊 **Parâmetros Ativos:**
-• 💰 **Budget Total:** R$ {budget:,.2f}
-• 🎯 **Gadgets Prioritários:** {gadgets_texto}
-• 📦 **Limite por Item:** {limite_qty} unidades
+<i class='fas fa-chart-bar'></i> **Parâmetros Ativos:**
+• <i class='fas fa-dollar-sign'></i> **Budget Total:** R$ {budget:,.2f}
+• <i class='fas fa-bullseye'></i> **Gadgets Prioritários:** {gadgets_texto}
+• <i class='fas fa-box'></i> **Limite por Item:** {limite_qty} unidades
 • 🔥 **% Extra por Prioritário:** {percentual_extra}%
 
 💡 **Como usar:**
@@ -7063,13 +7193,13 @@ def render_agente_matt():
 
     # 🎯 CONFIGURAÇÕES DE ORÇAMENTO E PREFERÊNCIAS
     st.divider()
-    st.subheader("🎯 Configurações de Orçamento Matt 2.0")
+    st.subheader("<i class='fas fa-bullseye'></i> Configurações de Orçamento Matt 2.0", unsafe_allow_html=True)
     
     # Configurações de orçamento em colunas
     col_config1, col_config2 = st.columns(2)
     
     with col_config1:
-        st.markdown("**💰 Budget Total:**")
+        st.markdown("**<i class='fas fa-dollar-sign'></i> Budget Total:**", unsafe_allow_html=True)
         matt_budget = st.number_input(
             "Definir budget total para compras:",
             min_value=1000,
@@ -7090,7 +7220,7 @@ def render_agente_matt():
         )
         
     with col_config2:
-        st.markdown("**📊 Limite de Quantidades:**")
+        st.markdown("**<i class='fas fa-chart-bar'></i> Limite de Quantidades:**", unsafe_allow_html=True)
         limite_por_item = st.number_input(
             "Quantidade máxima por item:",
             min_value=1,
@@ -7233,7 +7363,7 @@ def render_controle_gadgets():
     
     st.markdown("""
     <div style="text-align: center; margin: 2rem 0;">
-        <h1 style="color: #9333EA; margin-bottom: 0.5rem;">📱 Controle de Gadgets</h1>
+        <h1 style="color: #9333EA; margin-bottom: 0.5rem;"><i class='fas fa-mobile-alt'></i> Controle de Gadgets</h1>
         <p style="color: #A855F7; font-size: 1.1rem;">Registro e Análise de Perdas - Mensal, Trimestral e Anual</p>
     </div>
     """, unsafe_allow_html=True)
@@ -7568,11 +7698,9 @@ def load_inventario_data():
             
             st.session_state.inventory_data['unified'] = df
             
-            # Feedback de sucesso
+            # Feedback de sucesso (silencioso - sem exibir na sidebar)
             print(f"✅ Inventário carregado: {latest_file} ({len(df)} itens)")
-            if hasattr(st, 'session_state') and hasattr(st.session_state, 'get'):
-                if hasattr(st, 'sidebar'):
-                    st.sidebar.success(f"📁 Inventário carregado: {latest_file} ({len(df)} itens)")
+            # Aviso removido da sidebar conforme solicitado pelo usuário
             
             return True
         else:
@@ -9484,6 +9612,172 @@ def render_upload_dados():
                     st.markdown(f"- *Opcionais:* {optional_cols}")
                 st.markdown("")
 
+def show_gaming_loading_screen():
+    """Mostra tela de loading estilo videogame"""
+    st.markdown("""
+    <style>
+    @keyframes matrix-rain {
+        0% { transform: translateY(-100vh) }
+        100% { transform: translateY(100vh) }
+    }
+    
+    @keyframes pixel-bounce {
+        0%, 100% { transform: translateY(0px) }
+        50% { transform: translateY(-20px) }
+    }
+    
+    @keyframes neon-glow {
+        0%, 100% { text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00 }
+        50% { text-shadow: 0 0 20px #00ff00, 0 0 30px #00ff00, 0 0 40px #00ff00 }
+    }
+    
+    @keyframes data-stream {
+        0% { width: 0% }
+        100% { width: 100% }
+    }
+    
+    .gaming-loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background: linear-gradient(135deg, #000000 0%, #1a0033 50%, #000000 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: 'Courier New', monospace;
+        overflow: hidden;
+    }
+    
+    .matrix-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        color: #00ff00;
+        font-size: 10px;
+        opacity: 0.1;
+        pointer-events: none;
+        animation: matrix-rain 3s linear infinite;
+    }
+    
+    .loading-title {
+        color: #00ff00;
+        font-size: 3rem;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 2rem;
+        animation: neon-glow 2s ease-in-out infinite;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+    }
+    
+    .loading-subtitle {
+        color: #9333EA;
+        font-size: 1.2rem;
+        margin-bottom: 3rem;
+        text-align: center;
+        opacity: 0.8;
+    }
+    
+    .pixel-art {
+        font-size: 2rem;
+        color: #00ff00;
+        animation: pixel-bounce 1s ease-in-out infinite;
+        margin-bottom: 2rem;
+    }
+    
+    .progress-bar-container {
+        width: 60%;
+        height: 20px;
+        background: #333;
+        border: 2px solid #00ff00;
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+        box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    }
+    
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #00ff00, #33ff33, #00ff00);
+        animation: data-stream 3s ease-in-out;
+        border-radius: 8px;
+        box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.3);
+    }
+    
+    .loading-text {
+        color: #00ff00;
+        font-size: 1rem;
+        margin-top: 1rem;
+        text-align: center;
+        letter-spacing: 2px;
+    }
+    
+    .status-messages {
+        margin-top: 2rem;
+        color: #9333EA;
+        font-size: 0.9rem;
+        text-align: center;
+        line-height: 1.6;
+    }
+    
+    .glitch {
+        animation: glitch 0.3s ease-in-out infinite;
+    }
+    
+    @keyframes glitch {
+        0% { transform: translateX(0) }
+        25% { transform: translateX(-2px) }
+        50% { transform: translateX(2px) }
+        75% { transform: translateX(-1px) }
+        100% { transform: translateX(0) }
+    }
+    </style>
+    
+    <div class="gaming-loader">
+        <div class="matrix-bg">
+            01001001 01001110 01010110 01000101<br>
+            01001110 01010100 01000001 01010010<br>
+            01001001 01001111 00100000 01000100<br>
+            01000001 01010100 01000001 01000010<br>
+            01000001 01010011 01000101 00100000<br>
+        </div>
+        
+        <div class="loading-title glitch">LOADING INVENTORY</div>
+        <div class="loading-subtitle">▤ Sistema de Gestão Avançada ▤</div>
+        
+        <div class="pixel-art">
+            ███████<br>
+            ██   ██<br>
+            ███████<br>
+            ██   ██<br>
+            ███████
+        </div>
+        
+        <div class="progress-bar-container">
+            <div class="progress-bar"></div>
+        </div>
+        
+        <div class="loading-text">CARREGANDO DADOS...</div>
+        
+        <div class="status-messages">
+            > Inicializando sistema neural...<br>
+            > Conectando ao banco de dados...<br>
+            > Carregando inventário unificado...<br>
+            > Sincronizando dados em tempo real...<br>
+            > ████████████ 100% COMPLETO ████████████
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Pausar para mostrar a animação
+    time.sleep(3)
+
 def render_inventario_unificado():
     """Renderiza o inventário unificado organizado por categorias"""
     st.markdown("## ▬ Inventário Unificado por Categorias")
@@ -9500,18 +9794,18 @@ def render_inventario_unificado():
         should_load = True
     
     if should_load:
-        with st.spinner("🔄 Carregando dados do inventário..."):
-            if load_inventario_data():
-                st.success("✅ Dados do inventário carregados do CSV com sucesso!")
-                time.sleep(1)  # Pequena pausa para mostrar a mensagem
-                st.rerun()
-            else:
-                st.info("📝 Nenhum arquivo CSV encontrado. Inventário iniciará vazio.")
-                # Inicializar dados vazios
-                st.session_state.inventory_data['unified'] = pd.DataFrame(columns=[
-                    'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
-                    'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
-                ])
+        show_gaming_loading_screen()
+        if load_inventario_data():
+            st.success("✅ Inventário carregado com sucesso!")
+            time.sleep(0.5)
+            st.rerun()
+        else:
+            st.info("📝 Nenhum arquivo CSV encontrado. Inventário iniciará vazio.")
+            # Inicializar dados vazios
+            st.session_state.inventory_data['unified'] = pd.DataFrame(columns=[
+                'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
+                'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+            ])
     
     # Obter dados unificados
     unified_data = st.session_state.inventory_data['unified']
@@ -16209,8 +16503,124 @@ def render_historico_consultas_sefaz():
         st.success("✅ Histórico limpo!")
         st.rerun()
 
+def render_gaming_loading_screen():
+    """Tela de loading com tema de video game"""
+    if 'loading_complete' not in st.session_state:
+        st.session_state.loading_complete = False
+    
+    if not st.session_state.loading_complete:
+        # Estilo CSS para efeitos visuais
+        st.markdown("""
+        <style>
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 80vh;
+            background: linear-gradient(45deg, #0e1117, #1a1a2e, #16213e);
+            border-radius: 15px;
+            margin: 20px 0;
+            padding: 40px;
+            text-align: center;
+        }
+        .game-title {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #00ff41;
+            text-shadow: 0 0 20px #00ff41;
+            margin-bottom: 30px;
+            font-family: 'Courier New', monospace;
+        }
+        .loading-text {
+            font-size: 1.5rem;
+            color: #ffffff;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+        .pixel-art {
+            font-size: 2rem;
+            margin: 20px 0;
+            animation: bounce 1s infinite alternate;
+        }
+        @keyframes bounce {
+            0% { transform: translateY(0px); }
+            100% { transform: translateY(-10px); }
+        }
+        .progress-bar {
+            width: 300px;
+            height: 20px;
+            background: #333;
+            border: 2px solid #00ff41;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff41, #39ff14);
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px #00ff41;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Container principal
+        st.markdown('<div class="loading-container">', unsafe_allow_html=True)
+        
+        # Título do loading
+        st.markdown('<div class="game-title">Loading</div>', unsafe_allow_html=True)
+        
+        # Texto de loading
+        loading_messages = [
+            "Inicializando sistemas...",
+            "Carregando dados financeiros...", 
+            "Configurando segurança...",
+            "Preparando dashboards...",
+            "Quase pronto!"
+        ]
+        
+        # Placeholder para o progresso
+        progress_placeholder = st.empty()
+        message_placeholder = st.empty()
+        
+        # Simular carregamento
+        for i, message in enumerate(loading_messages):
+            progress = (i + 1) * 20
+            
+            with message_placeholder.container():
+                st.markdown(f'<div class="loading-text">{message}</div>', unsafe_allow_html=True)
+            
+            with progress_placeholder.container():
+                st.markdown(f"""
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {progress}%"></div>
+                </div>
+                <div style="color: #00ff41; font-family: 'Courier New', monospace;">
+                    {progress}% Complete
+                </div>
+                """, unsafe_allow_html=True)
+            
+            time.sleep(0.8)
+        
+        # Loading final
+        with message_placeholder.container():
+            st.markdown('<div class="loading-text">Bem-vindo!</div>', unsafe_allow_html=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Marcar loading como completo
+        time.sleep(0.5)
+        st.session_state.loading_complete = True
+        st.rerun()
+
 def main():
     """Função principal do app"""
+    # Tela de loading com tema de video game
+    if 'loading_complete' not in st.session_state or not st.session_state.loading_complete:
+        render_gaming_loading_screen()
+        return
+    
     # Inicializar todos os dados do sistema com persistência automática
     init_all_data()
     
