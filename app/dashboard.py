@@ -2198,7 +2198,8 @@ def render_visual_editor():
         with col_save:
             if st.button("💾 Salvar Configurações", use_container_width=True, type="primary"):
                 st.session_state.theme_config.update(config)
-                st.success("■ Configurações salvas!")
+                auto_save()  # Auto-save após alterações
+                st.success("■ Configurações salvas automaticamente!")
                 st.rerun()
         
         with col_apply:
@@ -2303,7 +2304,8 @@ def render_visual_editor():
                             new_data[row['Local']]['impressoras'].append(printer_data)
                         
                         st.session_state.impressoras_data = new_data
-                        st.success("💾 Dados das impressoras salvos!")
+                        auto_save()  # Auto-save após alterações
+                        st.success("💾 Dados das impressoras salvos automaticamente!")
                         st.rerun()
                 
                 with col_reload:
@@ -2311,7 +2313,8 @@ def render_visual_editor():
                         csv_data = load_impressoras_from_csv()
                         if csv_data:
                             st.session_state.impressoras_data = csv_data
-                            st.success("● Dados recarregados do CSV!")
+                            auto_save()  # Auto-save após recarregamento
+                            st.success("● Dados recarregados do CSV e salvos automaticamente!")
                             st.rerun()
                         else:
                             st.error("× Erro ao carregar CSV")
@@ -3035,7 +3038,8 @@ def render_hq1_8th():
                                     'fornecedor': [fornecedor]
                                 })
                                 st.session_state.hq1_8th_inventory = pd.concat([st.session_state.hq1_8th_inventory, new_item], ignore_index=True)
-                                st.success("✓ Item adicionado com sucesso!")
+                                auto_save()  # Auto-save após adição
+                                st.success("✓ Item adicionado e salvo automaticamente!")
                                 st.session_state.show_add_form_hq1_8th = False
                                 st.rerun()
                             else:
@@ -3134,7 +3138,8 @@ def render_hq1_8th():
             # Botão para salvar alterações
             if st.button("● Salvar Alterações HQ1", use_container_width=True, key="save_hq1"):
                 st.session_state.hq1_8th_inventory = edited_data
-                st.success("✓ Alterações salvas com sucesso!")
+                auto_save()  # Auto-save após alterações
+                st.success("✓ Alterações salvas automaticamente no banco de dados!")
                 st.rerun()
         else:
             st.info("ℹ Nenhum item encontrado com os filtros aplicados.")
@@ -3392,6 +3397,7 @@ def render_csv_upload_section(data_key, required_columns, section_title="Upload 
                                 st.session_state[data_key] = pd.concat([st.session_state[data_key], df_upload], ignore_index=True)
                             else:
                                 st.session_state[data_key] = df_upload
+                            auto_save()  # Auto-save após upload
                             
                             st.success(f"🎉 {len(df_upload)} itens importados com sucesso!")
                             st.rerun()
@@ -4669,7 +4675,8 @@ def render_tvs_monitores():
                                 'po': [po]
                             })
                             st.session_state.tvs_monitores_data = pd.concat([st.session_state.tvs_monitores_data, new_item], ignore_index=True)
-                            st.success("✓ Display adicionado com sucesso!")
+                            auto_save()  # Auto-save após adição
+                            st.success("✓ Display adicionado e salvo automaticamente!")
                             st.session_state.show_add_form_displays = False
                             st.rerun()
                         else:
@@ -4789,7 +4796,8 @@ def render_tvs_monitores():
             with col_save:
                 if st.button("✓ Salvar Alterações", use_container_width=True, key="save_displays"):
                     st.session_state.tvs_monitores_data = edited_data
-                    st.success("✓ Alterações salvas com sucesso!")
+                    auto_save()  # Auto-save após alterações
+                    st.success("✓ Alterações salvas automaticamente no banco de dados!")
                     st.session_state.show_edit_mode_displays = False
                     st.rerun()
             
@@ -4894,7 +4902,8 @@ def render_vendas_spark():
                                 'po': [po]
                             })
                             st.session_state.vendas_data = pd.concat([st.session_state.vendas_data, new_item], ignore_index=True)
-                            st.success("✓ Venda registrada com sucesso!")
+                            auto_save()  # Auto-save após adição
+                            st.success("✓ Venda registrada e salva automaticamente!")
                             st.session_state.show_add_form_vendas = False
                             st.rerun()
                         else:
@@ -5018,7 +5027,8 @@ def render_vendas_spark():
             with col_save:
                 if st.button("✓ Salvar Alterações", use_container_width=True, key="save_vendas"):
                     st.session_state.vendas_data = edited_data
-                    st.success("✓ Alterações salvas com sucesso!")
+                    auto_save()  # Auto-save após alterações
+                    st.success("✓ Alterações salvas automaticamente no banco de dados!")
                     st.session_state.show_edit_mode_vendas = False
                     st.rerun()
             
@@ -5135,7 +5145,8 @@ def render_lixo_eletronico():
         with col_save:
             if st.button("✓ Salvar", use_container_width=True, key="save_lixo"):
                 st.session_state.lixo_eletronico_data = edited_data
-                st.success("✓ Alterações salvas!")
+                auto_save()  # Auto-save após alterações
+                st.success("✓ Alterações salvas automaticamente no banco de dados!")
                 st.session_state.show_edit_mode_lixo = False
                 st.rerun()
         with col_cancel:
@@ -5558,8 +5569,9 @@ def render_barcode_entry():
                     
                     # Adicionar ao inventário
                     st.session_state.entry_inventory = pd.concat([st.session_state.entry_inventory, new_item], ignore_index=True)
+                    auto_save()  # Auto-save após adição
                     
-                    st.success(f"✓ Item '{item_nome}' adicionado com sucesso!")
+                    st.success(f"✓ Item '{item_nome}' adicionado e salvo automaticamente!")
                     st.info(f"▬ Tag: {tag} | Nota Fiscal: {nota_fiscal}")
                     
                     # Limpar campos preenchidos automaticamente
@@ -5642,7 +5654,8 @@ def render_barcode_entry():
         with col_action1:
             if st.button("💾 Salvar Alterações", use_container_width=True):
                 st.session_state.entry_inventory = edited_entries
-                st.success("✓ Alterações salvas no histórico!")
+                auto_save()  # Auto-save após alterações
+                st.success("✓ Alterações salvas automaticamente no banco de dados!")
         
         with col_action2:
             if st.button("📤 Exportar CSV", use_container_width=True):
@@ -5789,7 +5802,8 @@ def render_movements():
         with col_save:
             if st.button("✓ Salvar", use_container_width=True, key="save_mov"):
                 st.session_state.movimentacoes_data = edited_data
-                st.success("✓ Alterações salvas!")
+                auto_save()  # Auto-save após alterações
+                st.success("✓ Alterações salvas automaticamente no banco de dados!")
                 st.session_state.show_edit_mode_mov = False
                 st.rerun()
         with col_cancel:
@@ -7381,6 +7395,7 @@ def render_controle_estoque():
                 'ultima_atualizacao': [datetime.now().strftime('%d/%m/%Y %H:%M')]
             })
             st.session_state.estoque_data = pd.concat([st.session_state.estoque_data, nova_linha], ignore_index=True)
+            auto_save()  # Auto-save após adição
             st.rerun()
     
     st.divider()
@@ -9344,7 +9359,8 @@ def render_categoria_table(df_categoria, categoria_nome):
                     for col in df_updated.columns:
                         unified_data.loc[original_idx, col] = row[col]
                 
-                st.success(f"✅ Alterações salvas para {categoria_nome}!")
+                auto_save()  # Auto-save após alterações
+                st.success(f"✅ Alterações salvas automaticamente para {categoria_nome}!")
                 st.rerun()
     
     # Formulário de edição
@@ -9461,7 +9477,8 @@ def render_edit_form(df_categoria, categoria_nome):
                 unified_data.loc[original_idx, 'nota_fiscal'] = new_nota_fiscal
                 unified_data.loc[original_idx, 'uso'] = new_uso
                 
-                st.success(f"✅ Item {new_tag} atualizado com sucesso!")
+                auto_save()  # Auto-save após edição
+                st.success(f"✅ Item {new_tag} atualizado e salvo automaticamente!")
                 st.session_state[f'show_edit_form_{categoria_nome}'] = False
                 st.rerun()
         
@@ -9676,8 +9693,9 @@ def render_add_form():
             unified_data = st.session_state.inventory_data['unified']
             new_row = pd.DataFrame([novo_item])
             st.session_state.inventory_data['unified'] = pd.concat([unified_data, new_row], ignore_index=True)
+            auto_save()  # Auto-save após adição
             
-            st.success(f"✅ Item {new_tag} - {new_item} adicionado com sucesso!")
+            st.success(f"✅ Item {new_tag} - {new_item} adicionado e salvo automaticamente!")
             st.session_state['show_add_form'] = False
             st.rerun()
     
