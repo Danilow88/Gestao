@@ -48,27 +48,22 @@ try:
 except ImportError:
     pass
 
-# Importar bibliotecas de NFe/NFSe
+# Importar bibliotecas de NFe/NFSe (sem mensagens verbosas)
 try:
     from nfelib.nfe.bindings.v4_0.proc_nfe_v4_00 import NfeProc  # type: ignore
     from nfelib.nfse.bindings.v1_0.nfse_v1_00 import Nfse  # type: ignore
     NFELIB_DISPONIVEL = True
-    print("✅ nfelib disponível - Parser avançado de NFe e NFSe ativado")
 except ImportError:
     NFELIB_DISPONIVEL = False
-    print("⚠️ nfelib não encontrada - Usando parser manual básico")
 
-# Importar PyNFe para consultas reais - CORREÇÃO DEFINITIVA
+# Importar PyNFe para consultas reais (silenciosamente)
 try:
     from pynfe.processamento.comunicacao import ComunicacaoSefaz  # type: ignore
     from pynfe.entidades.cliente import Cliente  # type: ignore
     from pynfe.entidades.notafiscal import NotaFiscal  # type: ignore
-    # FORÇAR TRUE - PyNFe está funcionando perfeitamente
     PYNFE_DISPONIVEL = True
-    print("✅ PyNFe disponível - Consultas reais aos webservices SEFAZ ativadas")
 except ImportError:
     PYNFE_DISPONIVEL = False
-    print("⚠️ PyNFe não encontrada - Consultas reais indisponíveis")
 
 # Scanner sempre ativo - bibliotecas instaladas
 BARCODE_SCANNER_AVAILABLE = True
@@ -376,7 +371,7 @@ def init_all_data():
             # Se não houver CSV, inicializar estrutura vazia
             st.session_state.inventory_data['unified'] = pd.DataFrame(columns=[
                 'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
-                'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+                'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria', 'local'
             ])
         
         # Marcar como carregado
@@ -659,7 +654,9 @@ def load_impressoras_from_csv():
                     "ip": row['ip'],
                     "serial": row['serial'],
                     "papercut": row['papercut'] == True or str(row['papercut']).lower() == 'true',
-                    "modelo": row['modelo'],
+                    "modelo": "WORKFORCE WFC5790",  # Forçar modelo correto
+                    "marca": "Epson",
+                    "tipo": "EcoTank",
                     "status_manual": row['status_manual']
                 }
                 impressoras_data[local]["impressoras"].append(impressora)
@@ -686,7 +683,7 @@ def apply_nubank_theme():
         background_color = advanced_config.get('background_color', '#000000')
         text_color = advanced_config.get('text_color', '#FFFFFF')
         accent_color = advanced_config.get('accent_color', '#9333EA')
-        font_family = advanced_config.get('font_family', 'Inter')
+        font_family = advanced_config.get('font_family', 'Gellix')
         font_size = advanced_config.get('font_size', '16px')
         header_font_size = advanced_config.get('header_font_size', '2.5rem')
         button_style = advanced_config.get('button_style', 'solid')
@@ -718,7 +715,7 @@ def apply_nubank_theme():
         background_color = theme['background_color']
         text_color = theme['text_color']
         accent_color = theme['accent_color']
-        font_family = 'Inter'
+        font_family = 'Gellix'
         font_size = '16px'
         header_font_size = '2.5rem'
         button_style = 'solid'
@@ -747,18 +744,19 @@ def apply_nubank_theme():
     }.get(button_format if advanced_config else 'pill', '25px')
     
     # Definir background baseado nas configurações
-    app_background = background_color if solid_background else f"linear-gradient(135deg, {background_color} 0%, {primary_color} 100%)"
+    app_background = background_color  # Sempre usar cor sólida
     if background_image:
         app_background = f"url('{background_image}'), {background_color}"
     
     # Estilos de cards baseado no tipo
-    card_background = primary_color if remove_gradients else f"linear-gradient(135deg, {primary_color}, {accent_color})"
+    card_background = primary_color  # Sempre usar cor sólida
     if card_style == 'solid_purple':
         card_background = primary_color
     
     st.markdown(f"""
     <style>
     /* Importar fontes personalizadas e ícones */
+    @import url('https://fonts.googleapis.com/css2?family=Gellix:wght@300;400;500;600;700&display=swap');
     @import url('https://fonts.googleapis.com/css2?family={font_family.replace(" ", "+")}:wght@300;400;500;600;700;800&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=SF+Mono:wght@400;500;600;700&display=swap');
     @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
@@ -875,7 +873,7 @@ def apply_nubank_theme():
     
     /* Cards modernos */
     .modern-card {{
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
+        background: rgba(255, 255, 255, 0.1) !important;
         backdrop-filter: blur(10px) !important;
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
         border-radius: 16px !important;
@@ -905,13 +903,13 @@ def apply_nubank_theme():
     }}
     
     .status-online {{
-        background: linear-gradient(90deg, #9333EA, #A855F7) !important;
+        background: #9333EA !important;
         color: white !important;
         box-shadow: 0 2px 8px rgba(147, 51, 234, 0.3) !important;
     }}
     
     .status-offline {{
-        background: linear-gradient(90deg, #EF4444, #DC2626) !important;
+        background: #EF4444 !important;
         color: white !important;
         box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3) !important;
     }}
@@ -925,7 +923,7 @@ def apply_nubank_theme():
         text-align: center !important;
         padding: 2rem 0 !important;
         margin-bottom: 2rem !important;
-        background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%) !important;
+        background: rgba(124, 58, 237, 0.1) !important;
         border-radius: 16px !important;
         backdrop-filter: blur(10px) !important;
     }}
@@ -1043,7 +1041,7 @@ def apply_nubank_theme():
     
     /* Sidebar com logo da empresa */
     .css-1d391kg {{
-        background: linear-gradient(180deg, rgba(15, 15, 35, 0.95) 0%, rgba(26, 26, 46, 0.95) 100%) !important;
+        background: rgba(15, 15, 35, 0.95) !important;
         backdrop-filter: blur(16px) !important;
         border-right: 1px solid {accent_color} !important;
     }}
@@ -1111,9 +1109,12 @@ def apply_nubank_theme():
     }}
     
     .stButton > button:hover {{
+        color: white !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 8px 25px 0 rgba(147, 51, 234, 0.4) !important;
-        background: {accent_color} !important;
+        box-shadow: 0 8px 25px 0 rgba(106, 27, 154, 0.6) !important;
+        background: #6A1B9A !important;
+        border: 2px solid #6A1B9A !important;
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.9) !important;
     }}
     
     /* Cards como na foto */
@@ -1186,31 +1187,31 @@ def apply_nubank_theme():
     }}
     
     .stSuccess {{
-        background: linear-gradient(90deg, #333333 0%, #555555 100%) !important;
+        background: #9333EA !important;
         color: white !important;
         text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
     }}
     
     .stError {{
-        background: linear-gradient(90deg, #DC3545 0%, #E74C3C 100%) !important;
+        background: #DC3545 !important;
         color: white !important;
         text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
     }}
     
     .stWarning {{
-        background: linear-gradient(90deg, #FFC107 0%, #F39C12 100%) !important;
+        background: #FFC107 !important;
         color: #333333 !important;
         text-shadow: 1px 2px 3px rgba(255, 255, 255, 0.6);
     }}
     
     .stInfo {{
-        background: linear-gradient(90deg, #17A2B8 0%, #3498DB 100%) !important;
+        background: #17A2B8 !important;
         color: white !important;
         text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
     }}
     
     .metric-card {{
-        background: linear-gradient(135deg, {primary_color} 0%, rgba(138, 5, 190, 0.8) 100%) !important;
+        background: {primary_color} !important;
         border-radius: 16px;
         padding: 1.5rem;
         margin: 0.5rem 0;
@@ -1332,7 +1333,7 @@ def apply_nubank_theme():
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
     }}
     
-    /* Active/Focus states - White instead of red */
+    /* Active/Focus states - Manter texto branco */
     button:active, button:focus,
     .stButton > button:active, .stButton > button:focus,
     input:active, input:focus,
@@ -1347,23 +1348,23 @@ def apply_nubank_theme():
     .stDownloadButton > button:focus,
     .stTabs [data-baseweb="tab"]:active,
     .stTabs [data-baseweb="tab"]:focus {{
-        background: white !important;
-        color: {primary_color} !important;
-        border-color: white !important;
-        outline: 2px solid white !important;
+        background: #6A1B9A !important;
+        color: white !important;
+        border-color: #6A1B9A !important;
+        outline: 2px solid #6A1B9A !important;
         outline-offset: 2px !important;
-        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3) !important;
+        box-shadow: 0 0 0 3px rgba(106, 27, 154, 0.3) !important;
         transform: scale(0.98) !important;
-        text-shadow: none !important;
+        text-shadow: 0 0 8px rgba(106, 27, 154, 0.8) !important;
     }}
     
     /* Button active states */
     .stButton > button:active {{
-        background: white !important;
-        color: {primary_color} !important;
-        border: 2px solid {primary_color} !important;
+        background: #6A1B9A !important;
+        color: white !important;
+        border: 2px solid #6A1B9A !important;
         transform: scale(0.95) !important;
-        text-shadow: none !important;
+        text-shadow: 0 0 8px rgba(106, 27, 154, 0.8) !important;
     }}
     
     /* Input active states */
@@ -1375,21 +1376,21 @@ def apply_nubank_theme():
     .stTextArea > div > div > textarea:focus,
     .stSelectbox > div > div:active,
     .stSelectbox > div > div:focus {{
-        background: white !important;
-        color: {primary_color} !important;
-        border: 3px solid white !important;
+        background: rgba(106, 27, 154, 0.1) !important;
+        color: white !important;
+        border: 3px solid #6A1B9A !important;
         outline: none !important;
-        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5) !important;
+        box-shadow: 0 0 0 3px rgba(106, 27, 154, 0.3) !important;
         text-shadow: none !important;
     }}
     
     /* Tab active states */
     .stTabs [data-baseweb="tab"]:active {{
-        background: white !important;
-        color: {primary_color} !important;
-        border: 2px solid white !important;
+        background: #6A1B9A !important;
+        color: white !important;
+        border: 2px solid #6A1B9A !important;
         transform: scale(0.98) !important;
-        text-shadow: none !important;
+        text-shadow: 0 0 8px rgba(255, 255, 255, 0.8) !important;
     }}
     
     /* Remove default browser active/focus colors */
@@ -1459,6 +1460,374 @@ def apply_nubank_theme():
     }}
     
     {custom_css}
+            </style>
+        """, unsafe_allow_html=True)
+    
+    # ================================
+    # RESPONSIVE DESIGN SYSTEM - UX SENIOR OPTIMIZED  
+    # ================================
+    st.markdown("""
+    <style>
+    /* Design Tokens para Responsividade */
+    :root {
+        --space-xs: 0.25rem; --space-sm: 0.5rem; --space-md: 1rem;
+        --space-lg: 1.5rem; --space-xl: 2rem; --space-2xl: 3rem;
+        --text-xs: 0.75rem; --text-sm: 0.875rem; --text-base: 1rem;
+        --text-lg: 1.125rem; --text-xl: 1.25rem; --text-2xl: 1.5rem;
+        --font-primary: 'Gellix', -apple-system, BlinkMacSystemFont, sans-serif;
+        --transition-smooth: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+        --radius-md: 0.75rem; --radius-lg: 1rem; --radius-xl: 1.5rem;
+    }
+    
+    /* Layout responsivo mobile-first */
+    .main > div { 
+        padding: var(--space-md) !important; 
+        transition: padding var(--transition-smooth) !important; 
+    }
+    @media (min-width: 768px) { .main > div { padding: var(--space-lg) !important; }}
+    @media (min-width: 1024px) { .main > div { padding: var(--space-xl) !important; }}
+    
+    /* Cards responsivos com micro-interactions */
+    .metric-card { 
+        min-height: 120px !important; 
+        display: flex !important; 
+        flex-direction: column !important; 
+        justify-content: center !important;
+        backdrop-filter: blur(20px) !important; 
+        border-radius: var(--radius-lg) !important;
+        transition: all var(--transition-smooth) !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+    
+    @media (min-width: 768px) { 
+        .metric-card { min-height: 140px !important; } 
+    }
+    
+    @media (min-width: 1024px) { 
+        .metric-card { min-height: 160px !important; } 
+    }
+    
+    /* Micro-animation para hover */
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #9333EA, #6A1B9A);
+        transform: scaleX(0);
+        transition: transform var(--transition-smooth);
+    }
+    
+    .metric-card:hover::before { transform: scaleX(1); }
+    .metric-card:hover { transform: translateY(-2px); }
+    
+    /* Typography scale responsiva */
+    .metric-value { 
+        font-size: var(--text-lg) !important; 
+        line-height: 1.2 !important;
+        font-family: var(--font-primary) !important;
+        transition: font-size var(--transition-smooth) !important;
+    }
+    
+    @media (min-width: 768px) { 
+        .metric-value { font-size: var(--text-xl) !important; } 
+    }
+    
+    @media (min-width: 1024px) { 
+        .metric-value { font-size: var(--text-2xl) !important; } 
+    }
+    
+    .metric-label {
+        font-size: var(--text-sm) !important;
+        font-family: var(--font-primary) !important;
+        opacity: 0.9 !important;
+    }
+    
+    @media (min-width: 768px) { 
+        .metric-label { font-size: var(--text-base) !important; } 
+    }
+    
+    /* Botões touch-friendly e acessíveis */
+    .stButton > button { 
+        min-height: 48px !important; 
+        min-width: 48px !important;
+        font-family: var(--font-primary) !important; 
+        font-weight: 600 !important;
+        border-radius: var(--radius-md) !important;
+        transition: all var(--transition-smooth) !important;
+        cursor: pointer !important;
+        border: 2px solid transparent !important;
+    }
+    
+    /* Estado selecionado/ativo dos botões */
+    .stButton > button:hover,
+    .stButton > button:focus,
+    .stButton > button[aria-selected="true"] {
+        color: white !important;
+        border: 2px solid #6A1B9A !important;
+        box-shadow: 0 0 15px rgba(106, 27, 154, 0.6) !important;
+        text-shadow: 0 0 8px rgba(255, 255, 255, 0.9) !important;
+    }
+    
+    /* Específico para botões da sidebar */
+    [data-testid="stSidebar"] .stButton > button:hover,
+    [data-testid="stSidebar"] .stButton > button:focus {
+        color: white !important;
+        border: 2px solid #6A1B9A !important;
+        box-shadow: 0 0 20px rgba(106, 27, 154, 0.8) !important;
+        background: rgba(106, 27, 154, 0.1) !important;
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.9) !important;
+    }
+    
+    /* Botão Editor Visual específico */
+    [data-testid="stSidebar"] button[key="visual_editor"]:hover,
+    [data-testid="stSidebar"] button[key="visual_editor"]:focus {
+        color: white !important;
+        border: 3px solid #6A1B9A !important;
+        box-shadow: 
+            0 0 25px rgba(106, 27, 154, 0.9) !important,
+            inset 0 0 15px rgba(106, 27, 154, 0.2) !important;
+        background: linear-gradient(135deg, rgba(106, 27, 154, 0.2), rgba(106, 27, 154, 0.05)) !important;
+        text-shadow: 0 0 12px rgba(255, 255, 255, 1) !important;
+        transform: translateY(-1px) !important;
+    }
+    
+    @media (min-width: 768px) { 
+        .stButton > button { 
+            min-height: 52px !important;
+            padding: var(--space-md) var(--space-lg) !important; 
+        } 
+    }
+    
+    /* Micro-interactions nos botões com roxo neon */
+    .stButton > button:hover { 
+        color: white !important;
+        transform: translateY(-1px) !important; 
+        box-shadow: 0 4px 12px rgba(106, 27, 154, 0.6) !important;
+        border: 2px solid #6A1B9A !important;
+        text-shadow: 0 0 8px rgba(255, 255, 255, 0.9) !important;
+    }
+    
+    .stButton > button:active { 
+        color: white !important;
+        transform: translateY(0) !important; 
+        transition: transform 0.1s ease !important; 
+    }
+    
+    /* Sidebar responsiva */
+    @media (max-width: 767px) { 
+        .css-1d391kg, [data-testid="stSidebar"] { 
+            width: 280px !important; 
+        } 
+    }
+    
+    @media (min-width: 768px) { 
+        .css-1d391kg, [data-testid="stSidebar"] { 
+            width: 300px !important; 
+        } 
+    }
+    
+    @media (min-width: 1024px) { 
+        .css-1d391kg, [data-testid="stSidebar"] { 
+            width: 320px !important; 
+        } 
+    }
+    
+    /* Tables responsivas */
+    .stDataFrame, [data-testid="dataframe"] { 
+        font-size: var(--text-xs) !important; 
+        overflow-x: auto !important;
+        border-radius: var(--radius-lg) !important;
+    }
+    
+    @media (min-width: 768px) { 
+        .stDataFrame, [data-testid="dataframe"] { 
+            font-size: var(--text-sm) !important; 
+        } 
+    }
+    
+    @media (min-width: 1024px) { 
+        .stDataFrame, [data-testid="dataframe"] { 
+            font-size: var(--text-base) !important; 
+        } 
+    }
+    
+    /* Headers otimizados */
+    .stDataFrame th {
+        background: #9333EA !important;
+        color: white !important;
+        font-weight: 600 !important;
+        padding: var(--space-sm) !important;
+    }
+    
+    @media (min-width: 768px) { 
+        .stDataFrame th { 
+            padding: var(--space-md) !important; 
+        } 
+    }
+    
+    /* Loading screen responsivo */
+    .gaming-loading-container { 
+        padding: var(--space-md) !important; 
+        min-height: 70vh !important;
+        border-radius: var(--radius-xl) !important;
+    }
+    
+    @media (min-width: 768px) { 
+        .gaming-loading-container { 
+            padding: var(--space-xl) !important; 
+            min-height: 80vh !important; 
+        } 
+    }
+    
+    .gaming-title { 
+        font-size: var(--text-2xl) !important; 
+        font-family: var(--font-primary) !important;
+        text-align: center !important;
+        margin: var(--space-lg) 0 !important;
+    }
+    
+    @media (min-width: 768px) { 
+        .gaming-title { 
+            font-size: 2rem !important;
+            margin: var(--space-xl) 0 !important; 
+        } 
+    }
+    
+    @media (min-width: 1024px) { 
+        .gaming-title { 
+            font-size: 2.5rem !important; 
+            margin: var(--space-2xl) 0 !important; 
+        } 
+    }
+    
+    /* Progress bars responsivos */
+    .cyber-progress-container, .epic-progress-container {
+        width: 100% !important;
+        max-width: 300px !important;
+        margin: var(--space-md) auto !important;
+    }
+    
+    @media (min-width: 768px) {
+        .cyber-progress-container, .epic-progress-container {
+            max-width: 400px !important;
+        }
+    }
+    
+    /* Grid system responsivo */
+    .row-widget.stHorizontal { 
+        gap: var(--space-sm) !important; 
+    }
+    
+    .row-widget.stHorizontal > div { 
+        flex: 1 !important; 
+        min-width: 250px !important; 
+    }
+    
+    @media (max-width: 767px) { 
+        .row-widget.stHorizontal { 
+            flex-direction: column !important; 
+        }
+        .row-widget.stHorizontal > div { 
+            min-width: 100% !important; 
+        } 
+    }
+    
+    /* Acessibilidade aprimorada */
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { 
+            animation-duration: 0.01ms !important; 
+            transition-duration: 0.1s !important; 
+            scroll-behavior: auto !important; 
+        }
+        .gaming-title, .energy-particle, .matrix-bg { 
+            animation: none !important; 
+        }
+        .metric-card:hover { 
+            transform: none !important; 
+        }
+    }
+    
+    /* Focus management aprimorado */
+    .stButton > button:focus,
+    .stSelectbox > div > div:focus,
+    .stTextInput > div > div > input:focus { 
+        outline: 2px solid #6A1B9A !important; 
+        outline-offset: 2px !important; 
+        border-radius: var(--radius-md) !important; 
+        box-shadow: 0 0 10px rgba(106, 27, 154, 0.5) !important;
+    }
+    
+    /* High contrast support */
+    @media (prefers-contrast: high) {
+        .metric-card {
+            border-width: 2px !important;
+            background: rgba(0, 0, 0, 0.95) !important;
+        }
+        .metric-value { 
+            color: #FFFFFF !important; 
+            text-shadow: none !important; 
+        }
+        .stButton > button { 
+            border: 2px solid white !important; 
+        }
+    }
+    
+    /* Touch interactions otimizadas */
+    @media (hover: none) and (pointer: coarse) {
+        .metric-card:hover { 
+            transform: none !important; 
+        }
+        .metric-card:active { 
+            transform: scale(0.98) !important; 
+            transition: transform 0.1s ease !important; 
+        }
+        .stButton > button:hover { 
+            transform: none !important; 
+        }
+        .stButton > button:active { 
+            transform: scale(0.96) !important; 
+        }
+    }
+    
+    /* Print optimization */
+    @media print {
+        .gaming-loading-container, .energy-particle, .matrix-bg, 
+        .stButton, [data-testid="stSidebar"], .stDownloadButton { 
+            display: none !important; 
+        }
+        .metric-card { 
+            background: white !important; 
+            color: black !important; 
+            border: 1px solid black !important; 
+            box-shadow: none !important; 
+            break-inside: avoid !important; 
+        }
+        .metric-value { 
+            color: black !important; 
+            text-shadow: none !important; 
+        }
+        body { 
+            background: white !important; 
+            color: black !important; 
+            font-size: 12pt !important; 
+        }
+    }
+    
+    /* Dark mode enhancement */
+    @media (prefers-color-scheme: light) {
+        .metric-card {
+            background: rgba(255, 255, 255, 0.95) !important;
+            color: #1F2937 !important;
+        }
+        .metric-value { 
+            color: #9333EA !important; 
+        }
+        .metric-label { 
+            color: #6B7280 !important; 
+        }
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -1494,7 +1863,7 @@ def load_inventory_data():
         'modelo': ['Latitude 5520', 'Elite Desk 800 G8', 'MacBook Pro 14"', 'ThinkStation P520', 'iPad Pro 12.9"', 'MX Master 3S', 'K70 RGB MK.2', 'T7 Shield 2TB',
                    '27GL850-B', 'UN55AU7000', 'P2422H', 'MW632ST', 'MXGY2LL/A',
                    'Voyager 4220', 'Charge 5', 'Blue Yeti Nano', 'C920 HD Pro', 'PowerExpand 11-in-1',
-                   'LaserJet 1320', 'UltraSharp 1901FP', 'OptiPlex GX280', 'QuietKey KB212-B',
+                   'WORKFORCE WFC5790', 'UltraSharp 1901FP', 'OptiPlex GX280', 'QuietKey KB212-B',
                    'HDMI 2.1 Ultra High Speed', 'Anker 10-Port USB 3.0', 'Herman Miller Ollin', 'Corsair MM800 RGB', 'Fortrek 8 Tomadas'],
                    
         'serial': ['DLL5520001', 'HPE800001', 'MBPM2001', 'LEN520001', 'IPADPRO001', 'LGT3S001', 'COR70001', 'SAMT7001',
@@ -1739,11 +2108,141 @@ def is_super_admin(email):
     return email == "danilo.fukuyama.digisystem@nubank.com.br"
 
 # ========================================================================================
+# SISTEMA DE IDIOMAS
+# ========================================================================================
+
+def init_language_system():
+    """Inicializa o sistema de idiomas"""
+    if 'language' not in st.session_state:
+        st.session_state.language = 'pt'
+    
+    if 'translations' not in st.session_state:
+        st.session_state.translations = {
+            'pt': {
+                'app_title': 'Gestão de Estoque',
+                'language_selection': 'Selecionar Idioma',
+                'login': 'Login',
+                'forgot_password': 'Esqueci a Senha',
+                'request_access': 'Solicitar Acesso',
+                'unified_inventory': 'Estoque Unificado',
+                'gadgets_control': 'Controle de Gadgets',
+                'import_csv': 'Importar CSV',
+                'location': 'Local',
+                'item': 'Item',
+                'model': 'Modelo',
+                'brand': 'Marca',
+                'value': 'Valor',
+                'quantity': 'Quantidade',
+                'sector': 'Setor',
+                'supplier': 'Fornecedor',
+                'category': 'Categoria',
+                'upload_file': 'Carregar arquivo CSV',
+                'auto_translate': 'Tradução automática ativada',
+                'processing': 'Processando...',
+                'success_import': 'Importação realizada com sucesso!',
+                'error_import': 'Erro na importação'
+            },
+            'en': {
+                'app_title': 'Inventory Management',
+                'language_selection': 'Select Language',
+                'login': 'Login',
+                'forgot_password': 'Forgot Password',
+                'request_access': 'Request Access',
+                'unified_inventory': 'Unified Inventory',
+                'gadgets_control': 'Gadgets Control',
+                'import_csv': 'Import CSV',
+                'location': 'Location',
+                'item': 'Item',
+                'model': 'Model',
+                'brand': 'Brand',
+                'value': 'Value',
+                'quantity': 'Quantity',
+                'sector': 'Sector',
+                'supplier': 'Supplier',
+                'category': 'Category',
+                'upload_file': 'Upload CSV file',
+                'auto_translate': 'Auto-translation enabled',
+                'processing': 'Processing...',
+                'success_import': 'Import completed successfully!',
+                'error_import': 'Import error'
+            },
+            'es': {
+                'app_title': 'Gestión de Inventario',
+                'language_selection': 'Seleccionar Idioma',
+                'login': 'Iniciar Sesión',
+                'forgot_password': 'Olvidé la Contraseña',
+                'request_access': 'Solicitar Acceso',
+                'unified_inventory': 'Inventario Unificado',
+                'gadgets_control': 'Control de Gadgets',
+                'import_csv': 'Importar CSV',
+                'location': 'Ubicación',
+                'item': 'Artículo',
+                'model': 'Modelo',
+                'brand': 'Marca',
+                'value': 'Valor',
+                'quantity': 'Cantidad',
+                'sector': 'Sector',
+                'supplier': 'Proveedor',
+                'category': 'Categoría',
+                'upload_file': 'Subir archivo CSV',
+                'auto_translate': 'Traducción automática activada',
+                'processing': 'Procesando...',
+                'success_import': '¡Importación completada con éxito!',
+                'error_import': 'Error en la importación'
+            }
+        }
+
+def get_text(key):
+    """Obtém texto traduzido baseado no idioma selecionado"""
+    language = st.session_state.get('language', 'pt')
+    return st.session_state.translations.get(language, {}).get(key, key)
+
+def render_language_selector():
+    """Renderiza seletor de idioma no início da aplicação"""
+    if 'language_selected' not in st.session_state:
+        st.session_state.language_selected = False
+    
+    if not st.session_state.language_selected:
+        st.markdown("""
+        <div style="text-align: center; margin: 3rem 0;">
+            <h1 style="color: #9333EA; margin-bottom: 2rem; font-size: 2.5rem;">🌍 Language Selection</h1>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        
+        with col2:
+            st.markdown("### Selecione seu idioma / Select your language / Selecciona tu idioma")
+            
+            language_options = {
+                'pt': '🇧🇷 Português',
+                'en': '🇺🇸 English', 
+                'es': '🇪🇸 Español'
+            }
+            
+            selected_lang = st.selectbox(
+                "Idioma / Language / Idioma:",
+                options=['pt', 'en', 'es'],
+                format_func=lambda x: language_options[x],
+                index=0
+            )
+            
+            if st.button("Continuar / Continue / Continuar", use_container_width=True, type="primary"):
+                st.session_state.language = selected_lang
+                st.session_state.language_selected = True
+                st.rerun()
+        
+        return False
+    
+    return True
+
+# ========================================================================================
 # INICIALIZAÇÃO DA SESSÃO
 # ========================================================================================
 
-# Inicializar sistema de usuários
+# Inicializar sistema de usuários e idiomas
 init_user_system()
+init_language_system()
 
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 'dashboard'
@@ -1757,13 +2256,13 @@ if 'inventory_data' not in st.session_state:
 
 def render_login_page():
     """Renderiza a página de login"""
-    st.markdown("""
+    st.markdown(f"""
     <div style="text-align: center; margin: 2rem 0;">
-        <h1 style="color: #9333EA; margin: 0.5rem 0 0 0; font-size: 2.5rem; font-weight: 700;">Gestão de Estoque</h1>
+        <h1 style="color: #9333EA; margin: 0.5rem 0 0 0; font-size: 2.5rem; font-weight: 700;">{get_text('app_title')}</h1>
     </div>
     """, unsafe_allow_html=True)
     
-    tab1, tab2, tab3 = st.tabs(["● Login", "🔑 Esqueci a Senha", "◉ Solicitar Acesso"])
+    tab1, tab2, tab3 = st.tabs([f"● {get_text('login')}", f"🔑 {get_text('forgot_password')}", f"◉ {get_text('request_access')}"])
 
     with tab1:
         st.subheader("Fazer Login")
@@ -1921,7 +2420,7 @@ def render_admin_users():
         st.divider()
         
         # Reset manual de senha (apenas para super admin)
-        st.write("### 🔧 Reset Manual de Senha")
+        st.markdown("### <i class='fas fa-cog'></i> Reset Manual de Senha", unsafe_allow_html=True)
         st.info("🛡️ Como Super Admin, você pode resetar a senha de qualquer usuário")
         
         with st.form("manual_password_reset"):
@@ -2003,9 +2502,9 @@ def render_visual_editor():
             st.session_state.advanced_visual_config = {
                 'background_color': '#000000',
                 'primary_color': '#000000',
-                'accent_color': '#9333EA',
+                'accent_color': '#6A1B9A',
                 'text_color': '#FFFFFF',
-                'font_family': 'Inter',
+                'font_family': 'Gellix',
                 'font_size': '16px',
                 'header_font_size': '2.5rem',
                 'button_style': 'rounded_solid',
@@ -2024,6 +2523,35 @@ def render_visual_editor():
             }
         
         config = st.session_state.advanced_visual_config
+        
+        # Garantir que todas as chaves existam
+        default_keys = {
+            'background_color': '#000000',
+            'primary_color': '#000000', 
+            'accent_color': '#9333EA',
+            'text_color': '#FFFFFF',
+            'background_image': None,
+            'company_logo': None,
+            'font_family': 'Gellix',
+            'font_size': '16px',
+            'header_font_size': '2.5rem',
+            'button_style': 'rounded_solid',
+            'button_position': 'center',
+            'button_format': 'pill',
+            'dashboard_title': 'Gestão de Estoque',
+            'logo_position': 'sidebar_top',
+            'logo_size': '150px',
+            'custom_icons': {},
+            'graph_style': 'modern',
+            'card_style': 'solid_purple',
+            'remove_gradients': True,
+            'sidebar_style': 'clean',
+            'solid_background': True
+        }
+        
+        for key, default_value in default_keys.items():
+            if key not in config:
+                config[key] = default_value
         
         # Tabs secundárias para organizar melhor
         subtab1, subtab2, subtab3, subtab4 = st.tabs(["■ Cores & Fundo", "✎ Texto & Fontes", "● Botões & Layout", "▬ Gráficos & Cards"])
@@ -2106,7 +2634,7 @@ def render_visual_editor():
             with col_text1:
                 st.markdown("**Fontes:**")
                 config['font_family'] = st.selectbox("🔤 Família da Fonte", [
-                    'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 
+                    'Gellix', 'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 
                     'Poppins', 'Arial', 'Georgia', 'Times New Roman', 'Courier New'
                 ], index=0)
                 
@@ -2274,95 +2802,7 @@ def render_visual_editor():
                     config['graph_style'] = 'clean' if palette_choice == 'Visibilidade Alta' else 'colorful'
                     st.rerun()
         
-        # Preview
-        st.markdown("### ◯ Preview do Tema")
-        
-        # Definir estilos baseado nas configurações
-        button_border_radius = {
-            'pill': '25px',
-            'rounded': '12px', 
-            'square': '4px',
-            'circle': '50%',
-            'custom': config.get('custom_border_radius', '20px')
-        }.get(config['button_format'], '25px')
-        
-        card_bg = config['primary_color'] if config.get('remove_gradients', True) else f"linear-gradient(135deg, {config['primary_color']}, {config['accent_color']})"
-        main_bg = config['background_color'] if config.get('solid_background', True) else f"linear-gradient(135deg, {config['background_color']}, {config['primary_color']})"
-        
-        preview_style = f"""
-        <div style="
-            background: {main_bg};
-            color: {config['text_color']};
-            font-family: {config['font_family']}, sans-serif;
-            font-size: {config['font_size']};
-            padding: 2rem;
-            border-radius: 12px;
-            margin: 1rem 0;
-            min-height: 300px;
-        ">
-            <!-- Logo da empresa se existir -->
-            {f'<div style="text-align: center; margin-bottom: 1rem;"><img src="{config["company_logo"]}" width="{config.get("logo_size", "150px")}" style="border-radius: 8px;"></div>' if config.get('company_logo') else ''}
-            
-            <h1 style="font-size: {config['header_font_size']}; margin: 0 0 1rem 0; text-align: center;">{config['dashboard_title']}</h1>
-            <p style="margin: 0 0 2rem 0; text-align: center; opacity: 0.9;">{config.get('subtitle', 'Sistema Inteligente de Controle')}</p>
-            
-            <!-- Card de exemplo como na foto -->
-            <div style="
-                background: {card_bg};
-                border-radius: {config['card_border_radius']};
-                padding: 1.5rem;
-                margin: 1rem 0;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            ">
-                <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-                    <div style="width: 12px; height: 12px; background: #9333EA; border-radius: 50%; margin-right: 0.5rem;"></div>
-                    <h3 style="margin: 0; font-size: 1.2rem;">Térreo - Recepção</h3>
-                </div>
-                <p style="margin: 0.5rem 0; opacity: 0.8;">IP: 172.25.61.53 | Serial: X3B7034483 | Modelo: HP LaserJet</p>
-                <p style="margin: 0.5rem 0;">Status: <span style="color: #9333EA;">ONLINE</span> | Papercut: ✓ | Status Manual: Ativo</p>
-                
-                <!-- Botões de exemplo -->
-                <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
-                    <button style="
-                        background: {config['accent_color']};
-                        color: white;
-                        border: none;
-                        padding: 0.5rem 1rem;
-                        border-radius: {button_border_radius};
-                        font-family: {config['font_family']};
-                        font-size: 0.9rem;
-                        cursor: pointer;
-                    ">◯ Testar</button>
-                    <button style="
-                        background: #9333EA;
-                        color: white;
-                        border: none;
-                        padding: 0.5rem 1rem;
-                        border-radius: {button_border_radius};
-                        font-family: {config['font_family']};
-                        font-size: 0.9rem;
-                        cursor: pointer;
-                    ">🌐 Acessar</button>
-                    <button style="
-                        background: #3B82F6;
-                        color: white;
-                        border: none;
-                        padding: 0.5rem 1rem;
-                        border-radius: {button_border_radius};
-                        font-family: {config['font_family']};
-                        font-size: 0.9rem;
-                        cursor: pointer;
-                    ">▬ Copiar IP</button>
-                </div>
-            </div>
-            
-            <p style="text-align: center; margin-top: 2rem; opacity: 0.7; font-size: 0.9rem;">
-                Preview do design como na sua foto
-            </p>
-        </div>
-        """
-        st.markdown(preview_style, unsafe_allow_html=True)
+# Preview removido por solicitação do usuário
         
         # Botões de ação
         col_save, col_apply, col_reset, col_export = st.columns(4)
@@ -2397,7 +2837,7 @@ def render_visual_editor():
             )
     
     with tab_impressoras:
-        st.markdown("### 🖨️ Editor de Impressoras")
+        st.markdown("### <i class='fas fa-print'></i> Editor de Impressoras", unsafe_allow_html=True)
         
         # Carregar dados das impressoras
         if 'impressoras_data' not in st.session_state:
@@ -2533,105 +2973,284 @@ def render_visual_editor():
                 st.success("■ Visual das impressoras atualizado!")
                 st.rerun()
             
-            # Preview
-            st.markdown("**Preview:**")
-            st.markdown(f"""
-            <div style="
-                background-color: {config['card_background']};
-                color: {config['card_text_color']};
-                padding: 15px;
-                border-radius: {config['card_border_radius']};
-                margin: 10px 0;
-                border-left: 4px solid {config['online_color']};
-            ">
-                🖨️ Impressora Example<br/>
-                <span style="color: {config['online_color']};">● Online</span> | IP: 192.168.1.100
-            </div>
-            """, unsafe_allow_html=True)
+# Preview removido por solicitação do usuário
 
 # ========================================================================================
 # NAVEGAÇÃO PRINCIPAL
 # ========================================================================================
 
 def render_navigation():
-    """Renderiza a navegação principal na sidebar"""
+    """Renderiza a navegação principal com abas no topo e dropdown menus"""
     
-    # Logo da empresa se configurado
+    # Obter configurações avançadas
     advanced_config = getattr(st.session_state, 'advanced_visual_config', {})
-    company_logo = advanced_config.get('company_logo', None)
-    logo_position = advanced_config.get('logo_position', 'sidebar_top')
-    logo_size = advanced_config.get('logo_size', '150px')
+    dashboard_title = advanced_config.get('dashboard_title', 'Gestão de Estoque')
     
-    if company_logo and logo_position == 'sidebar_top':
-        st.sidebar.markdown(f"""
-        <div class="company-logo">
-            <img src="{company_logo}" style="max-width: {logo_size}; height: auto; border-radius: 8px;">
+    # Header simples usando elementos nativos do Streamlit
+    col_title, col_user, col_env = st.columns([3, 1, 1])
+    
+    with col_title:
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #9333EA, #7C3AED); 
+                    padding: 1rem; border-radius: 8px; text-align: center; margin-bottom: 1rem;">
+            <h1 style="color: white; margin: 0; font-size: 1.8rem; font-weight: 700;">
+                {dashboard_title}
+            </h1>
         </div>
         """, unsafe_allow_html=True)
     
-    # Título na sidebar
-    dashboard_title = advanced_config.get('dashboard_title', 'Gestão de Estoque')
-    st.sidebar.markdown(f"""
-    <div style="text-align: center; margin: 1rem 0 2rem 0;">
-        <h3 style="color: #9333EA; margin: 0; font-size: 1.2rem; font-weight: 700;">{dashboard_title}</h3>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Informações do usuário logado
-    if st.session_state.authenticated:
-        user_name = st.session_state.users_db[st.session_state.current_user]['nome']
-        st.sidebar.markdown(f"### ○ {user_name}")
-        st.sidebar.markdown(f"@ {st.session_state.current_user}")
+    with col_user:
+        user_name = st.session_state.users_db[st.session_state.current_user]['nome'].split()[0]
+        is_user_admin = is_admin(st.session_state.current_user)
+        admin_text = " ★ Admin" if is_user_admin else ""
         
-        if is_admin(st.session_state.current_user):
-            st.sidebar.markdown("★ **Administrador**")
-        
-        if st.sidebar.button("← Logout", use_container_width=True):
-            st.session_state.authenticated = False
-            st.session_state.current_user = None
-            st.session_state.current_page = 'dashboard'
-            st.rerun()
-        
-        st.sidebar.divider()
+        st.markdown(f"""
+        <div style="background: rgba(147, 51, 234, 0.1); padding: 1rem; 
+                    border-radius: 8px; text-align: center; margin-bottom: 1rem;">
+            <div style="color: #9333EA; font-weight: 600;">
+                ○ {user_name}{admin_text}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     
-    st.sidebar.markdown("### ■ Sistema de Estoque")
+    with col_env:
+        # Indicador de ambiente
+        if is_streamlit_cloud():
+            env_text = "🌐 Cloud"
+            env_color = "#FF6B35"
+            env_bg = "rgba(255, 107, 53, 0.1)"
+            env_title = "Streamlit Cloud (Ping Simulado)"
+        else:
+            env_text = "🏢 Local"
+            env_color = "#28A745"
+            env_bg = "rgba(40, 167, 69, 0.1)"
+            env_title = "Rede Local/VPN (Ping Real)"
+        
+        st.markdown(f"""
+        <div style="background: {env_bg}; padding: 1rem; 
+                    border-radius: 8px; text-align: center; margin-bottom: 1rem;"
+                    title="{env_title}">
+            <div style="color: {env_color}; font-weight: 600; font-size: 0.9rem;">
+                {env_text}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     
-    pages = {
-        'dashboard': '■ Dashboard',
-        'inventario_unificado': '▬ Inventário Unificado',
-        'impressoras': '■ Impressoras',
-        'controle_gadgets': '▤ Controle de Gadgets',
-        'entrada_estoque': '☰ Entrada de Estoque',
-        'entrada_automatica': '🔄 Entrada Automática SEFAZ',
-        'saida_estoque': '↗ Saída de Estoque',
-        'movimentacoes': '▤ Movimentações',
-        'relatorios': '▬ Relatórios'
+    # CSS para estilização moderna dos botões e ícones
+    st.markdown("""
+    <style>
+    /* Estilização dos botões de navegação com ícones modernos */
+    div[data-testid="column"] button[kind="primary"] {
+        background: linear-gradient(135deg, #9333EA, #7C3AED) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 700 !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4) !important;
+        transform: translateY(-1px) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        letter-spacing: 0.5px !important;
     }
     
-    # Adicionar páginas administrativas se for admin
-    if st.session_state.authenticated and is_admin(st.session_state.current_user):
-        st.sidebar.markdown("### ● Administração")
-        if st.sidebar.button("● Gerenciar Usuários", key="admin_users", use_container_width=True):
-            st.session_state.current_page = 'admin_users'
-            st.rerun()
-        if st.sidebar.button("■ Editor Visual", key="visual_editor", use_container_width=True):
-            st.session_state.current_page = 'visual_editor'
-            st.rerun()
-        st.sidebar.divider()
+    div[data-testid="column"] button[kind="secondary"] {
+        background: rgba(147, 51, 234, 0.08) !important;
+        border: 1px solid rgba(147, 51, 234, 0.2) !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        color: #9333EA !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        letter-spacing: 0.3px !important;
+    }
     
-    for page_key, page_name in pages.items():
-        if st.sidebar.button(page_name, key=page_key, use_container_width=True):
-            st.session_state.current_page = page_key
+    div[data-testid="column"] button[kind="secondary"]:hover {
+        background: rgba(147, 51, 234, 0.15) !important;
+        border-color: rgba(147, 51, 234, 0.4) !important;
+        box-shadow: 0 4px 12px rgba(147, 51, 234, 0.2) !important;
+        transform: translateY(-1px) !important;
+        color: #7C3AED !important;
+    }
+    
+    div[data-testid="column"] button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #7C3AED, #6366F1) !important;
+        box-shadow: 0 6px 16px rgba(147, 51, 234, 0.5) !important;
+        transform: translateY(-2px) !important;
+    }
+    
+    /* Melhorar renderização dos ícones geométricos */
+    div[data-testid="column"] button p {
+        font-size: 0.95rem !important;
+        line-height: 1.2 !important;
+        text-rendering: optimizeLegibility !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+    }
+    
+    /* Styling para o container de navegação */
+    .element-container:has(div[style*="background: rgba(147, 51, 234, 0.05)"]) {
+        backdrop-filter: blur(8px) !important;
+        border: 1px solid rgba(147, 51, 234, 0.1) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Determinar aba ativa baseada na página atual
+    current_page = st.session_state.get('current_page', 'dashboard')
+    
+    estoque_pages = ['inventario_unificado', 'controle_gadgets', 'entrada_estoque', 
+                     'entrada_automatica', 'saida_estoque', 'movimentacoes']
+    admin_pages = ['admin_users', 'visual_editor']
+    
+    active_tab = 'dashboard'
+    if current_page in estoque_pages:
+        active_tab = 'estoque'
+    elif current_page == 'impressoras':
+        active_tab = 'impressoras'
+    elif current_page == 'relatorios':
+        active_tab = 'relatorios'
+    elif current_page in admin_pages and is_admin(st.session_state.current_user):
+        active_tab = 'admin'
+    
+    # Sistema de navegação em abas horizontal mais elegante
+    st.markdown("""
+    <div style="background: rgba(147, 51, 234, 0.05); padding: 0.5rem; border-radius: 12px; margin-bottom: 2rem;">
+    """, unsafe_allow_html=True)
+    
+    # Primeira linha - Abas principais
+    tab_main_cols = st.columns([2, 2, 2, 2, 1.5])
+    
+    with tab_main_cols[0]:
+        if st.button("◆ Dashboard", 
+                    key="nav_dashboard", 
+                    use_container_width=True,
+                    type="primary" if active_tab == 'dashboard' else "secondary"):
+            st.session_state.current_page = 'dashboard'
             st.rerun()
     
-    # Logo da empresa no final da sidebar se configurado
-    if company_logo and logo_position == 'sidebar_bottom':
-        st.sidebar.markdown("---")
-        st.sidebar.markdown(f"""
-        <div class="company-logo">
-            <img src="{company_logo}" style="max-width: {logo_size}; height: auto; border-radius: 8px;">
-        </div>
-        """, unsafe_allow_html=True)
+    with tab_main_cols[1]:
+        if st.button("■ Estoque", 
+                    key="nav_estoque_main", 
+                    use_container_width=True,
+                    type="primary" if active_tab == 'estoque' else "secondary"):
+            # Mostrar menu de estoque na linha seguinte
+            if 'show_estoque_menu' not in st.session_state:
+                st.session_state.show_estoque_menu = False
+            st.session_state.show_estoque_menu = not st.session_state.show_estoque_menu
+            st.rerun()
+    
+    with tab_main_cols[2]:
+        if st.button("▬ Impressoras", 
+                    key="nav_impressoras", 
+                    use_container_width=True,
+                    type="primary" if active_tab == 'impressoras' else "secondary"):
+            st.session_state.current_page = 'impressoras'
+            st.session_state.show_estoque_menu = False
+            st.session_state.show_admin_menu = False
+            st.rerun()
+    
+    with tab_main_cols[3]:
+        if st.button("▲ Relatórios", 
+                    key="nav_relatorios", 
+                    use_container_width=True,
+                    type="primary" if active_tab == 'relatorios' else "secondary"):
+            st.session_state.current_page = 'relatorios'
+            st.session_state.show_estoque_menu = False
+            st.session_state.show_admin_menu = False
+            st.rerun()
+    
+    with tab_main_cols[4]:
+        if is_admin(st.session_state.current_user):
+            if st.button("● Admin", 
+                        key="nav_admin_main", 
+                        use_container_width=True,
+                        type="primary" if active_tab == 'admin' else "secondary"):
+                if 'show_admin_menu' not in st.session_state:
+                    st.session_state.show_admin_menu = False
+                st.session_state.show_admin_menu = not st.session_state.show_admin_menu
+                st.session_state.show_estoque_menu = False
+                st.rerun()
+        else:
+            if st.button("◯ Logout", 
+                        key="nav_logout", 
+                        use_container_width=True,
+                        type="secondary"):
+                st.session_state.authenticated = False
+                st.session_state.current_user = None
+                st.session_state.current_page = 'dashboard'
+                st.rerun()
+        
+    # Menu expansível do Estoque
+    if st.session_state.get('show_estoque_menu', False) or active_tab == 'estoque':
+        st.markdown("**■ Opções de Estoque:**")
+        estoque_cols = st.columns([2, 2, 2, 2, 2])
+        
+        with estoque_cols[0]:
+            if st.button("▤ Inventário", key="nav_inventario", use_container_width=True):
+                st.session_state.current_page = 'inventario_unificado'
+                st.session_state.show_estoque_menu = False
+                st.rerun()
+        
+        with estoque_cols[1]:
+            if st.button("● Gadgets", key="nav_gadgets", use_container_width=True):
+                st.session_state.current_page = 'controle_gadgets'
+                st.session_state.show_estoque_menu = False
+                st.rerun()
+        
+        with estoque_cols[2]:
+            if st.button("◁ Entrada", key="nav_entrada", use_container_width=True):
+                st.session_state.current_page = 'entrada_estoque'
+                st.session_state.show_estoque_menu = False
+                st.rerun()
+        
+        with estoque_cols[3]:
+            if st.button("▷ Saída", key="nav_saida", use_container_width=True):
+                st.session_state.current_page = 'saida_estoque'
+                st.session_state.show_estoque_menu = False
+                st.rerun()
+        
+        with estoque_cols[4]:
+            if st.button("◈ Movimentações", key="nav_movimentacoes", use_container_width=True):
+                st.session_state.current_page = 'movimentacoes'
+                st.session_state.show_estoque_menu = False
+                st.rerun()
+        
+        # Segunda linha para SEFAZ
+        if st.button("◆ Entrada Automática SEFAZ", key="nav_sefaz", use_container_width=True):
+            st.session_state.current_page = 'entrada_automatica'
+            st.session_state.show_estoque_menu = False
+            st.rerun()
+    
+    # Menu expansível do Admin
+    if is_admin(st.session_state.current_user) and (st.session_state.get('show_admin_menu', False) or active_tab == 'admin'):
+        st.markdown("**● Opções de Administração:**")
+        admin_cols = st.columns([3, 3, 3, 3])
+        
+        with admin_cols[0]:
+            if st.button("◎ Usuários", key="nav_admin_users", use_container_width=True):
+                st.session_state.current_page = 'admin_users'
+                st.session_state.show_admin_menu = False
+                st.rerun()
+        
+        with admin_cols[1]:
+            if st.button("◉ Editor Visual", key="nav_visual_editor", use_container_width=True):
+                st.session_state.current_page = 'visual_editor'
+                st.session_state.show_admin_menu = False
+                st.rerun()
+        
+        with admin_cols[2]:
+            if st.button("◯ Logout", key="nav_logout_admin", use_container_width=True, type="secondary"):
+                st.session_state.authenticated = False
+                st.session_state.current_user = None
+                st.session_state.current_page = 'dashboard'
+            st.rerun()
+    
+    elif not is_admin(st.session_state.current_user):
+        # Logout para usuários não-admin na linha principal já foi tratado acima
+        pass
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ========================================================================================
 # PÁGINAS DO SISTEMA
@@ -2789,9 +3408,9 @@ def render_dashboard():
             title=dict(
                 text="▬ Distribuição por Categoria",
                 x=0.5,
-                font=dict(size=18, color=text_color, family='Inter')
+                font=dict(size=18, color=text_color, family='Gellix')
             ),
-            font=dict(size=14, color=text_color, family='Inter'),
+            font=dict(size=14, color=text_color, family='Gellix'),
             showlegend=True,
             legend=dict(
                 orientation='h',
@@ -2845,7 +3464,7 @@ def render_dashboard():
             ),
             text=[f'{val}<br>({perc:.1f}%)' for val, perc in zip(status_data['Quantidade'], status_data['Percentual'])],
             textposition='inside',
-            textfont=dict(color='white', size=12, family='Inter'),
+            textfont=dict(color='white', size=12, family='Gellix'),
             hovertemplate='<b>%{x}</b><br>' +
                          'Quantidade: <b>%{y}</b><br>' +
                          'Percentual: <b>%{customdata:.1f}%</b><br>' +
@@ -2858,7 +3477,7 @@ def render_dashboard():
             title=dict(
                 text='▬ Status de Conferência',
                 x=0.5,
-                font=dict(size=18, color=text_color, family='Inter')
+                font=dict(size=18, color=text_color, family='Gellix')
             ),
             xaxis=dict(
                 title=dict(text='Status', font=dict(size=14, color=text_color)),
@@ -2876,7 +3495,7 @@ def render_dashboard():
             ),
             barmode='stack',
             height=chart_height,
-            font=dict(size=14, color=text_color, family='Inter'),
+            font=dict(size=14, color=text_color, family='Gellix'),
             paper_bgcolor=bg_color,
             plot_bgcolor='rgba(0,0,0,0)',
             legend=dict(
@@ -2919,19 +3538,24 @@ def render_inventory_table(data, title, key_prefix):
     """Renderiza uma tabela de inventário com funcionalidade de edição"""
     st.subheader(title)
     
+    # Garantir que a coluna 'local' existe
+    if 'local' not in data.columns:
+        data = data.copy()
+        data['local'] = 'N/A'
+    
     # Controles de Ação
     col_btn1, col_btn2, col_btn3 = st.columns(3)
     
     with col_btn1:
-        if st.button("● Adicionar Item", use_container_width=True, key=f"add_{key_prefix}"):
+        if st.button("➕ Adicionar Item", use_container_width=True, key=f"add_{key_prefix}"):
             st.session_state[f'show_add_form_{key_prefix}'] = True
     
     with col_btn2:
-        if st.button("✎ Editar Dados", use_container_width=True, key=f"edit_{key_prefix}"):
+        if st.button("✏️ Editar Dados", use_container_width=True, key=f"edit_{key_prefix}"):
             st.session_state[f'show_edit_mode_{key_prefix}'] = True
     
     with col_btn3:
-        if st.button("▬ Exportar CSV", use_container_width=True, key=f"export_{key_prefix}"):
+        if st.button("📊 Exportar CSV", use_container_width=True, key=f"export_{key_prefix}"):
             csv = data.to_csv(index=False)
             st.download_button(
                 label="⬇ Download CSV",
@@ -2960,6 +3584,7 @@ def render_inventory_table(data, title, key_prefix):
                     po = st.text_input("▬ PO", placeholder="PO-YYYY-###")
                     data_compra = st.date_input("⌚ Data de Compra")
                     uso = st.text_input("◎ Uso", placeholder="Finalidade do item")
+                    local = st.text_input(f"📍 {get_text('location')}", placeholder="Ex: Depósito Central, Sede SP")
                 
                     col_submit, col_cancel = st.columns(2)
                     
@@ -2977,6 +3602,7 @@ def render_inventory_table(data, title, key_prefix):
                                 'fornecedor': [fornecedor],
                                 'po': [po],
                                 'uso': [uso],
+                                'local': [local or 'N/A'],
                                 'qtd': [1],
                                 'avenue': ['A1'],
                                 'street': ['Rua Principal'],
@@ -3062,6 +3688,7 @@ def render_inventory_table(data, title, key_prefix):
                     "street": st.column_config.TextColumn("Street", width="medium"),
                     "shelf": st.column_config.TextColumn("Shelf", width="medium"),
                     "box": st.column_config.TextColumn("Box", width="small"),
+                    "local": st.column_config.TextColumn(f"{get_text('location')}", width="medium"),
                     "conferido": st.column_config.CheckboxColumn("Conferido")
                 },
                 key=f"{key_prefix}_editor"
@@ -3070,7 +3697,7 @@ def render_inventory_table(data, title, key_prefix):
             col_save, col_cancel = st.columns(2)
             
             with col_save:
-                if st.button("✓ Salvar Alterações", use_container_width=True, key=f"save_{key_prefix}"):
+                if st.button("💾 Salvar Alterações", use_container_width=True, key=f"save_{key_prefix}"):
                     st.session_state.inventory_data[key_prefix] = edited_data
                     st.success("✓ Alterações salvas com sucesso!")
                     st.session_state[f'show_edit_mode_{key_prefix}'] = False
@@ -3182,7 +3809,7 @@ def render_hq1_8th():
         col_btn1, col_btn2, col_btn3 = st.columns(3)
         
         with col_btn1:
-            if st.button("● Adicionar Item", use_container_width=True, key="add_hq1"):
+            if st.button("➕ Adicionar Item", use_container_width=True, key="add_hq1"):
                 st.session_state.show_add_form_hq1_8th = True
         
         with col_btn2:
@@ -3327,7 +3954,7 @@ def render_hq1_8th():
             )
             
             # Botão para salvar alterações
-            if st.button("● Salvar Alterações HQ1", use_container_width=True, key="save_hq1"):
+            if st.button("💾 Salvar Alterações HQ1", use_container_width=True, key="save_hq1"):
                 st.session_state.hq1_8th_inventory = edited_data
                 if save_hq1_data():
                     st.session_state.hq1_data_last_saved = datetime.now()
@@ -3366,7 +3993,7 @@ def render_hq1_8th():
         col_btn1, col_btn2, col_btn3 = st.columns(3)
         
         with col_btn1:
-            if st.button("● Adicionar Item", use_container_width=True, key="add_spark"):
+            if st.button("➕ Adicionar Item", use_container_width=True, key="add_spark"):
                 st.session_state.show_add_form_spark = True
         
         with col_btn2:
@@ -3509,7 +4136,7 @@ def render_hq1_8th():
             )
             
             # Botão para salvar alterações
-            if st.button("● Salvar Alterações Spark", use_container_width=True, key="save_spark"):
+            if st.button("💾 Salvar Alterações Spark", use_container_width=True, key="save_spark"):
                 st.session_state.spark_estoque_data = edited_data
                 auto_save()  # Auto-save após alterações
                 st.success("✓ Alterações salvas automaticamente no banco de dados!")
@@ -3522,7 +4149,7 @@ def render_csv_upload_section(data_key, required_columns, section_title="Upload 
     st.markdown("""
     <style>
     .csv-upload-expander {
-        background: linear-gradient(135deg, #9333EA 0%, #A855F7 100%) !important;
+        background: #9333EA !important;
         border: 2px solid #8B5CF6 !important;
         border-radius: 12px !important;
         box-shadow: 0 4px 15px rgba(138, 5, 190, 0.2) !important;
@@ -3736,8 +4363,203 @@ def debug_vpn_connection():
         else:
             st.error("Digite um IP para testar")
 
+def is_streamlit_cloud():
+    """Detecta se está rodando no Streamlit Cloud"""
+    try:
+        import os
+        # Streamlit Cloud tem estas variáveis de ambiente específicas
+        cloud_indicators = [
+            'STREAMLIT_SHARING_MODE',
+            'STREAMLIT_CLOUD',
+            'STREAMLIT_SERVER_HEADLESS',
+        ]
+        
+        # Verificar hostname também
+        hostname = os.environ.get('HOSTNAME', '')
+        
+        # Se algum indicador estiver presente OU hostname contém "streamlit"
+        return any(os.environ.get(indicator) for indicator in cloud_indicators) or 'streamlit' in hostname.lower()
+    except:
+        return False
+
+def simulate_ping_for_cloud(ip_address):
+    """Simula ping para Streamlit Cloud baseado em padrões conhecidos"""
+    
+    # Padrões de IPs internos da Nubank (baseado nos dados que vi)
+    nubank_patterns = [
+        '172.30.',  # Rede interna comum
+        '10.',      # Rede privada
+        '192.168.'  # Rede local
+    ]
+    
+    # Se for IP interno da Nubank, simular 70% online (realista)
+    if any(ip_address.startswith(pattern) for pattern in nubank_patterns):
+        import random
+        import hashlib
+        # Usar hash do IP como seed para consistência
+        hash_seed = int(hashlib.md5(ip_address.encode()).hexdigest()[:8], 16)
+        random.seed(hash_seed)
+        return random.random() < 0.7  # 70% chance de estar online
+    
+    # Para IPs públicos, tentar ping real (pode funcionar)
+    try:
+        import platform
+        system = platform.system().lower()
+        
+        if system == "windows":
+            cmd = ["ping", "-n", "1", "-w", "1000", ip_address]
+        else:
+            cmd = ["ping", "-c", "1", "-W", "1", ip_address]
+        
+        result = subprocess.run(cmd, capture_output=True, timeout=2)
+        return result.returncode == 0
+    except:
+        return False
+
+def create_responsive_table(df, key_prefix="table", editable=True, add_search=True, add_filters=True):
+    """Cria uma tabela responsiva e interativa"""
+    
+    if df.empty:
+        st.info("📝 Nenhum dado encontrado")
+        return df
+    
+    # Container para controles
+    if add_search or add_filters:
+        with st.container():
+            control_cols = st.columns([2, 1, 1] if add_filters else [3, 1])
+            
+            # Busca global
+            if add_search:
+                with control_cols[0]:
+                    search_term = st.text_input(
+                        "🔍 Buscar", 
+                        placeholder="Digite para filtrar...",
+                        key=f"{key_prefix}_search"
+                    )
+            
+            # Filtros por coluna
+            if add_filters and len(df.columns) > 0:
+                with control_cols[1]:
+                    # Selecionar coluna para filtrar
+                    filterable_columns = [col for col in df.columns if df[col].dtype == 'object']
+                    if filterable_columns:
+                        filter_column = st.selectbox(
+                            "📊 Filtrar coluna",
+                            ["Todas"] + filterable_columns,
+                            key=f"{key_prefix}_filter_col"
+                        )
+                
+                with control_cols[2]:
+                    # Valores únicos da coluna selecionada
+                    if add_filters and filterable_columns and filter_column != "Todas":
+                        unique_values = ["Todos"] + sorted(df[filter_column].unique().tolist())
+                        selected_value = st.selectbox(
+                            "🎯 Valor",
+                            unique_values,
+                            key=f"{key_prefix}_filter_val"
+                        )
+    
+    # Aplicar filtros
+    filtered_df = df.copy()
+    
+    # Filtro de busca global
+    if add_search and 'search_term' in locals() and search_term:
+        mask = False
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                mask |= df[col].astype(str).str.contains(search_term, case=False, na=False)
+        filtered_df = df[mask] if mask.any() else pd.DataFrame(columns=df.columns)
+    
+    # Filtro por coluna específica
+    if (add_filters and 'filter_column' in locals() and 'selected_value' in locals() 
+        and filter_column != "Todas" and selected_value != "Todos"):
+        filtered_df = filtered_df[filtered_df[filter_column] == selected_value]
+    
+    # Métricas
+    if not filtered_df.empty:
+        total_rows = len(filtered_df)
+        st.caption(f"📊 Mostrando {total_rows} registro(s)")
+    
+    # Configurações da tabela
+    column_config = {}
+    
+    # Auto-configurar colunas baseado no tipo
+    for col in filtered_df.columns:
+        if filtered_df[col].dtype in ['int64', 'float64']:
+            # Colunas numéricas
+            if 'valor' in col.lower() or 'preco' in col.lower() or 'custo' in col.lower():
+                column_config[col] = st.column_config.NumberColumn(
+                    col,
+                    format="R$ %.2f",
+                    min_value=0
+                )
+            else:
+                column_config[col] = st.column_config.NumberColumn(
+                    col,
+                    min_value=0
+                )
+        elif filtered_df[col].dtype == 'bool':
+            # Colunas booleanas
+            column_config[col] = st.column_config.CheckboxColumn(col)
+        elif 'email' in col.lower():
+            # Colunas de email
+            column_config[col] = st.column_config.TextColumn(
+                col,
+                validate=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+            )
+        elif 'url' in col.lower() or 'link' in col.lower():
+            # Colunas de URL
+            column_config[col] = st.column_config.LinkColumn(col)
+    
+    # Renderizar tabela
+    if editable:
+        edited_data = st.data_editor(
+            filtered_df,
+            use_container_width=True,
+            hide_index=True,
+            num_rows="dynamic",
+            column_config=column_config,
+            key=f"{key_prefix}_editor"
+        )
+        return edited_data
+    else:
+        st.dataframe(
+            filtered_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config=column_config
+        )
+        return filtered_df
+
+def ping_via_local_api(ip_address):
+    """Tenta usar API local do usuário para ping real"""
+    try:
+        import requests
+        
+        # Tentar conectar com serviço local
+        response = requests.get(f"http://localhost:5000/ping/{ip_address}", timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('online', False)
+        
+        return False
+    except:
+        return None
+
 def ping_ip_simple(ip_address):
-    """Faz ping simples e direto no IP"""
+    """Faz ping inteligente - prioriza API local, fallback para simulação/direto"""
+    
+    # 1. Tentar API local primeiro (ping real)
+    local_result = ping_via_local_api(ip_address)
+    if local_result is not None:
+        return local_result
+    
+    # 2. Se estiver no Streamlit Cloud e API local não disponível, simular
+    if is_streamlit_cloud():
+        return simulate_ping_for_cloud(ip_address)
+    
+    # 3. Fallback para ping direto (ambiente local sem API)
     try:
         import platform
         system = platform.system().lower()
@@ -4299,13 +5121,13 @@ def load_printers_from_csv():
         
         # Renomear e ajustar colunas para padronizar
         df_formatted = pd.DataFrame({
-            'modelo': 'EPSON WF-C5790 Series',  # Modelo correto conforme informado
+            'modelo': 'WORKFORCE WFC5790',  # Modelo correto conforme informado
             'marca': 'Epson',  # Marca Epson
             'tag': df['serial'],  # Usar serial como tag
-            'tipo': 'Multifuncional',  # WF-C5790 é multifuncional (Impressora/Scanner/Copiadora)
+            'tipo': 'EcoTank',  # WORKFORCE WFC5790 é EcoTank (Impressora/Scanner/Copiadora)
             'local': df['local'] + ' - ' + df['descricao_local'],
             'status': df['status_manual'].map({'Ativo': '✓ Ativo', 'Manutenção': '● Manutenção'}).fillna('✓ Ativo'),
-            'valor': 3200.00,  # Valor atualizado para EPSON WF-C5790
+            'valor': 3200.00,  # Valor atualizado para WORKFORCE WFC5790
             'data_compra': pd.to_datetime('2023-01-01'),  # Data padrão
             'fornecedor': 'Epson do Brasil',
             'nota_fiscal': 'NF-EPS-' + df['serial'].str[-6:],
@@ -4326,17 +5148,58 @@ def load_printers_from_csv():
         st.error(f"× Erro ao carregar arquivo de impressoras: {str(e)}")
         return pd.DataFrame()
 
+def check_local_ping_service():
+    """Verifica se o serviço local de ping está disponível"""
+    try:
+        import requests
+        response = requests.get("http://localhost:5000/status", timeout=2)
+        return response.status_code == 200
+    except:
+        return False
+
 def render_impressoras():
     """Renderiza a página de Impressoras com verificação de conectividade"""
+    
+    # Verificar serviço local
+    local_service_available = check_local_ping_service()
+    
+    # Indicador de método de ping
+    if local_service_available:
+        st.success("""
+        🎯 **Serviço Local de Ping Ativo**
+        
+        ✅ Conectado ao serviço local na sua máquina  
+        🏢 **Ping real** das impressoras da rede Nubank  
+        ⚡ Resultados em tempo real com cache de 30s  
+        📡 API: `http://localhost:5000`
+        """)
+    elif is_streamlit_cloud():
+        st.warning("""
+        🌐 **Modo Streamlit Cloud**
+        
+        ⚠️ Serviço local não detectado  
+        🔧 **Para ping real**: Execute `python ping_service.py` na sua máquina  
+        📊 **Modo atual**: Simulação inteligente para demonstração  
+        💡 Mantenha o serviço local rodando para resultados reais
+        """)
+    else:
+        st.info("""
+        🏢 **Modo Local Direto**
+        
+        🔍 Ping direto via linha de comando  
+        💡 **Melhore a performance**: Execute `python ping_service.py`  
+        ⚡ Com o serviço local: cache, batch e melhor UX
+        """)
+    
     st.markdown("""
     <style>
     .printer-header {
-        background: linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%);
+        background: #9c27b0;
         padding: 20px;
         border-radius: 15px;
         margin-bottom: 20px;
-        border: 2px solid #4CAF50;
-        box-shadow: 0 8px 32px rgba(76, 175, 80, 0.3);
+        border: 2px solid #9c27b0;
+        box-shadow: 0 8px 32px rgba(156, 39, 176, 0.3);
     }
     .printer-metric {
         background: rgba(255, 255, 255, 0.1);
@@ -4348,7 +5211,7 @@ def render_impressoras():
         color: white;
         margin: 10px 0;
     }
-    .printer-status-active { color: #4CAF50; font-weight: bold; }
+    .printer-status-active { color: #9c27b0; font-weight: bold; }
     .printer-status-maintenance { color: #FF9800; font-weight: bold; }
     .printer-status-inactive { color: #F44336; font-weight: bold; }
     </style>
@@ -4365,23 +5228,20 @@ def render_impressoras():
     </div>
     """, unsafe_allow_html=True)
     
-
-
-    # Inicializar dados das impressoras no session_state
-    if 'impressoras_data' not in st.session_state:
-        csv_data = load_impressoras_from_csv()
-        if csv_data:
-            st.session_state.impressoras_data = csv_data
-        else:
-            # Fallback para dados de exemplo se não conseguir carregar o CSV
-            st.session_state.impressoras_data = {
-                "HQ1": {
-                    "info": {"login": "admin", "senha": "Ultravioleta"},
-                    "impressoras": [
-                        {"id": "hq1_001", "local": "Térreo - Recepção", "ip": "172.25.61.53", "serial": "X3B7034483", "papercut": False, "modelo": "HP LaserJet", "status_manual": "Ativo"}
-                    ]
-                }
+    # Sempre recarregar dados das impressoras para garantir modelo atualizado
+    csv_data = load_impressoras_from_csv()
+    if csv_data:
+        st.session_state.impressoras_data = csv_data
+    else:
+        # Fallback para dados de exemplo se não conseguir carregar o CSV
+        st.session_state.impressoras_data = {
+            "HQ1": {
+                "info": {"login": "admin", "senha": "Ultravioleta"},
+                "impressoras": [
+                    {"id": "hq1_001", "local": "Térreo - Recepção", "ip": "172.25.61.53", "serial": "X3B7034483", "papercut": False, "modelo": "WORKFORCE WFC5790", "marca": "Epson", "tipo": "EcoTank", "status_manual": "Ativo"}
+                ]
             }
+        }
     
     # Usar dados do session_state  
     impressoras_data = st.session_state.impressoras_data
@@ -4405,26 +5265,22 @@ def render_impressoras():
                     import subprocess
                     import platform
                     
-                    try:
-                        param = "-n" if platform.system().lower() == "windows" else "-c"
-                        result = subprocess.run(
-                            ["ping", param, "1", printer["ip"]],
-                            capture_output=True,
-                            text=True,
-                            timeout=3
-                        )
-                        st.session_state.printer_status_cache[printer["ip"]] = result.returncode == 0
-                    except:
-                        st.session_state.printer_status_cache[printer["ip"]] = False
+                    # Usar função de ping inteligente (detecta ambiente)
+                    st.session_state.printer_status_cache[printer["ip"]] = ping_ip_simple(printer["ip"])
             
             # Contar resultados
             online_count = sum(1 for status in st.session_state.printer_status_cache.values() if status)
             offline_count = len(st.session_state.printer_status_cache) - online_count
             
             st.session_state.auto_scan_executed = True
+            
+            # Mensagem de scan adaptada ao ambiente
+            scan_mode = "simulado" if is_streamlit_cloud() else "real"
+            mode_icon = "🌐" if is_streamlit_cloud() else "🏢"
+            
             st.markdown(f'''
             <div style="background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 0.75rem 1.25rem; border-radius: 0.375rem; margin: 1rem 0;">
-                <i class="fas fa-check-circle icon icon-success"></i> **Scan Automático Concluído:** {online_count} online, {offline_count} offline
+                {mode_icon} **Scan Automático Concluído ({scan_mode}):** {online_count} online, {offline_count} offline
             </div>
             ''', unsafe_allow_html=True)
     
@@ -4546,8 +5402,8 @@ def render_impressoras():
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    modelo = st.text_input("🖨️ Modelo", placeholder="Ex: HP LaserJet Pro 404n")
-                    marca = st.selectbox("🏷️ Marca", ["HP", "Canon", "Epson", "Brother", "Samsung", "Xerox", "Kyocera", "Lexmark", "Outros"])
+                    modelo = st.text_input("🖨️ Modelo", placeholder="Ex: WORKFORCE WFC5790")
+                    marca = st.selectbox("🏷️ Marca", ["Epson", "HP", "Canon", "Brother", "Samsung", "Xerox", "Kyocera", "Lexmark", "Outros"])
                     tag = st.text_input("🏷️ Tag/Código", placeholder="Ex: IMP007")
                     tipo = st.selectbox("▬ Tipo", ["Laser", "Jato de Tinta", "EcoTank", "Multifuncional", "Térmica", "Matricial"])
                     local = st.selectbox("📍 Localização", ["8th floor hq1", "spark estoque", "day1 spark", "day1hq1", "auditorio", "outros"])
@@ -4613,7 +5469,7 @@ def render_impressoras():
         st.markdown(f"""
         <div class="printer-metric">
             <div style="font-size: 2rem; font-weight: bold;">{total_impressoras}</div>
-            <div style="font-size: 0.9rem; opacity: 0.8;">🖨️ Total</div>
+            <div style="font-size: 0.9rem; opacity: 0.8;"><i class='fas fa-print'></i> Total</div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -4653,18 +5509,8 @@ def render_impressoras():
     import platform
     
     def ping_ip(ip):
-        """Testa conectividade com o IP"""
-        try:
-            param = "-n" if platform.system().lower() == "windows" else "-c"
-            result = subprocess.run(
-            ["ping", param, "1", ip],
-                capture_output=True,
-                text=True,
-                timeout=3
-                )
-            return result.returncode == 0
-        except:
-            return False
+        """Testa conectividade com o IP - usa função inteligente"""
+        return ping_ip_simple(ip)
 
     for tab, (local_name, local_data) in zip([tab_hq1, tab_hq2, tab_spark], impressoras_data.items()):
         with tab:
@@ -4673,7 +5519,7 @@ def render_impressoras():
             col_login, col_senha = st.columns(2)
 
             with col_login:
-                st.info(f"**👤 Login:** {local_data['info']['login']}")
+                st.markdown(f"ℹ️ **<i class='fas fa-user'></i> Login:** {local_data['info']['login']}", unsafe_allow_html=True)
 
             with col_senha:
                 st.info(f"**🔒 Senha:** {local_data['info']['senha']}")
@@ -4690,7 +5536,7 @@ def render_impressoras():
 
             with col_total:
                 st.markdown(f"""
-                <div style='background: linear-gradient(135deg, #667eea, #764ba2); padding: 15px; border-radius: 10px; text-align: center; color: white;'>
+                <div style='background: #9333EA; padding: 15px; border-radius: 10px; text-align: center; color: white;'>
                 <div style='font-size: 24px; font-weight: bold;'>{total_impressoras}</div>
                     <div style='font-size: 12px;'>Total</div>
                     </div>
@@ -4698,7 +5544,7 @@ def render_impressoras():
 
             with col_online:
                 st.markdown(f"""
-                <div style='background: linear-gradient(135deg, #9333EA, #A855F7); padding: 15px; border-radius: 10px; text-align: center; color: white;'>
+                <div style='background: #9333EA; padding: 15px; border-radius: 10px; text-align: center; color: white;'>
                 <div style='font-size: 24px; font-weight: bold;'>{online}</div>
                     <div style='font-size: 12px;'>Online</div>
                     </div>
@@ -4706,7 +5552,7 @@ def render_impressoras():
 
             with col_offline:
                 st.markdown(f"""
-                <div style='background: linear-gradient(135deg, #EF4444, #DC2626); padding: 15px; border-radius: 10px; text-align: center; color: white;'>
+                <div style='background: #EF4444; padding: 15px; border-radius: 10px; text-align: center; color: white;'>
                 <div style='font-size: 24px; font-weight: bold;'>{offline}</div>
                     <div style='font-size: 12px;'>Offline</div>
                     </div>
@@ -4714,13 +5560,13 @@ def render_impressoras():
 
             with col_papercut:
                 st.markdown(f"""
-                <div style='background: linear-gradient(135deg, #9333EA, #A855F7); padding: 15px; border-radius: 10px; text-align: center; color: white;'>
+                <div style='background: #9333EA; padding: 15px; border-radius: 10px; text-align: center; color: white;'>
                 <div style='font-size: 24px; font-weight: bold;'>{com_papercut}</div>
                     <div style='font-size: 12px;'>Papercut</div>
                     </div>
                 """, unsafe_allow_html=True)
 
-            st.markdown("### 🖨️ Lista de Impressoras")
+            st.markdown("### <i class='fas fa-print'></i> Lista de Impressoras", unsafe_allow_html=True)
 
             # Cards das impressoras
             for i, printer in enumerate(local_data["impressoras"]):
@@ -4816,15 +5662,15 @@ def render_tvs_monitores():
     col_btn1, col_btn2, col_btn3 = st.columns(3)
     
     with col_btn1:
-        if st.button("● Adicionar Display", use_container_width=True, key="add_display"):
+        if st.button("➕ Adicionar Display", use_container_width=True, key="add_display"):
             st.session_state.show_add_form_displays = True
     
     with col_btn2:
-        if st.button("✎ Editar Dados", use_container_width=True, key="edit_displays"):
+        if st.button("✏️ Editar Dados", use_container_width=True, key="edit_displays"):
             st.session_state.show_edit_mode_displays = True
     
     with col_btn3:
-        if st.button("▬ Exportar CSV", use_container_width=True, key="export_displays"):
+        if st.button("📊 Exportar CSV", use_container_width=True, key="export_displays"):
             csv = displays_data.to_csv(index=False)
             st.download_button(
                 label="⬇ Download CSV",
@@ -5003,7 +5849,7 @@ def render_tvs_monitores():
             col_save, col_cancel = st.columns(2)
             
             with col_save:
-                if st.button("✓ Salvar Alterações", use_container_width=True, key="save_displays"):
+                if st.button("💾 Salvar Alterações", use_container_width=True, key="save_displays"):
                     st.session_state.tvs_monitores_data = edited_data
                     if save_displays_data():
                         st.session_state.displays_data_last_saved = datetime.now()
@@ -5050,15 +5896,15 @@ def render_vendas_spark():
     col_btn1, col_btn2, col_btn3 = st.columns(3)
     
     with col_btn1:
-        if st.button("● Registrar Venda", use_container_width=True, key="add_venda"):
+        if st.button("💰 Registrar Venda", use_container_width=True, key="add_venda"):
             st.session_state.show_add_form_vendas = True
     
     with col_btn2:
-        if st.button("✎ Editar Dados", use_container_width=True, key="edit_vendas"):
+        if st.button("✏️ Editar Dados", use_container_width=True, key="edit_vendas"):
             st.session_state.show_edit_mode_vendas = True
     
     with col_btn3:
-        if st.button("▬ Exportar CSV", use_container_width=True, key="export_vendas"):
+        if st.button("📊 Exportar CSV", use_container_width=True, key="export_vendas"):
             csv = vendas_data.to_csv(index=False)
             st.download_button(
                 label="⬇ Download CSV",
@@ -5239,7 +6085,7 @@ def render_vendas_spark():
             col_save, col_cancel = st.columns(2)
             
             with col_save:
-                if st.button("✓ Salvar Alterações", use_container_width=True, key="save_vendas"):
+                if st.button("💾 Salvar Alterações", use_container_width=True, key="save_vendas"):
                     st.session_state.vendas_data = edited_data
                     if save_vendas_data():
                         st.session_state.vendas_data_last_saved = datetime.now()
@@ -5285,10 +6131,10 @@ def render_lixo_eletronico():
     # Controles de Edição
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
-        if st.button("✎ Editar Dados", use_container_width=True, key="edit_lixo"):
+        if st.button("✏️ Editar Dados", use_container_width=True, key="edit_lixo"):
             st.session_state.show_edit_mode_lixo = True
     with col_btn2:
-        if st.button("▬ Exportar CSV", use_container_width=True, key="export_lixo"):
+        if st.button("📊 Exportar CSV", use_container_width=True, key="export_lixo"):
             csv = descarte_data.to_csv(index=False)
             st.download_button("⬇ Download", csv, f"lixo_eletronico_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv", "text/csv", key="dl_lixo")
     
@@ -5360,7 +6206,7 @@ def render_lixo_eletronico():
         )
         col_save, col_cancel = st.columns(2)
         with col_save:
-            if st.button("✓ Salvar", use_container_width=True, key="save_lixo"):
+            if st.button("💾 Salvar", use_container_width=True, key="save_lixo"):
                 st.session_state.lixo_eletronico_data = edited_data
                 if save_lixo_data():
                     st.session_state.lixo_data_last_saved = datetime.now()
@@ -5449,7 +6295,7 @@ def render_barcode_entry():
     st.markdown("""
     <style>
     .upload-csv-expander {
-        background: linear-gradient(135deg, #9333EA 0%, #A855F7 100%) !important;
+        background: #9333EA !important;
         border: 2px solid #8B5CF6 !important;
         border-radius: 12px !important;
         box-shadow: 0 4px 15px rgba(138, 5, 190, 0.3) !important;
@@ -5538,7 +6384,7 @@ def render_barcode_entry():
     st.markdown("""
     <style>
     .scanner-nf-expander {
-        background: linear-gradient(135deg, #9333EA 0%, #A855F7 100%) !important;
+        background: #9333EA !important;
         border: 2px solid #8B5CF6 !important;
         border-radius: 12px !important;
         box-shadow: 0 4px 15px rgba(138, 5, 190, 0.3) !important;
@@ -5573,7 +6419,7 @@ def render_barcode_entry():
     </style>
     """, unsafe_allow_html=True)
     
-    with st.expander('<i class="fas fa-camera icon icon-scan"></i> Scanner de Nota Fiscal', expanded=False):
+    with st.expander('📷 Scanner de Nota Fiscal', expanded=False):
         st.markdown("""
         <div style="text-align: center; padding: 1rem 0;">
             <h3 style="color: #9333EA; margin: 0;">
@@ -5587,7 +6433,7 @@ def render_barcode_entry():
         
         # Mostrar status do scanner - sempre ativo
         st.markdown("""
-        <div style="background: linear-gradient(90deg, #28a745 0%, #20c997 100%); 
+        <div style="background: #28a745; 
                     padding: 1rem; border-radius: 8px; margin: 1rem 0; color: white;">
             <h4 style="margin: 0;">
                 <i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>Scanner Real Ativo
@@ -5653,7 +6499,7 @@ def render_barcode_entry():
             
             except Exception as e:
                 # Fallback se houver algum erro com WebRTC
-                st.info("📱 Use o upload de imagem abaixo para scanner de códigos")
+                st.markdown("ℹ️ <i class='fas fa-mobile-alt'></i> Use o upload de imagem abaixo para scanner de códigos", unsafe_allow_html=True)
                 if st.button("■ Gerar Código", use_container_width=True):
                     codigo_gerado = f"GEN-{pd.Timestamp.now().strftime('%Y%m%d%H%M%S')}"
                     st.session_state.codigo_nf_capturado = codigo_gerado
@@ -5941,105 +6787,264 @@ def render_movements():
     """Renderiza a página de movimentações do estoque"""
     st.markdown("## ▤ Movimentações")
     
-    # Métricas
+    # SEMPRE verificar e carregar dados do CSV no início da renderização
+    should_load = False
+    
+    if 'movimentacoes_data' not in st.session_state:
+        should_load = True
+    elif st.session_state.movimentacoes_data.empty:
+        should_load = True
+    
+    if should_load:
+        if load_movimentacoes_data():
+            st.rerun()
+        else:
+            st.info("📝 Nenhum arquivo CSV de movimentações encontrado. Sistema iniciará com dados de exemplo.")
+            # Inicializar dados de exemplo
+            st.session_state.movimentacoes_data = pd.DataFrame({
+                'Data': pd.to_datetime(['2024-03-15', '2024-03-14', '2024-03-13']),
+                'Tipo': ['↗ Saída', '↘ Entrada', '↻ Transferência'],
+                'Item': ['Notebook Dell', 'Mouse Logitech', 'Monitor LG'],
+                'Tag': ['SPK001', 'SPK002', 'SPK003'],
+                'Responsável': ['João Silva', 'Admin', 'Maria Santos'],
+                'Status': ['✓ Concluído', '✓ Concluído', '⧖ Pendente'],
+                'po': ['PO-MOV-001', 'PO-MOV-002', 'PO-MOV-003']
+            })
+            # Salvar dados de exemplo
+            save_movimentacoes_data()
+    
+    # Obter dados de movimentações
+    movimentacoes = st.session_state.movimentacoes_data
+    
+    # Se ainda estiver vazio após tentativa de carregamento
+    if movimentacoes.empty:
+        st.info("📝 Nenhuma movimentação registrada. Use o formulário abaixo para adicionar.")
+        # Continuar com dados vazios para mostrar interface
+        movimentacoes = pd.DataFrame(columns=['Data', 'Tipo', 'Item', 'Tag', 'Responsável', 'Status', 'po'])
+    
+    # Métricas dinâmicas baseadas nos dados reais
+    total_movimentacoes = len(movimentacoes)
+    entradas = len(movimentacoes[movimentacoes['Tipo'] == '↘ Entrada']) if not movimentacoes.empty else 0
+    saidas = len(movimentacoes[movimentacoes['Tipo'] == '↗ Saída']) if not movimentacoes.empty else 0
+    pendentes = len(movimentacoes[movimentacoes['Status'] == '⧖ Pendente']) if not movimentacoes.empty else 0
+    
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-value">127</div>
+            <div class="metric-value">{total_movimentacoes}</div>
             <div class="metric-label">▤ Total Movimentações</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-value">85</div>
+            <div class="metric-value">{entradas}</div>
             <div class="metric-label">↘ Entradas</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col3:
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-value">42</div>
+            <div class="metric-value">{saidas}</div>
             <div class="metric-label">↗ Saídas</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col4:
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-value">15</div>
+            <div class="metric-value">{pendentes}</div>
             <div class="metric-label">⧖ Pendentes</div>
         </div>
         """, unsafe_allow_html=True)
     
-    # Inicializar dados no session_state se não existir
-    if 'movimentacoes_data' not in st.session_state:
-        st.session_state.movimentacoes_data = pd.DataFrame({
-            'Data': pd.to_datetime(['2024-03-15', '2024-03-14', '2024-03-13']),
-            'Tipo': ['↗ Saída', '↘ Entrada', '↻ Transferência'],
-            'Item': ['Notebook Dell', 'Mouse Logitech', 'Monitor LG'],
-            'Tag': ['SPK001', 'SPK002', 'SPK003'],
-            'Responsável': ['João Silva', 'Admin', 'Maria Santos'],
-            'Status': ['✓ Concluído', '✓ Concluído', '⧖ Pendente'],
-            'po': ['PO-MOV-001', 'PO-MOV-002', 'PO-MOV-003']
-        })
+    st.divider()
     
-    movimentacoes = st.session_state.movimentacoes_data
+    # Importação de CSV (seguindo padrão do estoque unificado)
+    with st.expander(f"📤 {get_text('import_csv')} - Movimentações", expanded=False):
+        st.markdown(f"### 📊 {get_text('import_csv')} - Controle de Movimentações")
+        st.markdown(f"**{get_text('auto_translate')}** - Importe dados de movimentações em qualquer formato CSV")
+        
+        uploaded_file = st.file_uploader(
+            f"📁 {get_text('select_csv_file')}",
+            type="csv",
+            key="movements_csv_upload",
+            help="Formatos aceitos: .csv com colunas como Data, Tipo, Item, Tag, Responsável, Status, PO"
+        )
+        
+        if uploaded_file is not None:
+            try:
+                # Ler o arquivo CSV
+                df = pd.read_csv(uploaded_file)
+                st.write(f"**{get_text('csv_preview')}:**")
+                st.dataframe(df.head(), use_container_width=True)
+                
+                # Traduzir colunas automaticamente
+                df_translated = translate_movements_csv(df)
+                
+                st.write(f"**{get_text('translated_columns')}:**")
+                st.dataframe(df_translated.head(), use_container_width=True)
+                
+                col_import1, col_import2 = st.columns(2)
+                
+                with col_import1:
+                    if st.button("➕ Importar dados", use_container_width=True):
+                        with st.spinner(get_text('processing')):
+                            # Combinar com dados existentes
+                            if not st.session_state.movimentacoes_data.empty:
+                                combined_df = pd.concat([st.session_state.movimentacoes_data, df_translated], ignore_index=True)
+                            else:
+                                combined_df = df_translated
+                            
+                            st.session_state.movimentacoes_data = combined_df
+                            
+                            # Salvar automaticamente
+                            save_movimentacoes_data()
+                            
+                            st.success(f"✅ {get_text('success_import')} - {len(df_translated)} movimentações adicionadas!")
+                            time.sleep(1)
+                            st.rerun()
+                
+                with col_import2:
+                    if st.button("🔄 Substituir dados", use_container_width=True):
+                        with st.spinner(get_text('processing')):
+                            st.session_state.movimentacoes_data = df_translated
+                            save_movimentacoes_data()
+                            st.rerun()
+                            
+            except Exception as e:
+                st.error(f"{get_text('error_import')}: {e}")
+    
+    # Ações globais
+    col_global1, col_global2, col_global3 = st.columns([2, 1, 1])
+    
+    with col_global2:
+        if st.button("➕ Nova Movimentação", key="btn_add_movement"):
+            st.session_state['show_add_movement_form'] = True
+    
+    with col_global3:
+        if st.button("📊 Exportar CSV", use_container_width=True, key="export_mov"):
+            csv = movimentacoes.to_csv(index=False)
+            st.download_button("⬇ Download", csv, f"movimentacoes_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv", "text/csv", key="dl_mov")
+    
+    # Formulário para adicionar nova movimentação
+    if st.session_state.get('show_add_movement_form', False):
+        with st.expander("➕ Adicionar Nova Movimentação", expanded=True):
+            with st.form("add_movement_form"):
+                col_form1, col_form2 = st.columns(2)
+                
+                with col_form1:
+                    new_data = st.date_input("📅 Data", datetime.now().date())
+                    new_tipo = st.selectbox("🔄 Tipo", ["↘ Entrada", "↗ Saída", "↻ Transferência"])
+                    new_item = st.text_input("📦 Item", placeholder="Ex: Notebook Dell Latitude")
+                    new_tag = st.text_input("🏷️ Tag", placeholder="Ex: NBK001")
+                
+                with col_form2:
+                    new_responsavel = st.text_input("👤 Responsável", placeholder="Ex: João Silva")
+                    new_status = st.selectbox("📊 Status", ["✓ Concluído", "⧖ Pendente", "× Cancelado"])
+                    new_po = st.text_input("📋 PO", placeholder="Ex: PO-MOV-001")
+                
+                col_submit, col_cancel = st.columns(2)
+                with col_submit:
+                    if st.form_submit_button("💾 Adicionar Movimentação", use_container_width=True):
+                        if new_item and new_tag and new_responsavel:
+                            nova_movimentacao = {
+                                'Data': pd.to_datetime(new_data),
+                                'Tipo': new_tipo,
+                                'Item': new_item,
+                                'Tag': new_tag,
+                                'Responsável': new_responsavel,
+                                'Status': new_status,
+                                'po': new_po if new_po else f"PO-MOV-{len(movimentacoes)+1:03d}"
+                            }
+                            
+                            # Adicionar ao DataFrame
+                            new_row = pd.DataFrame([nova_movimentacao])
+                            st.session_state.movimentacoes_data = pd.concat([movimentacoes, new_row], ignore_index=True)
+                            
+                            if save_movimentacoes_data():
+                                st.success(f"✅ Movimentação {new_tag} - {new_item} adicionada e salva automaticamente!")
+                            else:
+                                st.error("× Erro ao salvar movimentação")
+                            
+                            st.session_state['show_add_movement_form'] = False
+                            st.rerun()
+                        else:
+                            st.error("× Preencha pelo menos Item, Tag e Responsável")
+                
+                with col_cancel:
+                    if st.form_submit_button("× Cancelar", use_container_width=True):
+                        st.session_state['show_add_movement_form'] = False
+                        st.rerun()
     
     # Controles de Edição
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
-        if st.button("✎ Editar Dados", use_container_width=True, key="edit_mov"):
+        if st.button("✏️ Editar Dados", use_container_width=True, key="edit_mov"):
             st.session_state.show_edit_mode_mov = True
     with col_btn2:
-        if st.button("▬ Exportar CSV", use_container_width=True, key="export_mov"):
-            csv = movimentacoes.to_csv(index=False)
-            st.download_button("⬇ Download", csv, f"movimentacoes_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv", "text/csv", key="dl_mov")
+        if st.button("🔄 Recarregar CSV", use_container_width=True, key="reload_mov"):
+            if load_movimentacoes_data():
+                st.rerun()
+            else:
+                st.warning("⚠️ Nenhum arquivo CSV encontrado")
     
-    # Upload de CSV para Movimentações
-    required_columns_movements = ['Data', 'Tipo', 'Item', 'Tag', 'Responsável', 'Status', 'po']
-    render_csv_upload_section('movimentacoes_data', required_columns_movements, "Upload de Movimentações via CSV")
+    # Tabela responsiva e interativa
+    st.subheader("☰ Histórico de Movimentações")
     
-    # Modo de edição
     if st.session_state.get('show_edit_mode_mov', False):
-        st.info("✎ **MODO EDIÇÃO ATIVO** - Edite os dados diretamente na tabela")
-        edited_data = st.data_editor(
+        st.info("✎ **MODO EDIÇÃO ATIVO** - Edite, busque e filtre os dados da tabela")
+        
+        # Configuração específica para movimentações
+        column_config = {
+            "Data": st.column_config.DateColumn("Data"),
+            "Tipo": st.column_config.SelectboxColumn("Tipo", options=["↗ Saída", "↘ Entrada", "↻ Transferência"]),
+            "Item": st.column_config.TextColumn("Item", width="medium"),
+            "Tag": st.column_config.TextColumn("Tag", width="small"),
+            "Responsável": st.column_config.TextColumn("Responsável", width="medium"),
+            "Status": st.column_config.SelectboxColumn("Status", options=["✓ Concluído", "⧖ Pendente", "× Cancelado"]),
+            "po": st.column_config.TextColumn("PO", width="medium")
+        }
+        
+        edited_data = create_responsive_table(
             movimentacoes,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Data": st.column_config.DateColumn("Data"),
-                "Tipo": st.column_config.SelectboxColumn("Tipo", options=["↗ Saída", "↘ Entrada", "↻ Transferência"]),
-                "Item": st.column_config.TextColumn("Item", width="medium"),
-                "Tag": st.column_config.TextColumn("Tag", width="small"),
-                "Responsável": st.column_config.TextColumn("Responsável", width="medium"),
-                "Status": st.column_config.SelectboxColumn("Status", options=["✓ Concluído", "⧖ Pendente", "× Cancelado"]),
-                "po": st.column_config.TextColumn("PO", width="medium")
-            },
-            key="mov_editor"
+            key_prefix="movimentacoes_edit",
+            editable=True,
+            add_search=True,
+            add_filters=True
         )
+        
         col_save, col_cancel = st.columns(2)
         with col_save:
-            if st.button("✓ Salvar", use_container_width=True, key="save_mov"):
+            if st.button("💾 Salvar Alterações", use_container_width=True, key="save_mov"):
                 st.session_state.movimentacoes_data = edited_data
                 if save_movimentacoes_data():
                     st.session_state.movimentacoes_data_last_saved = datetime.now()
-                    st.success("✓ Alterações salvas automaticamente!")
+                    st.success("✅ Alterações salvas automaticamente!")
                 else:
                     st.error("× Erro ao salvar alterações")
                 st.session_state.show_edit_mode_mov = False
                 st.rerun()
         with col_cancel:
-            if st.button("× Cancelar", use_container_width=True, key="cancel_mov"):
+            if st.button("× Cancelar Edição", use_container_width=True, key="cancel_mov"):
                 st.session_state.show_edit_mode_mov = False
                 st.rerun()
     else:
-        st.subheader("☰ Histórico de Movimentações")
-        st.dataframe(movimentacoes, use_container_width=True, hide_index=True)
+        # Modo visualização com busca e filtros
+        if not movimentacoes.empty:
+            create_responsive_table(
+                movimentacoes,
+                key_prefix="movimentacoes_view",
+                editable=False,
+                add_search=True,
+                add_filters=True
+            )
+        else:
+            st.info("📝 Nenhuma movimentação registrada. Use o botão 'Nova Movimentação' para adicionar.")
 
 def render_reports():
     """Renderiza a página de relatórios gerenciais"""
@@ -6359,10 +7364,7 @@ def load_gadgets_data():
             
             st.session_state.gadgets_data = df
             
-            # Mostrar informação sobre carregamento
-            if hasattr(st, 'sidebar'):
-                st.sidebar.success(f"📁 Dados carregados: {latest_file} ({len(df)} registros)")
-            
+            # Carregamento silencioso
             return True
     except Exception as e:
         if hasattr(st, 'sidebar'):
@@ -6528,7 +7530,7 @@ def process_matt_response(user_message):
                     if budget < 1000:
                         budget *= 1000
                     st.session_state.matt_budget = budget
-                    return f"💰 **Budget definido com sucesso!** R$ {budget:,.2f} configurado para suas análises e recomendações."
+                    return f"<i class='fas fa-dollar-sign'></i> **Budget definido com sucesso!** R$ {budget:,.2f} configurado para suas análises e recomendações."
                 except:
                     pass
         
@@ -6560,9 +7562,9 @@ def process_matt_response(user_message):
             
             st.session_state.gadgets_preferidos = gadgets_atuais
             texto_gadgets = ", ".join(gadgets_encontrados)
-            return f"🎯 **Gadgets prioritários definidos!** {texto_gadgets} agora receberão preferência nas recomendações."
+            return f"<i class='fas fa-bullseye'></i> **Gadgets prioritários definidos!** {texto_gadgets} agora receberão preferência nas recomendações."
         
-        return """🎯 **CONFIGURAÇÕES MATT 2.0**
+        return """<i class='fas fa-bullseye'></i> **CONFIGURAÇÕES MATT 2.0**
 
 Para configurar suas preferências, use comandos como:
 • "Definir budget de R$ 80.000"
@@ -6570,9 +7572,9 @@ Para configurar suas preferências, use comandos como:
 • "Limitar quantidade para 15 por item"
 
 **📊 Configurações atuais:**
-• 💰 Budget: R$ {0:,.2f}
-• 🎯 Gadgets prioritários: {1}
-• 📦 Limite por item: {2} unidades
+• <i class='fas fa-dollar-sign'></i> Budget: R$ {0:,.2f}
+• <i class='fas fa-bullseye'></i> Gadgets prioritários: {1}
+• <i class='fas fa-box'></i> Limite por item: {2} unidades
 • 🔥 % Extra prioritário: {3}%
 
 **💡 Dica:** Use as configurações acima na interface visual ou converse comigo diretamente!
@@ -6609,7 +7611,7 @@ Para configurar suas preferências, use comandos como:
 • ▬ Análises detalhadas e insights personalizados
 • $ Otimização de orçamentos e estratégias financeiras  
 • ■ Gestão inteligente de estoque e alertas preditivos
-• 🛒 Recomendações de compras baseadas em IA
+• <i class='fas fa-shopping-cart'></i> Recomendações de compras baseadas em IA
 • ▲ Tendências, padrões e análises preditivas
 • 🤖 Qualquer questão sobre gestão de gadgets!
 
@@ -6759,7 +7761,7 @@ Assim que você registrar perdas, minha IA será capaz de:
 • Projeções financeiras precisas
 
 ◎ **Para começar:**
-1. Vá na aba "✎ Registrar Perdas"
+1. Vá na aba "✏️ Registrar Perdas"
 2. Registre algumas perdas de exemplo
 3. Volte aqui e peça: "Analise meus dados"
 4. Receba insights incríveis da IA!
@@ -6777,10 +7779,10 @@ Assim que você registrar perdas, minha IA será capaz de:
         
         return f"""🎯 **SUAS CONFIGURAÇÕES MATT 2.0**
 
-📊 **Parâmetros Ativos:**
-• 💰 **Budget Total:** R$ {budget:,.2f}
-• 🎯 **Gadgets Prioritários:** {gadgets_texto}
-• 📦 **Limite por Item:** {limite_qty} unidades
+<i class='fas fa-chart-bar'></i> **Parâmetros Ativos:**
+• <i class='fas fa-dollar-sign'></i> **Budget Total:** R$ {budget:,.2f}
+• <i class='fas fa-bullseye'></i> **Gadgets Prioritários:** {gadgets_texto}
+• <i class='fas fa-box'></i> **Limite por Item:** {limite_qty} unidades
 • 🔥 **% Extra por Prioritário:** {percentual_extra}%
 
 💡 **Como usar:**
@@ -7193,13 +8195,13 @@ def render_agente_matt():
 
     # 🎯 CONFIGURAÇÕES DE ORÇAMENTO E PREFERÊNCIAS
     st.divider()
-    st.subheader("🎯 Configurações de Orçamento Matt 2.0")
+    st.markdown("## <i class='fas fa-bullseye'></i> Configurações de Orçamento Matt 2.0", unsafe_allow_html=True)
     
     # Configurações de orçamento em colunas
     col_config1, col_config2 = st.columns(2)
     
     with col_config1:
-        st.markdown("**💰 Budget Total:**")
+        st.markdown("**<i class='fas fa-dollar-sign'></i> Budget Total:**", unsafe_allow_html=True)
         matt_budget = st.number_input(
             "Definir budget total para compras:",
             min_value=1000,
@@ -7220,7 +8222,7 @@ def render_agente_matt():
         )
         
     with col_config2:
-        st.markdown("**📊 Limite de Quantidades:**")
+        st.markdown("**<i class='fas fa-chart-bar'></i> Limite de Quantidades:**", unsafe_allow_html=True)
         limite_por_item = st.number_input(
             "Quantidade máxima por item:",
             min_value=1,
@@ -7363,7 +8365,7 @@ def render_controle_gadgets():
     
     st.markdown("""
     <div style="text-align: center; margin: 2rem 0;">
-        <h1 style="color: #9333EA; margin-bottom: 0.5rem;">📱 Controle de Gadgets</h1>
+        <h1 style="color: #9333EA; margin-bottom: 0.5rem;"><i class='fas fa-mobile-alt'></i> Controle de Gadgets</h1>
         <p style="color: #A855F7; font-size: 1.1rem;">Registro e Análise de Perdas - Mensal, Trimestral e Anual</p>
     </div>
     """, unsafe_allow_html=True)
@@ -7391,13 +8393,116 @@ def render_controle_gadgets():
         st.warning("⚠️ **Status dos Dados:** Nenhum registro encontrado. Registre algumas perdas primeiro.")
     
     # Tabs principais
-    tab_registro, tab_analises, tab_estoque, tab_matt, tab_config = st.tabs([
-        "✎ Registrar Perdas", 
-        "▬ Análises & Gráficos", 
-        "■ Controle de Estoque",
-        "◉ Agente Matt",
-        "● Configurações"
+    tab_registro, tab_import, tab_analises, tab_estoque, tab_matt, tab_config = st.tabs([
+        "✏️ Registrar Perdas",
+        f"📤 {get_text('import_csv')}", 
+        "📊 Análises & Gráficos", 
+        "📦 Controle de Estoque",
+        "🤖 Agente Matt",
+        "⚙️ Configurações"
     ])
+    
+    with tab_import:
+        st.markdown(f"### 📊 {get_text('import_csv')} - Controle de Gadgets")
+        st.markdown(f"**{get_text('auto_translate')}** - Importe dados de perdas em qualquer formato CSV")
+        
+        uploaded_gadgets_file = st.file_uploader(
+            get_text('upload_file'),
+            type=['csv'],
+            help="Carregue dados de perdas de gadgets em formato CSV",
+            key="gadgets_csv_upload"
+        )
+        
+        if uploaded_gadgets_file is not None:
+            try:
+                # Ler o CSV
+                df_gadgets_uploaded = pd.read_csv(uploaded_gadgets_file)
+                
+
+                
+                # Mostrar preview antes da tradução
+                st.markdown("**Preview do arquivo original:**")
+                st.dataframe(df_gadgets_uploaded.head(), use_container_width=True)
+                
+                # Traduzir colunas para o formato de gadgets
+                def translate_gadgets_csv(df):
+                    """Traduz CSV para formato de controle de gadgets"""
+                    df.columns = df.columns.str.lower().str.strip().str.replace(' ', '_')
+                    
+                    column_mapping = {
+                        'data': 'data', 'date': 'data', 'fecha': 'data',
+                        'item_id': 'item_id', 'id': 'item_id', 'codigo': 'item_id',
+                        'name': 'name', 'nome': 'name', 'item': 'name', 'producto': 'name',
+                        'description': 'description', 'descricao': 'description', 'desc': 'description',
+                        'building': 'building', 'predio': 'building', 'edificio': 'building',
+                        'andar': 'andar', 'floor': 'andar', 'piso': 'andar',
+                        'quantidade': 'quantidade', 'quantity': 'quantidade', 'qty': 'quantidade', 'cantidad': 'quantidade',
+                        'cost': 'cost', 'custo': 'cost', 'preco': 'cost', 'valor': 'cost', 'price': 'cost',
+                        'valor_total': 'valor_total', 'total': 'valor_total', 'total_value': 'valor_total',
+                        'periodo': 'periodo', 'period': 'periodo', 'periodo': 'periodo',
+                        'observacoes': 'observacoes', 'obs': 'observacoes', 'notes': 'observacoes', 'notas': 'observacoes'
+                    }
+                    
+                    # Mapear colunas
+                    new_columns = {}
+                    for col in df.columns:
+                        mapped_col = column_mapping.get(col, col)
+                        new_columns[col] = mapped_col
+                    
+                    df = df.rename(columns=new_columns)
+                    
+                    # Garantir colunas obrigatórias
+                    required_cols = ['data', 'item_id', 'name', 'description', 'building', 'andar', 'quantidade', 'cost', 'valor_total', 'periodo', 'observacoes']
+                    
+                    for col in required_cols:
+                        if col not in df.columns:
+                            if col == 'data':
+                                df[col] = pd.Timestamp.now().strftime('%Y-%m-%d')
+                            elif col in ['quantidade', 'cost', 'valor_total']:
+                                df[col] = 1 if col == 'quantidade' else 0
+                            elif col == 'periodo':
+                                df[col] = f"{pd.Timestamp.now().strftime('%Y-%m')}"
+                            else:
+                                df[col] = ''
+                    
+                    return df
+                
+                df_gadgets_translated = translate_gadgets_csv(df_gadgets_uploaded)
+                
+                st.markdown("**Preview após tradução automática:**")
+                st.dataframe(df_gadgets_translated.head(), use_container_width=True)
+                
+                col_gadgets1, col_gadgets2 = st.columns(2)
+                
+                with col_gadgets1:
+                    if st.button("✅ Importar perdas", type="primary", use_container_width=True, key="import_gadgets_btn"):
+                        with st.spinner(get_text('processing')):
+                            # Adicionar aos dados existentes
+                            if 'gadgets_data' not in st.session_state:
+                                st.session_state.gadgets_data = pd.DataFrame(columns=[
+                                    'data', 'item_id', 'name', 'description', 'building', 'andar', 
+                                    'quantidade', 'cost', 'valor_total', 'periodo', 'observacoes'
+                                ])
+                            
+                            combined_gadgets = pd.concat([st.session_state.gadgets_data, df_gadgets_translated], ignore_index=True)
+                            st.session_state.gadgets_data = combined_gadgets
+                            
+                            # Salvar automaticamente
+                            save_gadgets_data()
+                            
+                            st.success(f"✅ {get_text('success_import')} - {len(df_gadgets_translated)} registros de perdas adicionados!")
+                            time.sleep(1)
+                            st.rerun()
+                
+                with col_gadgets2:
+                    if st.button("🔄 Substituir perdas", use_container_width=True, key="replace_gadgets_btn"):
+                        with st.spinner(get_text('processing')):
+                            st.session_state.gadgets_data = df_gadgets_translated
+                            save_gadgets_data()
+                            st.rerun()
+                            
+            except Exception as e:
+                st.error(f"{get_text('error_import')}: {e}")
     
     with tab_registro:
         render_registro_perdas()
@@ -7586,6 +8691,55 @@ def load_lixo_data():
         st.error(f"Erro ao carregar dados lixo eletrônico: {e}")
     return False
 
+def translate_movements_csv(df, target_language='pt'):
+    """Traduz automaticamente as colunas de um CSV de movimentações para o idioma selecionado"""
+    column_mapping = {
+        'pt': {
+            'data': 'Data', 'date': 'Data', 'fecha': 'Data', 'datum': 'Data',
+            'tipo': 'Tipo', 'type': 'Tipo', 'movementtype': 'Tipo', 'movement_type': 'Tipo',
+            'item': 'Item', 'produto': 'Item', 'product': 'Item', 'articulo': 'Item',
+            'tag': 'Tag', 'codigo': 'Tag', 'code': 'Tag', 'sku': 'Tag', 'id': 'Tag',
+            'responsavel': 'Responsável', 'responsible': 'Responsável', 'responsable': 'Responsável', 'user': 'Responsável',
+            'status': 'Status', 'estado': 'Status', 'state': 'Status', 'situacao': 'Status',
+            'po': 'po', 'purchase_order': 'po', 'ordem_compra': 'po', 'pedido': 'po', 'order': 'po'
+        }
+    }
+    
+    # Normalizar nomes das colunas (minúsculas, sem espaços)
+    df.columns = df.columns.str.lower().str.strip().str.replace(' ', '_')
+    
+    # Mapear colunas para padrão português
+    mapping = column_mapping.get(target_language, column_mapping['pt'])
+    new_columns = {}
+    
+    for col in df.columns:
+        mapped_col = mapping.get(col, col)
+        new_columns[col] = mapped_col
+    
+    df = df.rename(columns=new_columns)
+    
+    # Garantir que todas as colunas obrigatórias existam
+    required_columns = ['Data', 'Tipo', 'Item', 'Tag', 'Responsável', 'Status', 'po']
+    
+    for col in required_columns:
+        if col not in df.columns:
+            if col == 'Data':
+                df[col] = datetime.now().strftime('%Y-%m-%d')
+            elif col == 'Tipo':
+                df[col] = '↘ Entrada'
+            elif col == 'Status':
+                df[col] = '✓ Concluído'
+            elif col == 'po':
+                df[col] = f'PO-IMP-{datetime.now().strftime("%Y%m%d")}'
+            else:
+                df[col] = ''
+    
+    # Converter coluna de data
+    if 'Data' in df.columns:
+        df['Data'] = pd.to_datetime(df['Data'], errors='coerce')
+    
+    return df
+
 def save_movimentacoes_data():
     """Salva os dados de movimentações em arquivo CSV"""
     try:
@@ -7596,7 +8750,7 @@ def save_movimentacoes_data():
             return True
         else:
             filename = f"movimentacoes_{datetime.now().strftime('%Y%m%d')}.csv"
-            pd.DataFrame(columns=['data_movimentacao', 'tipo', 'item', 'origem', 'destino', 'responsavel', 'observacoes']).to_csv(filename, index=False)
+            pd.DataFrame(columns=['Data', 'Tipo', 'Item', 'Tag', 'Responsável', 'Status', 'po']).to_csv(filename, index=False)
             st.session_state.movimentacoes_data_last_saved = datetime.now()
             return True
     except Exception as e:
@@ -7608,14 +8762,39 @@ def load_movimentacoes_data():
     try:
         files = glob.glob("movimentacoes_*.csv")
         if files:
+            # Encontrar arquivo mais recente
             latest_file = max(files, key=lambda x: x.split('_')[-1])
             df = pd.read_csv(latest_file)
-            if 'data_movimentacao' in df.columns:
-                df['data_movimentacao'] = pd.to_datetime(df['data_movimentacao'], errors='coerce')
+            
+            # Garantir que o DataFrame tenha as colunas necessárias
+            required_columns = ['Data', 'Tipo', 'Item', 'Tag', 'Responsável', 'Status', 'po']
+            
+            # Adicionar colunas faltantes se necessário
+            for col in required_columns:
+                if col not in df.columns:
+                    if col == 'Data':
+                        df[col] = datetime.now().strftime('%Y-%m-%d')
+                    elif col == 'Tipo':
+                        df[col] = '↘ Entrada'
+                    elif col == 'Status':
+                        df[col] = '✓ Concluído'
+                    else:
+                        df[col] = ''
+            
+            # Converter coluna de data
+            if 'Data' in df.columns:
+                df['Data'] = pd.to_datetime(df['Data'], errors='coerce')
+                
             st.session_state.movimentacoes_data = df
+            
+            # Carregamento silencioso - sem feedback no terminal
             return True
+        else:
+            # Debug: avisar se não há arquivos
+            print("⚠️ Nenhum arquivo de movimentações encontrado")
+            return False
     except Exception as e:
-        st.error(f"Erro ao carregar dados movimentações: {e}")
+        print(f"Erro ao carregar dados movimentações: {e}")
     return False
 
 def save_entrada_data():
@@ -7660,7 +8839,7 @@ def save_inventario_data():
             return True
         else:
             filename = f"inventario_unificado_{datetime.now().strftime('%Y%m%d')}.csv"
-            pd.DataFrame(columns=['tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria']).to_csv(filename, index=False)
+            pd.DataFrame(columns=['tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria', 'local']).to_csv(filename, index=False)
             st.session_state.inventario_data_last_saved = datetime.now()
             return True
     except Exception as e:
@@ -7676,9 +8855,9 @@ def load_inventario_data():
             latest_file = max(files, key=lambda x: x.split('_')[-1])
             df = pd.read_csv(latest_file)
             
-            # Garantir que o DataFrame tenha as colunas necessárias
+            # Garantir que o DataFrame tenha as colunas necessárias (incluindo campo 'local')
             required_columns = ['tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
-                              'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria']
+                              'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria', 'local']
             
             # Adicionar colunas faltantes se necessário
             for col in required_columns:
@@ -7698,12 +8877,7 @@ def load_inventario_data():
             
             st.session_state.inventory_data['unified'] = df
             
-            # Feedback de sucesso
-            print(f"✅ Inventário carregado: {latest_file} ({len(df)} itens)")
-            if hasattr(st, 'session_state') and hasattr(st.session_state, 'get'):
-                if hasattr(st, 'sidebar'):
-                    st.sidebar.success(f"📁 Inventário carregado: {latest_file} ({len(df)} itens)")
-            
+            # Carregamento silencioso - sem feedback no terminal  
             return True
         else:
             # Debug: avisar se não há arquivos
@@ -7927,7 +9101,7 @@ def render_controle_estoque():
 
 def render_registro_perdas():
     """Renderiza interface para registrar perdas de gadgets em formato de planilha"""
-    st.subheader("✎ Registrar Perdas de Gadgets")
+    st.subheader("✏️ Registrar Perdas de Gadgets")
     
     # Garantir que os valores CSV estão inicializados
     if 'gadgets_valores_csv' not in st.session_state:
@@ -7952,21 +9126,21 @@ def render_registro_perdas():
     col_filtro1, col_filtro2, col_filtro3, col_filtro4 = st.columns(4)
     
     with col_filtro1:
-        building_filter = st.selectbox("▬ Filtrar por Prédio", 
+        building_filter = st.selectbox("🏢 Filtrar por Prédio", 
                                      ['Todos'] + sorted(list(valores_csv['building'].unique())))
     
     with col_filtro2:
-        name_filter = st.selectbox("📱 Filtrar por Tipo", 
+        name_filter = st.selectbox("📦 Filtrar por Tipo", 
                                  ['Todos'] + sorted(list(valores_csv['name'].unique())))
     
     with col_filtro3:
         # Filtrar por andar baseado no prédio selecionado
         if building_filter != 'Todos':
             andares_opcoes = get_andares_options(building_filter)
-            andar_filter = st.selectbox("🏗️ Filtrar por Andar", 
+            andar_filter = st.selectbox("🏠 Filtrar por Andar", 
                                       ['Todos'] + andares_opcoes[1:])  # Remove o primeiro item vazio
         else:
-            andar_filter = st.selectbox("🏗️ Filtrar por Andar", ['Todos'])
+            andar_filter = st.selectbox("🏠 Filtrar por Andar", ['Todos'])
     
     with col_filtro4:
         data_perda = st.date_input("📅 Data da Perda", datetime.now())
@@ -9101,7 +10275,6 @@ def render_config_gadgets():
     with col_save_load2:
         if st.button("📁 Carregar Dados Salvos", use_container_width=True):
             if load_gadgets_data():
-                st.success("● Dados carregados com sucesso!")
                 st.rerun()
             else:
                 st.warning("⚠️ Nenhum arquivo de dados encontrado")
@@ -9120,7 +10293,6 @@ def render_config_gadgets():
             # Forçar recarregamento
             if load_gadgets_data():
                 st.session_state.gadgets_data_loaded = True
-                st.success("● Dados recarregados do arquivo com sucesso!")
                 st.rerun()
             else:
                 st.warning("⚠️ Nenhum arquivo de dados encontrado para recarregar")
@@ -9148,7 +10320,6 @@ def render_config_gadgets():
             try:
                 df_valores = pd.read_csv(uploaded_file_valores)
                 st.session_state.gadgets_valores_csv = df_valores
-                st.success("● Valores carregados com sucesso!")
                 st.dataframe(df_valores, use_container_width=True)
             except Exception as e:
                 st.error(f"× Erro ao carregar arquivo: {e}")
@@ -9170,7 +10341,6 @@ def render_config_gadgets():
                 if all(col in df_estoque.columns for col in required_columns):
                      st.session_state.estoque_data = df_estoque
                      auto_save()  # Auto-save após carregamento
-                     st.success("● Estoque carregado e salvo automaticamente no banco de dados!")
                      st.dataframe(df_estoque, use_container_width=True)
                 else:
                     st.error(f"× CSV deve conter as colunas: {', '.join(required_columns)}")
@@ -9286,7 +10456,7 @@ def render_config_gadgets():
         if st.button("◯ Resetar Valores Padrão", use_container_width=True):
             # Recarregar do CSV original
             if load_gadgets_valores_csv():
-                st.success("● Valores recarregados do arquivo CSV!")
+                pass
             else:
                 st.session_state.gadgets_valores_csv = pd.DataFrame({
                     'item_id': ['Headset-spk', 'Mouse-spk', 'Teclado k120-spk', 'Adaptadores usb c-spk'],
@@ -9329,7 +10499,7 @@ def render_upload_dados():
         border: 1px solid #8B5CF6;
     }
     .success-message {
-        background: linear-gradient(135deg, #00C851 0%, #007E33 100%);
+        background: #00C851;
         color: white;
         padding: 15px;
         border-radius: 10px;
@@ -9364,7 +10534,7 @@ def render_upload_dados():
             else:
                 df = pd.read_excel(uploaded_file)
             
-            st.success(f"● Arquivo carregado com sucesso! {df.shape[0]} linhas e {df.shape[1]} colunas")
+
             
             # Análise automática
             analysis = analyze_dataframe_structure(df)
@@ -9644,7 +10814,13 @@ def show_gaming_loading_screen():
         left: 0;
         width: 100%;
         height: 100vh;
-        background: linear-gradient(135deg, #000000 0%, #1a0033 50%, #000000 100%);
+        background: #0F0F23;
+        background-image: 
+            radial-gradient(circle at 25% 75%, rgba(147, 51, 234, 0.4) 0%, transparent 50%),
+            radial-gradient(circle at 75% 25%, rgba(124, 58, 237, 0.3) 0%, transparent 50%),
+            linear-gradient(135deg, transparent 25%, rgba(147, 51, 234, 0.1) 25%, rgba(147, 51, 234, 0.1) 50%, transparent 50%, transparent 75%, rgba(147, 51, 234, 0.1) 75%);
+        background-size: 100% 100%, 100% 100%, 40px 40px;
+        animation: cyberpunk-bg 6s ease-in-out infinite, grid-flow 3s linear infinite;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -9652,6 +10828,41 @@ def show_gaming_loading_screen():
         z-index: 9999;
         font-family: 'Courier New', monospace;
         overflow: hidden;
+    }
+    
+    .gaming-loader::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: 
+            linear-gradient(45deg, transparent 0%, rgba(147, 51, 234, 0.6) 50%, transparent 100%),
+            linear-gradient(-45deg, transparent 0%, rgba(124, 58, 237, 0.4) 50%, transparent 100%);
+        background-size: 150% 150%, 150% 150%;
+        animation: energy-waves 4s ease-in-out infinite;
+        pointer-events: none;
+    }
+    
+    @keyframes grid-flow {
+        0% { background-position: 0px 0px, 0px 0px, 0px 0px; }
+        100% { background-position: 0px 0px, 0px 0px, 40px 40px; }
+    }
+    
+    @keyframes energy-waves {
+        0% { 
+            background-position: -150% 0%, 0% -150%;
+            opacity: 0.4;
+        }
+        50% { 
+            background-position: 150% 0%, 0% 150%;
+            opacity: 0.8;
+        }
+        100% { 
+            background-position: -150% 0%, 0% -150%;
+            opacity: 0.4;
+        }
     }
     
     .matrix-bg {
@@ -9706,7 +10917,7 @@ def show_gaming_loading_screen():
     
     .progress-bar {
         height: 100%;
-        background: linear-gradient(90deg, #00ff00, #33ff33, #00ff00);
+        background: #9333EA;
         animation: data-stream 3s ease-in-out;
         border-radius: 8px;
         box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.3);
@@ -9780,9 +10991,119 @@ def show_gaming_loading_screen():
     # Pausar para mostrar a animação
     time.sleep(3)
 
+def translate_csv_columns(df, target_language='pt'):
+    """Traduz automaticamente as colunas de um CSV para o idioma selecionado"""
+    column_mapping = {
+        'pt': {
+            'tag': 'tag', 'itens': 'itens', 'item': 'itens', 'name': 'itens', 'nome': 'itens',
+            'modelo': 'modelo', 'model': 'modelo', 'marca': 'marca', 'brand': 'marca',
+            'valor': 'valor', 'value': 'valor', 'price': 'valor', 'preco': 'valor',
+            'qtd': 'qtd', 'quantity': 'qtd', 'quantidade': 'qtd', 'qty': 'qtd',
+            'prateleira': 'prateleira', 'shelf': 'prateleira', 'rua': 'rua', 'street': 'rua',
+            'setor': 'setor', 'sector': 'setor', 'box': 'box', 'conferido': 'conferido', 'checked': 'conferido',
+            'fornecedor': 'fornecedor', 'supplier': 'fornecedor', 'proveedor': 'fornecedor',
+            'po': 'po', 'nota_fiscal': 'nota_fiscal', 'invoice': 'nota_fiscal', 'factura': 'nota_fiscal',
+            'uso': 'uso', 'use': 'uso', 'categoria': 'categoria', 'category': 'categoria',
+            'local': 'local', 'location': 'local', 'ubicacion': 'local', 'lugar': 'local'
+        }
+    }
+    
+    # Normalizar nomes das colunas (minúsculas, sem espaços)
+    df.columns = df.columns.str.lower().str.strip().str.replace(' ', '_')
+    
+    # Mapear colunas para padrão português
+    mapping = column_mapping.get(target_language, column_mapping['pt'])
+    new_columns = {}
+    
+    for col in df.columns:
+        mapped_col = mapping.get(col, col)
+        new_columns[col] = mapped_col
+    
+    df = df.rename(columns=new_columns)
+    
+    # Garantir que todas as colunas obrigatórias existam
+    required_columns = ['tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
+                       'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria', 'local']
+    
+    for col in required_columns:
+        if col not in df.columns:
+            if col == 'categoria':
+                df[col] = 'importado'
+            elif col == 'conferido':
+                df[col] = True
+            elif col in ['valor', 'qtd']:
+                df[col] = 0
+            else:
+                df[col] = ''
+    
+    return df
+
 def render_inventario_unificado():
     """Renderiza o inventário unificado organizado por categorias"""
-    st.markdown("## ▬ Inventário Unificado por Categorias")
+    st.markdown(f"## ▬ {get_text('unified_inventory')}")
+    
+    # Seção de importação CSV
+    with st.expander(f"📊 {get_text('import_csv')}", expanded=False):
+        st.markdown(f"**{get_text('auto_translate')}** - Suporta qualquer formato de planilha CSV")
+        
+        uploaded_file = st.file_uploader(
+            get_text('upload_file'),
+            type=['csv'],
+            help="Carregue um arquivo CSV em qualquer formato. As colunas serão traduzidas automaticamente."
+        )
+        
+        if uploaded_file is not None:
+            try:
+                # Ler o CSV
+                df_uploaded = pd.read_csv(uploaded_file)
+                
+
+                
+                # Mostrar preview antes da tradução
+                st.markdown("**Preview do arquivo original:**")
+                st.dataframe(df_uploaded.head(), use_container_width=True)
+                
+                # Traduzir colunas
+                df_translated = translate_csv_columns(df_uploaded, st.session_state.get('language', 'pt'))
+                
+                st.markdown("**Preview após tradução automática:**")
+                st.dataframe(df_translated.head(), use_container_width=True)
+                
+                col_import1, col_import2 = st.columns(2)
+                
+                with col_import1:
+                    if st.button("✅ Importar dados", type="primary", use_container_width=True):
+                        with st.spinner(get_text('processing')):
+                            # Adicionar aos dados existentes
+                            if 'inventory_data' not in st.session_state:
+                                st.session_state.inventory_data = {}
+                            
+                            if 'unified' in st.session_state.inventory_data and not st.session_state.inventory_data['unified'].empty:
+                                # Combinar com dados existentes
+                                combined_df = pd.concat([st.session_state.inventory_data['unified'], df_translated], ignore_index=True)
+                            else:
+                                combined_df = df_translated
+                            
+                            st.session_state.inventory_data['unified'] = combined_df
+                            
+                            # Salvar automaticamente
+                            save_inventario_data()
+                            
+                            st.success(f"✅ {get_text('success_import')} - {len(df_translated)} itens adicionados!")
+                            time.sleep(1)
+                            st.rerun()
+                
+                with col_import2:
+                    if st.button("🔄 Substituir dados", use_container_width=True):
+                        with st.spinner(get_text('processing')):
+                            st.session_state.inventory_data['unified'] = df_translated
+                            save_inventario_data()
+                            st.rerun()
+                            
+            except Exception as e:
+                st.error(f"{get_text('error_import')}: {e}")
+    
+    st.divider()
     
     # SEMPRE verificar e carregar dados do CSV no início da renderização
     should_load = False
@@ -9798,15 +11119,13 @@ def render_inventario_unificado():
     if should_load:
         show_gaming_loading_screen()
         if load_inventario_data():
-            st.success("✅ Inventário carregado com sucesso!")
-            time.sleep(0.5)
             st.rerun()
         else:
             st.info("📝 Nenhum arquivo CSV encontrado. Inventário iniciará vazio.")
-            # Inicializar dados vazios
+            # Inicializar dados vazios (incluindo campo 'local')
             st.session_state.inventory_data['unified'] = pd.DataFrame(columns=[
                 'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
-                'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+                'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria', 'local'
             ])
     
     # Obter dados unificados
@@ -9815,10 +11134,10 @@ def render_inventario_unificado():
     # Se ainda estiver vazio após tentativa de carregamento
     if unified_data.empty:
         st.info("📝 Inventário vazio. Adicione itens usando o formulário abaixo.")
-        # Continuar com dados vazios para mostrar interface
+        # Continuar com dados vazios para mostrar interface (incluindo campo 'local')
         unified_data = pd.DataFrame(columns=[
             'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd', 'prateleira', 
-            'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria'
+            'rua', 'setor', 'box', 'conferido', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'categoria', 'local'
         ])
     
     # Métricas gerais
@@ -9900,7 +11219,7 @@ def render_inventario_unificado():
     if categoria_selecionada == 'Todas':
         # Exibir todas as categorias em tabs
         tab_techstop, tab_monitor, tab_audio, tab_lixo, tab_outros = st.tabs([
-            "■ TechStop", "▬ TV e Monitor", "◯ Audio e Video", "↻ Lixo Eletrônico", "▤ Outros"
+            "💻 TechStop", "📺 TV e Monitor", "🎧 Audio e Video", "♻️ Lixo Eletrônico", "📦 Outros"
         ])
         
         with tab_techstop:
@@ -9976,21 +11295,25 @@ def render_categoria_table(df_categoria, categoria_nome):
     elif status_filtro == 'Pendentes':
         df_exibicao = df_exibicao[df_exibicao['conferido'] == False]
     
-    # Tabela principal com colunas organizadas
+    # Garantir que a coluna 'local' existe
+    if 'local' not in df_exibicao.columns:
+        df_exibicao['local'] = 'N/A'
+    
+    # Tabela principal com colunas organizadas (incluindo 'local')
     df_display = df_exibicao[[
         'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd',
-        'prateleira', 'rua', 'setor', 'box', 'conferido',
+        'prateleira', 'rua', 'setor', 'box', 'local', 'conferido',
         'fornecedor', 'po', 'nota_fiscal', 'uso'
     ]].copy()
     
     # Renomear colunas para melhor visualização
     df_display.columns = [
         'Tag', 'Item', 'Modelo', 'Marca', 'Valor (R$)', 'Qtd',
-        'Prateleira', 'Rua', 'Setor', 'Caixa', 'Conferido',
+        'Prateleira', 'Rua', 'Setor', 'Caixa', f'{get_text("location")}', 'Conferido',
         'Fornecedor', 'PO', 'Nota Fiscal', 'Uso'
     ]
     
-    # Configurar tipos de coluna
+    # Configurar tipos de coluna (incluindo 'local')
     column_config = {
         'Tag': st.column_config.TextColumn('Tag', width='small'),
         'Item': st.column_config.TextColumn('Item', width='medium'),
@@ -10002,6 +11325,7 @@ def render_categoria_table(df_categoria, categoria_nome):
         'Rua': st.column_config.TextColumn('Rua', width='small'),
         'Setor': st.column_config.TextColumn('Setor', width='medium'),
         'Caixa': st.column_config.TextColumn('Caixa', width='small'),
+        f'{get_text("location")}': st.column_config.TextColumn(f'{get_text("location")}', width='medium'),
         'Conferido': st.column_config.CheckboxColumn('Conferido'),
         'Fornecedor': st.column_config.TextColumn('Fornecedor', width='medium'),
         'PO': st.column_config.TextColumn('PO', width='small'),
@@ -10038,7 +11362,7 @@ def render_categoria_table(df_categoria, categoria_nome):
                 df_updated = edited_data.copy()
                 df_updated.columns = [
                     'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd',
-                    'prateleira', 'rua', 'setor', 'box', 'conferido',
+                    'prateleira', 'rua', 'setor', 'box', 'local', 'conferido',
                     'fornecedor', 'po', 'nota_fiscal', 'uso'
                 ]
                 
@@ -10330,6 +11654,7 @@ def render_add_form():
             new_setor = setor_choice
         
         new_box = st.text_input("Caixa", placeholder="Ex: Caixa L1", key="add_box")
+        new_local = st.text_input(f"📍 {get_text('location')}", placeholder="Ex: Depósito Central, Sede SP, Filial RJ", key="add_local")
         new_fornecedor = st.text_input("Fornecedor", placeholder="Ex: Dell Brasil", key="add_fornecedor")
         new_po = st.text_input("PO", placeholder="Ex: PO-TEC-009", key="add_po")
         new_nota_fiscal = st.text_input("Nota Fiscal", placeholder="Ex: NF-012345", key="add_nota_fiscal")
@@ -10385,6 +11710,7 @@ def render_add_form():
                 'rua': new_rua,
                 'setor': new_setor,
                 'box': new_box or "N/A",
+                'local': new_local or "N/A",
                 'conferido': new_conferido
             }
             
@@ -10578,7 +11904,7 @@ def consultar_sefaz_nota_fiscal(numero_nf, serie=None, cnpj_emitente=None):
             "items": [
                 {
                     "codigo_produto": "SPT003",
-                    "descricao": "Impressora HP LaserJet Pro M404dn",
+                    "descricao": "Impressora WORKFORCE WFC5790",
                     "ean": "1234567890123",
                     "ncm": "84433210",
                     "cfop": "5102",
@@ -11631,11 +12957,10 @@ def parsear_xml_nfe(xml_content):
     Usa nfelib se disponível, fallback para parser manual
     """
     try:
-        print("🔍 Iniciando parse do XML da NFe...")
+
         
         # Detectar tipo de documento pelo XML
         tipo_doc = detectar_tipo_documento_xml(xml_content)
-        print(f"🔍 Tipo de documento detectado: {tipo_doc}")
         
         # Tentar usar nfelib se disponível no ambiente
         try:
@@ -11646,10 +12971,8 @@ def parsear_xml_nfe(xml_content):
                 
             if resultado_nfelib:
                 return resultado_nfelib
-            else:
-                print("🔄 nfelib falhou, usando parser manual...")
         except:
-            print("⚠️ nfelib não disponível, usando parser manual...")
+            pass  # Usar parser manual como fallback
         
         # Fallback para parser manual
         if tipo_doc == "NFSe":
@@ -16505,8 +17828,596 @@ def render_historico_consultas_sefaz():
         st.success("✅ Histórico limpo!")
         st.rerun()
 
+def render_gaming_loading_screen():
+    """Tela de loading com tema de video game"""
+    if 'loading_complete' not in st.session_state:
+        st.session_state.loading_complete = False
+    
+    if not st.session_state.loading_complete:
+        # Estilo CSS para efeitos visuais
+        st.markdown("""
+        <style>
+        .loading-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0F0F23;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(147, 51, 234, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(124, 58, 237, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(147, 51, 234, 0.2) 0%, transparent 50%),
+                linear-gradient(135deg, transparent 25%, rgba(147, 51, 234, 0.1) 25%, rgba(147, 51, 234, 0.1) 50%, transparent 50%, transparent 75%, rgba(147, 51, 234, 0.1) 75%);
+            background-size: 100% 100%, 100% 100%, 100% 100%, 60px 60px;
+            animation: cyberpunk-bg 8s ease-in-out infinite, grid-move 4s linear infinite;
+            z-index: 9999;
+            text-align: center;
+            overflow: hidden;
+        }
+        
+        .loading-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                linear-gradient(90deg, transparent 0%, rgba(147, 51, 234, 0.8) 50%, transparent 100%),
+                linear-gradient(0deg, transparent 0%, rgba(124, 58, 237, 0.6) 50%, transparent 100%);
+            background-size: 200% 200%, 200% 200%;
+            animation: energy-sweep 3s ease-in-out infinite, vertical-sweep 4s ease-in-out infinite 1.5s;
+            pointer-events: none;
+        }
+        
+        .loading-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 98px,
+                    rgba(147, 51, 234, 0.03) 100px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 98px,
+                    rgba(147, 51, 234, 0.03) 100px
+                );
+            animation: circuit-pulse 2s ease-in-out infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes cyberpunk-bg {
+            0%, 100% { 
+                background-position: 0% 0%, 100% 100%, 50% 50%, 0px 0px;
+                filter: hue-rotate(0deg) brightness(1);
+            }
+            25% { 
+                background-position: 100% 0%, 0% 100%, 80% 20%, 30px 30px;
+                filter: hue-rotate(15deg) brightness(1.1);
+            }
+            50% { 
+                background-position: 100% 100%, 0% 0%, 20% 80%, 60px 60px;
+                filter: hue-rotate(30deg) brightness(1.2);
+            }
+            75% { 
+                background-position: 0% 100%, 100% 0%, 70% 30%, 30px 90px;
+                filter: hue-rotate(15deg) brightness(1.1);
+            }
+        }
+        
+        @keyframes grid-move {
+            0% { background-position: 0px 0px, 0px 0px, 0px 0px, 0px 0px; }
+            100% { background-position: 0px 0px, 0px 0px, 0px 0px, 60px 60px; }
+        }
+        
+        @keyframes energy-sweep {
+            0% { 
+                background-position: -200% 0%, 0% -200%;
+                opacity: 0.3;
+            }
+            50% { 
+                background-position: 200% 0%, 0% 200%;
+                opacity: 0.8;
+            }
+            100% { 
+                background-position: -200% 0%, 0% -200%;
+                opacity: 0.3;
+            }
+        }
+        
+        @keyframes vertical-sweep {
+            0% { 
+                background-position: 0% -200%, -200% 0%;
+                opacity: 0.4;
+            }
+            50% { 
+                background-position: 0% 200%, 200% 0%;
+                opacity: 0.9;
+            }
+            100% { 
+                background-position: 0% -200%, -200% 0%;
+                opacity: 0.4;
+            }
+        }
+        
+        @keyframes circuit-pulse {
+            0%, 100% { 
+                opacity: 0.1;
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 0.3;
+                transform: scale(1.02);
+            }
+        }
+        .game-title {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #00FF41;
+            text-shadow: 
+                0 0 5px #00FF41,
+                0 0 10px #00FF41,
+                0 0 20px #00FF41,
+                0 0 40px #00FF41;
+            margin-bottom: 30px;
+            font-family: 'Gellix', 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            animation: 
+                neon-glow 2s ease-in-out infinite,
+                typewriter 4s steps(7) 1s both,
+                glitch 0.5s ease-in-out infinite alternate;
+            white-space: nowrap;
+            overflow: hidden;
+            border-right: 3px solid #00FF41;
+        }
+        
+        @keyframes neon-glow {
+            0%, 100% { 
+                text-shadow: 
+                    0 0 5px #00FF41,
+                    0 0 10px #00FF41,
+                    0 0 20px #00FF41,
+                    0 0 40px #00FF41;
+            }
+            50% { 
+                text-shadow: 
+                    0 0 2px #00FF41,
+                    0 0 5px #00FF41,
+                    0 0 10px #00FF41,
+                    0 0 20px #00FF41,
+                    0 0 40px #00FF41,
+                    0 0 60px #00FF41;
+            }
+        }
+        
+        @keyframes typewriter {
+            0% { width: 0; }
+            100% { width: 7ch; }
+        }
+        
+        @keyframes glitch {
+            0% { 
+                transform: translateX(0);
+                filter: hue-rotate(0deg);
+            }
+            10% { 
+                transform: translateX(-2px) skew(-1deg);
+                filter: hue-rotate(90deg);
+            }
+            20% { 
+                transform: translateX(2px) skew(1deg);
+                filter: hue-rotate(180deg);
+            }
+            30% { 
+                transform: translateX(-1px);
+                filter: hue-rotate(270deg);
+            }
+            100% { 
+                transform: translateX(0);
+                filter: hue-rotate(360deg);
+            }
+        }
+        
+        .scan-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                transparent 50%,
+                rgba(0, 255, 65, 0.03) 50%
+            );
+            background-size: 100% 4px;
+            animation: scan 0.1s linear infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(4px); }
+        }
+        .loading-text {
+            font-size: 1.5rem;
+            color: #00FF41;
+            margin: 20px 0;
+            font-family: 'Gellix', sans-serif;
+            text-shadow: 0 0 10px #00FF41;
+            animation: blink 1.5s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.7; }
+        }
+        .pixel-art {
+            font-size: 2rem;
+            margin: 20px 0;
+            animation: bounce 1s infinite alternate;
+        }
+        @keyframes bounce {
+            0% { transform: translateY(0px); }
+            100% { transform: translateY(-10px); }
+        }
+        .progress-bar {
+            width: 400px;
+            height: 25px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid #00FF41;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 30px 0;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 65, 0.3),
+                inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00FF41, #39FF14, #00FF41);
+            transition: width 0.3s ease;
+            box-shadow: 
+                0 0 10px #00FF41,
+                inset 0 0 10px rgba(0, 255, 65, 0.3);
+            border-radius: 12px;
+            animation: progress-glow 1s ease-in-out infinite alternate;
+        }
+        
+        @keyframes progress-glow {
+            0% { box-shadow: 0 0 10px #00FF41, inset 0 0 10px rgba(0, 255, 65, 0.3); }
+            100% { box-shadow: 0 0 20px #00FF41, 0 0 30px #00FF41, inset 0 0 15px rgba(0, 255, 65, 0.5); }
+        }
+        
+        /* ================================
+           ANIMAÇÃO DE FUNDO STYLE VIDEO GAME
+        ================================ */
+        
+        .energy-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: radial-gradient(circle, #9333EA 0%, #00FF41 100%);
+            border-radius: 50%;
+            box-shadow: 
+                0 0 10px #9333EA,
+                0 0 20px #00FF41,
+                0 0 30px rgba(147, 51, 234, 0.5);
+            animation: float-particle 4s ease-in-out infinite, glow-particle 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes float-particle {
+            0%, 100% { 
+                transform: translateY(0px) translateX(0px) scale(1);
+                opacity: 0.3;
+            }
+            25% { 
+                transform: translateY(-20px) translateX(10px) scale(1.2);
+                opacity: 0.8;
+            }
+            50% { 
+                transform: translateY(-30px) translateX(-15px) scale(1.5);
+                opacity: 1;
+            }
+            75% { 
+                transform: translateY(-15px) translateX(20px) scale(1.1);
+                opacity: 0.7;
+            }
+        }
+        
+        @keyframes glow-particle {
+            0% { 
+                box-shadow: 0 0 10px #9333EA, 0 0 20px #00FF41;
+                filter: hue-rotate(0deg);
+            }
+            100% { 
+                box-shadow: 0 0 20px #9333EA, 0 0 40px #00FF41, 0 0 60px rgba(147, 51, 234, 0.8);
+                filter: hue-rotate(60deg);
+            }
+        }
+        
+        .circuit-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+        
+        .circuit-line {
+            position: absolute;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(147, 51, 234, 0.8) 20%, 
+                #00FF41 50%, 
+                rgba(147, 51, 234, 0.8) 80%, 
+                transparent 100%
+            );
+            animation: circuit-flow 3s ease-in-out infinite;
+        }
+        
+        .circuit-line.horizontal {
+            height: 2px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(147, 51, 234, 0.8) 20%, 
+                #00FF41 50%, 
+                rgba(147, 51, 234, 0.8) 80%, 
+                transparent 100%
+            );
+        }
+        
+        .circuit-line.vertical {
+            width: 2px;
+            background: linear-gradient(0deg, 
+                transparent 0%, 
+                rgba(147, 51, 234, 0.8) 20%, 
+                #00FF41 50%, 
+                rgba(147, 51, 234, 0.8) 80%, 
+                transparent 100%
+            );
+        }
+        
+        @keyframes circuit-flow {
+            0%, 100% { 
+                opacity: 0.3;
+                filter: brightness(1) drop-shadow(0 0 5px #9333EA);
+            }
+            50% { 
+                opacity: 1;
+                filter: brightness(1.5) drop-shadow(0 0 15px #00FF41);
+            }
+        }
+        
+        .radar-sweep {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 400px;
+            height: 400px;
+            margin: -200px 0 0 -200px;
+            border: 2px solid rgba(147, 51, 234, 0.3);
+            border-radius: 50%;
+            background: 
+                conic-gradient(
+                    from 0deg, 
+                    transparent 0deg, 
+                    transparent 270deg, 
+                    rgba(147, 51, 234, 0.4) 280deg, 
+                    rgba(0, 255, 65, 0.6) 290deg, 
+                    rgba(147, 51, 234, 0.4) 300deg, 
+                    transparent 310deg, 
+                    transparent 360deg
+                );
+            animation: radar-rotation 4s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .radar-sweep::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 300px;
+            height: 300px;
+            margin: -150px 0 0 -150px;
+            border: 1px solid rgba(147, 51, 234, 0.2);
+            border-radius: 50%;
+        }
+        
+        .radar-sweep::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200px;
+            height: 200px;
+            margin: -100px 0 0 -100px;
+            border: 1px solid rgba(147, 51, 234, 0.1);
+            border-radius: 50%;
+        }
+        
+        @keyframes radar-rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Pontos de conexão nos circuitos */
+        .circuit-line::before {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #00FF41;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00FF41;
+            animation: pulse-node 1.5s ease-in-out infinite;
+        }
+        
+        .circuit-line.horizontal::before {
+            top: -3px;
+            left: 20%;
+        }
+        
+        .circuit-line.vertical::before {
+            left: -3px;
+            top: 20%;
+        }
+        
+        @keyframes pulse-node {
+            0%, 100% { 
+                transform: scale(1);
+                opacity: 0.8;
+            }
+            50% { 
+                transform: scale(1.5);
+                opacity: 1;
+            }
+        }
+        
+        /* Hologram effect */
+        .loading-container {
+            position: relative;
+        }
+        
+        .loading-container::before {
+            animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+        }
+        
+        /* Data stream effect */
+        @keyframes data-stream {
+            0% { 
+                background-position: 0% 0%;
+                opacity: 0.6;
+            }
+            25% { 
+                background-position: 25% 25%;
+                opacity: 0.8;
+            }
+            50% { 
+                background-position: 50% 50%;
+                opacity: 1;
+            }
+            75% { 
+                background-position: 75% 75%;
+                opacity: 0.8;
+            }
+            100% { 
+                background-position: 100% 100%;
+                opacity: 0.6;
+            }
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Título centralizado
+        st.markdown("""
+        <div style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0F0F23;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(147, 51, 234, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(124, 58, 237, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(147, 51, 234, 0.2) 0%, transparent 50%),
+                linear-gradient(135deg, transparent 25%, rgba(147, 51, 234, 0.1) 25%, rgba(147, 51, 234, 0.1) 50%, transparent 50%, transparent 75%, rgba(147, 51, 234, 0.1) 75%);
+            background-size: 100% 100%, 100% 100%, 100% 100%, 60px 60px;
+            animation: cyberpunk-bg 8s ease-in-out infinite, grid-move 4s linear infinite;
+            z-index: 9999;
+            text-align: center;
+            overflow: hidden;
+        ">
+            <div style="
+                font-size: 3rem;
+                font-weight: bold;
+                color: #00FF41;
+                text-shadow: 
+                    0 0 5px #00FF41,
+                    0 0 10px #00FF41,
+                    0 0 20px #00FF41,
+                    0 0 40px #00FF41;
+                margin-bottom: 30px;
+                font-family: 'Gellix', 'Courier New', monospace;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                animation: 
+                    neon-glow 2s ease-in-out infinite;
+            ">LOADING</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Texto de loading
+        loading_messages = [
+            "⚡ Inicializando sistemas...",
+            "💾 Carregando dados financeiros...", 
+            "🔒 Configurando segurança...",
+            "📊 Preparando dashboards...",
+            "✅ Quase pronto!"
+        ]
+        
+        # Simular carregamento simples
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        for i, message in enumerate(loading_messages):
+            progress = (i + 1) * 20
+            status_text.text(message)
+            progress_bar.progress(progress)
+            time.sleep(0.8)
+        
+        # Loading final
+        status_text.text("🎮 Bem-vindo!")
+        progress_bar.progress(100)
+        time.sleep(0.5)
+        
+        # Marcar loading como completo
+        time.sleep(0.5)
+        st.session_state.loading_complete = True
+        st.rerun()
+
 def main():
     """Função principal do app"""
+    # Tela de loading com tema de video game
+    if 'loading_complete' not in st.session_state or not st.session_state.loading_complete:
+        render_gaming_loading_screen()
+        return
+    
+    # Seleção de idioma primeiro
+    if not render_language_selector():
+        return
+    
     # Inicializar todos os dados do sistema com persistência automática
     init_all_data()
     

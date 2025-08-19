@@ -27,3 +27,7 @@ selenium>=4.15.0
 beautifulsoup4>=4.12.0
 nfelib>=1.0.0
 PyNFe>=0.6.0
+
+# Dependências para serviço local de ping
+flask>=3.0.0
+flask-cors>=4.0.0
