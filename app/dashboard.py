@@ -3243,7 +3243,7 @@ def render_navigation():
                 st.session_state.authenticated = False
                 st.session_state.current_user = None
                 st.session_state.current_page = 'dashboard'
-            st.rerun()
+                st.rerun()
     
     elif not is_admin(st.session_state.current_user):
         # Logout para usuários não-admin na linha principal já foi tratado acima
