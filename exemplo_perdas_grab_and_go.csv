@@ -1,0 +1,11 @@
+data,local,produto,categoria,quantidade,valor_unitario,valor_total,motivo,observacoes
+2024-10-01,HQ1 - LADO MAIOR,TECLADO E MOUSE MK120,TECLADO,2,126.90,253.80,Furto/Roubo,Dois kits desaparecidos do 2º andar
+2024-10-03,HQ1 - LADO MENOR,MOUSE COM FIO USB M90 PRETO,MOUSE,3,39.90,119.70,Não Retornado,Emprestados e não devolvidos
+2024-10-05,HQ2,HEADSET BLACKWIRE C3220,HEADSET,1,209.00,209.00,Dano/Quebra,Cabo danificado
+2024-10-07,SPARK - 1º ANDAR,HUB 6 EM 1 SEM REDE,ADAPTADOR,5,110.00,550.00,Perda,Sumidos durante mudança de setor
+2024-10-10,HQ1 - LADO MAIOR,ALCOOL ISOPROPILICO,ACESSORIO,10,46.90,469.00,Uso Indevido,Consumo acima do normal
+2024-10-12,SPARK - 2º ANDAR,MICRO SD 128GB,ACESSORIO,3,97.90,293.70,Furto/Roubo,Retirados sem autorização
+2024-10-15,HQ2,ADAPTADOR HUB MULTIPORTAS FULL USB,ADAPTADOR,2,59.00,118.00,Defeito,Pararam de funcionar
+2024-10-18,HQ1 - LADO MENOR,FLANELA DE MICROFIBRA KIT,ACESSORIO,4,27.90,111.60,Perda,Não localizados após limpeza
+2024-10-20,SPARK - 3º ANDAR,TECLADO COM FIO USB K120,TECLADO,1,99.90,99.90,Dano/Quebra,Líquido derramado
+2024-10-22,HQ1 - LADO MAIOR,HUB 5 EM 1 COM REDE,ADAPTADOR,1,244.00,244.00,Não Retornado,Emprestado para home office

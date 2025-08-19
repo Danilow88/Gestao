@@ -16,3 +16,14 @@ pyzbar>=0.1.9
 Pillow>=10.0.0
 pytesseract>=0.3.10
 openpyxl>=3.1.5
+
+# Dependências para integração real com SEFAZ
+requests>=2.31.0
+zeep>=4.2.1
+lxml>=4.9.3
+xmltodict>=0.13.0
+cryptography>=41.0.0
+selenium>=4.15.0
+beautifulsoup4>=4.12.0
+nfelib>=1.0.0
+PyNFe>=0.6.0
