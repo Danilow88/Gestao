@@ -5571,6 +5571,28 @@ def render_impressoras():
     </div>
     """, unsafe_allow_html=True)
     
+    # Sempre recarregar dados das impressoras para garantir modelo atualizado
+    csv_data = load_impressoras_from_csv()
+    if csv_data:
+        st.session_state.impressoras_data = csv_data
+    else:
+        # Fallback para dados de exemplo se não conseguir carregar o CSV
+        st.session_state.impressoras_data = {
+            "HQ1": {
+                "info": {"login": "admin", "senha": "Ultravioleta"},
+                "impressoras": [
+                    {"id": "hq1_001", "local": "Térreo - Recepção", "ip": "172.25.61.53", "serial": "X3B7034483", "papercut": False, "modelo": "WORKFORCE WFC5790", "marca": "Epson", "tipo": "EcoTank", "status_manual": "Ativo"}
+                ]
+            }
+        }
+    
+    # Usar dados do session_state  
+    impressoras_data = st.session_state.impressoras_data
+    
+    # Cache de status das impressoras
+    if 'printer_status_cache' not in st.session_state:
+        st.session_state.printer_status_cache = {}
+    
     # ========================================================================================
     # COMPONENTE DE PING LOCAL VIA WEBRTC - EXECUÇÃO DIRETA NA MÁQUINA DO USUÁRIO
     # ========================================================================================
@@ -5872,33 +5894,9 @@ def render_impressoras():
             🔒 **100% seguro:** Apenas comunicação local
             """)
     
-    # Sempre recarregar dados das impressoras para garantir modelo atualizado
-    csv_data = load_impressoras_from_csv()
-    if csv_data:
-        st.session_state.impressoras_data = csv_data
-    else:
-        # Fallback para dados de exemplo se não conseguir carregar o CSV
-        st.session_state.impressoras_data = {
-            "HQ1": {
-                "info": {"login": "admin", "senha": "Ultravioleta"},
-                "impressoras": [
-                    {"id": "hq1_001", "local": "Térreo - Recepção", "ip": "172.25.61.53", "serial": "X3B7034483", "papercut": False, "modelo": "WORKFORCE WFC5790", "marca": "Epson", "tipo": "EcoTank", "status_manual": "Ativo"}
-                ]
-            }
-        }
-    
-    # Usar dados do session_state  
-    impressoras_data = st.session_state.impressoras_data
-    
-    # Cache de status das impressoras
-    if 'printer_status_cache' not in st.session_state:
-        st.session_state.printer_status_cache = {}
-    
     # Auto-scan das impressoras quando acessar a aba
     if 'auto_scan_executed' not in st.session_state:
         st.session_state.auto_scan_executed = False
-    
-    impressoras_data = st.session_state.impressoras_data
     
     # Executar scan automaticamente na primeira vez que acessa a aba
     if not st.session_state.auto_scan_executed:
