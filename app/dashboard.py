@@ -5654,8 +5654,8 @@ def render_impressoras():
                         # Container para detalhes das impressoras com status
                         st.markdown('<div id="printer-details-container"></div>', unsafe_allow_html=True)
                         
-                        # Exibir detalhes iniciais (sem status ainda)
-                        displayPrinterDetails(printer_details, {{}});
+                        # Exibir detalhes iniciais (sem status ainda) - será preenchido pelo JavaScript
+                        st.info("📋 **Detalhes das impressoras aparecerão aqui após executar o ping local**")
                     
                     # Executar ping local via JavaScript para TODAS as impressoras
                     st.markdown(f"""
