@@ -5652,10 +5652,14 @@ def render_impressoras():
                     # Mostrar detalhes das impressoras com status em tempo real
                     with st.expander(f"📋 **Detalhes de todas as {len(printer_ips)} impressoras**", expanded=True):
                         # Container para detalhes das impressoras com status
-                        st.markdown('<div id="printer-details-container"></div>', unsafe_allow_html=True)
+                        st.markdown('<div id="printer-details-container" style="min-height: 200px; border: 2px dashed #ccc; padding: 20px; text-align: center; background: #f9f9f9;"></div>', unsafe_allow_html=True)
                         
                         # Exibir detalhes iniciais (sem status ainda) - será preenchido pelo JavaScript
                         st.info("📋 **Detalhes das impressoras aparecerão aqui após executar o ping local**")
+                        
+                        # Adicionar botão de teste para verificar se o JavaScript está funcionando
+                        if st.button("🧪 TESTAR JAVASCRIPT", key="test_js"):
+                            st.success("✅ Botão funcionando! JavaScript deve estar ativo.")
                     
                     # Executar ping local via JavaScript para TODAS as impressoras
                     st.markdown(f"""
