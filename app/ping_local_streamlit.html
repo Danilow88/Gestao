@@ -1,0 +1,302 @@
+<!-- Sistema de Ping Local para Streamlit -->
+<div id="ping-local-system">
+    <style>
+        .printer-card {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .online { border-color: #4caf50; }
+        .offline { border-color: #f44336; }
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+        }
+        .status-online {
+            background: #4caf5020;
+            color: #4caf50;
+            border: 2px solid #4caf50;
+        }
+        .status-offline {
+            background: #f4433620;
+            color: #f44336;
+            border: 2px solid #f44336;
+        }
+        .status-waiting {
+            background: #ff980020;
+            color: #ff9800;
+            border: 2px solid #ff9800;
+        }
+        .progress-bar {
+            width: 100%;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .progress-fill {
+            height: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+        .summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .summary-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+        }
+    </style>
+
+    <div id="printer-details-container"></div>
+    <div id="progress-container" style="display: none;">
+        <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+        </div>
+        <div id="progress-text" style="text-align: center; margin: 10px 0;"></div>
+    </div>
+</div>
+
+<script>
+// Sistema de Ping Local SIMPLIFICADO para Streamlit
+console.log('🚀 Sistema de ping local SIMPLIFICADO carregado!');
+
+// Dados das impressoras (serão injetados pelo Python)
+const printerIPs = window.printerIPs || [];
+const printerDetails = window.printerDetails || {};
+
+let pingResults = {};
+let currentProgress = 0;
+
+// Função para exibir detalhes das impressoras
+function displayPrinterDetails(details, pingResults) {
+    console.log('🔄 Atualizando detalhes das impressoras...');
+    const container = document.getElementById('printer-details-container');
+    console.log('📦 Container encontrado:', container);
+    
+    if (!container) {
+        console.error('❌ Container não encontrado!');
+        return;
+    }
+    
+    let html = '<h3 style="color: #333; text-align: center; margin-bottom: 20px;">📋 Detalhes das Impressoras</h3>';
+    
+    for (const [ip, detail] of Object.entries(details)) {
+        const pingResult = pingResults[ip];
+        const statusClass = pingResult ? (pingResult.online ? 'online' : 'offline') : '';
+        const statusBadgeClass = pingResult ? (pingResult.online ? 'status-online' : 'status-offline') : 'status-waiting';
+        const statusText = pingResult ? (pingResult.online ? 'ONLINE' : 'OFFLINE') : '⏳ Aguardando...';
+        const statusIcon = pingResult ? (pingResult.online ? '✅' : '❌') : '⏳';
+        const latencyText = pingResult && pingResult.latency ? `(${pingResult.latency}ms)` : '';
+        const methodText = pingResult ? pingResult.method : '';
+        
+        html += `
+        <div class="printer-card ${statusClass}">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h4 style="margin: 0 0 10px 0; color: #333;">
+                        ${statusIcon} <strong>${ip}</strong> ${latencyText}
+                    </h4>
+                    <p style="margin: 5px 0; color: #666;">
+                        <strong>Local:</strong> ${detail.local} | 
+                        <strong>Modelo:</strong> ${detail.modelo} | 
+                        <strong>Serial:</strong> ${detail.serial}
+                    </p>
+                    <p style="margin: 5px 0; color: #666;">
+                        <strong>Status Manual:</strong> ${detail.status_manual} | 
+                        <strong>Método:</strong> ${methodText}
+                    </p>
+                </div>
+                <div>
+                    <div class="status-badge ${statusBadgeClass}">
+                        ${statusText}
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+    }
+    
+    console.log('📝 HTML gerado:', html.substring(0, 200) + '...');
+    container.innerHTML = html;
+    console.log('✅ Detalhes das impressoras atualizados!');
+}
+
+// Função para atualizar progresso
+function updateProgress(completed, total) {
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+    const percentage = Math.round((completed / total) * 100);
+    
+    if (progressFill) progressFill.style.width = percentage + '%';
+    if (progressText) progressText.textContent = `🔄 Pingando impressoras... ${completed}/${total} (${percentage}%)`;
+}
+
+// Função para executar ping local
+async function executeCompleteLocalPing() {
+    console.log('🚀 Iniciando ping local para', printerIPs.length, 'impressoras...');
+    
+    // Resetar resultados
+    pingResults = {};
+    currentProgress = 0;
+    
+    // Mostrar progresso
+    document.getElementById('progress-container').style.display = 'block';
+    updateProgress(0, printerIPs.length);
+    
+    // Primeiro, mostrar detalhes iniciais (sem status)
+    displayPrinterDetails(printerDetails, {});
+    
+    // Executar ping para cada IP
+    for (let i = 0; i < printerIPs.length; i++) {
+        const ip = printerIPs[i];
+        console.log('🏓 Pingando:', ip);
+        
+        try {
+            const startTime = performance.now();
+            
+            // Método: HTTP HEAD request
+            try {
+                console.log('🔍 Tentando HTTP para:', ip);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                
+                const response = await fetch(`http://${ip}`, {
+                    method: 'HEAD',
+                    mode: 'no-cors',
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                const endTime = performance.now();
+                const pingResult = {
+                    online: true,
+                    latency: Math.round(endTime - startTime),
+                    method: 'http_fetch'
+                };
+                
+                pingResults[ip] = pingResult;
+                console.log('✅ HTTP sucesso para:', ip, pingResult);
+                
+            } catch (httpError) {
+                console.log('❌ HTTP falhou para:', ip, httpError.message);
+                const pingResult = {
+                    online: false,
+                    latency: null,
+                    method: 'http_failed'
+                };
+                
+                pingResults[ip] = pingResult;
+            }
+            
+        } catch (error) {
+            console.error('💥 Erro geral para:', ip, error.message);
+            const pingResult = {
+                online: false,
+                latency: null,
+                method: 'error',
+                error: error.message
+            };
+            
+            pingResults[ip] = pingResult;
+        }
+        
+        // Atualizar progresso
+        currentProgress++;
+        updateProgress(currentProgress, printerIPs.length);
+        
+        // Atualizar detalhes da impressora em tempo real
+        displayPrinterDetails(printerDetails, pingResults);
+        
+        // Pequena pausa para visualizar
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    console.log('🎉 Ping local concluído!', pingResults);
+    
+    // Mostrar resumo final
+    const total = Object.keys(pingResults).length;
+    const online = Object.values(pingResults).filter(r => r.online).length;
+    const offline = total - online;
+    
+    const summaryDiv = document.createElement('div');
+    summaryDiv.innerHTML = `
+        <div class="summary">
+            <h3 style="margin: 0 0 15px 0;">
+                📊 **RESULTADOS COMPLETOS DO PING LOCAL**
+            </h3>
+            <div class="summary-stats">
+                <div class="stat">
+                    <div class="stat-number">${total}</div>
+                    <div>Total Testadas</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" style="color: #4caf50;">${online}</div>
+                    <div>Online</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" style="color: #f44336;">${offline}</div>
+                    <div>Offline</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const container = document.getElementById('printer-details-container');
+    if (container) {
+        container.appendChild(summaryDiv);
+    }
+    
+    // Esconder progresso
+    document.getElementById('progress-container').style.display = 'none';
+}
+
+// Função para configurar dados das impressoras (chamada pelo Python)
+function setupPrinterData(ips, details) {
+    window.printerIPs = ips;
+    window.printerDetails = details;
+    console.log('📊 Dados das impressoras configurados:', ips, details);
+    
+    // Mostrar detalhes iniciais
+    displayPrinterDetails(details, {});
+}
+
+// Função para iniciar ping (chamada pelo Python)
+function startPing() {
+    if (window.printerIPs && window.printerIPs.length > 0) {
+        executeCompleteLocalPing();
+    } else {
+        console.error('❌ Dados das impressoras não configurados!');
+    }
+}
+
+// Aguardar página carregar
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('📄 Página carregada, sistema de ping pronto!');
+    });
+} else {
+    console.log('📄 Página já carregada, sistema de ping pronto!');
+}
+
+console.log('✅ Sistema de ping local SIMPLIFICADO carregado com sucesso!');
+</script>

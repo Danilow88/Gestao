@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Ping Local</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .printer-card {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .online {
+            border-color: #4caf50;
+        }
+        .offline {
+            border-color: #f44336;
+        }
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+        }
+        .status-online {
+            background: #4caf5020;
+            color: #4caf50;
+            border: 2px solid #4caf50;
+        }
+        .status-offline {
+            background: #f4433620;
+            color: #f44336;
+            border: 2px solid #f44336;
+        }
+        .status-waiting {
+            background: #ff980020;
+            color: #ff9800;
+            border: 2px solid #ff9800;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .progress-bar {
+            width: 100%;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .progress-fill {
+            height: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+        .summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .summary-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste Sistema de Ping Local</h1>
+        <p>Este é um teste do sistema de ping local que será integrado ao Streamlit.</p>
+        
+        <button onclick="executePing()">🚀 EXECUTAR PING LOCAL</button>
+        <button onclick="resetDisplay()">🔄 RESETAR</button>
+        
+        <div id="progress-container" style="display: none;">
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+            </div>
+            <div id="progress-text" style="text-align: center; margin: 10px 0;"></div>
+        </div>
+        
+        <div id="results-container"></div>
+    </div>
+
+    <script>
+        // Dados de exemplo (serão substituídos pelos dados reais do CSV)
+        const printerData = {
+            "172.25.61.53": {
+                "local": "Sede Principal",
+                "modelo": "HP LaserJet Pro M404n",
+                "serial": "ABC123456789",
+                "status_manual": "Ativo"
+            },
+            "172.25.61.54": {
+                "local": "Sede Principal", 
+                "modelo": "HP LaserJet Pro M404n",
+                "serial": "DEF987654321",
+                "status_manual": "Ativo"
+            },
+            "192.168.1.100": {
+                "local": "Filial Norte",
+                "modelo": "Canon ImageRunner",
+                "serial": "GHI555666777",
+                "status_manual": "Ativo"
+            },
+            "192.168.1.101": {
+                "local": "Filial Sul",
+                "modelo": "Epson WorkForce",
+                "serial": "JKL888999000",
+                "status_manual": "Manutenção"
+            },
+            "10.0.0.50": {
+                "local": "Escritório Central",
+                "modelo": "Brother HL-L2350DW",
+                "serial": "MNO111222333",
+                "status_manual": "Ativo"
+            }
+        };
+
+        let pingResults = {};
+        let currentProgress = 0;
+
+        function displayPrinterDetails() {
+            const container = document.getElementById('results-container');
+            if (!container) return;
+
+            let html = '<h2>📋 Detalhes das Impressoras</h2>';
+            
+            for (const [ip, details] of Object.entries(printerData)) {
+                const result = pingResults[ip];
+                const statusClass = result ? (result.online ? 'online' : 'offline') : '';
+                const statusBadgeClass = result ? (result.online ? 'status-online' : 'status-offline') : 'status-waiting';
+                const statusText = result ? (result.online ? 'ONLINE' : 'OFFLINE') : '⏳ Aguardando...';
+                const statusIcon = result ? (result.online ? '✅' : '❌') : '⏳';
+                const latencyText = result && result.latency ? `(${result.latency}ms)` : '';
+                const methodText = result ? result.method : '';
+
+                html += `
+                <div class="printer-card ${statusClass}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="margin: 0 0 10px 0; color: #333;">
+                                ${statusIcon} <strong>${ip}</strong> ${latencyText}
+                            </h3>
+                            <p style="margin: 5px 0; color: #666;">
+                                <strong>Local:</strong> ${details.local} | 
+                                <strong>Modelo:</strong> ${details.modelo} | 
+                                <strong>Serial:</strong> ${details.serial}
+                            </p>
+                            <p style="margin: 5px 0; color: #666;">
+                                <strong>Status Manual:</strong> ${details.status_manual} | 
+                                <strong>Método:</strong> ${methodText}
+                            </p>
+                        </div>
+                        <div>
+                            <div class="status-badge ${statusBadgeClass}">
+                                ${statusText}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function updateProgress(completed, total) {
+            const progressFill = document.getElementById('progress-fill');
+            const progressText = document.getElementById('progress-text');
+            const percentage = Math.round((completed / total) * 100);
+            
+            if (progressFill) progressFill.style.width = percentage + '%';
+            if (progressText) progressText.textContent = `🔄 Pingando impressoras... ${completed}/${total} (${percentage}%)`;
+        }
+
+        function showSummary() {
+            const total = Object.keys(printerData).length;
+            const online = Object.values(pingResults).filter(r => r.online).length;
+            const offline = total - online;
+
+            const summaryHtml = `
+                <div class="summary">
+                    <h3>📊 RESULTADOS COMPLETOS DO PING LOCAL</h3>
+                    <div class="summary-stats">
+                        <div class="stat">
+                            <div class="stat-number">${total}</div>
+                            <div>Total Testadas</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number" style="color: #4caf50;">${online}</div>
+                            <div>Online</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number" style="color: #f44336;">${offline}</div>
+                            <div>Offline</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const container = document.getElementById('results-container');
+            if (container) {
+                container.insertAdjacentHTML('beforeend', summaryHtml);
+            }
+        }
+
+        async function executePing() {
+            console.log('🚀 Iniciando ping local...');
+            
+            // Resetar resultados
+            pingResults = {};
+            currentProgress = 0;
+            
+            // Mostrar progresso
+            document.getElementById('progress-container').style.display = 'block';
+            updateProgress(0, Object.keys(printerData).length);
+            
+            // Mostrar detalhes iniciais
+            displayPrinterDetails();
+            
+            const ips = Object.keys(printerData);
+            
+            for (let i = 0; i < ips.length; i++) {
+                const ip = ips[i];
+                console.log(`🏓 Pingando ${ip}...`);
+                
+                try {
+                    const startTime = performance.now();
+                    
+                    // Tentar ping via HTTP HEAD
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 3000);
+                        
+                        const response = await fetch(`http://${ip}`, {
+                            method: 'HEAD',
+                            mode: 'no-cors',
+                            signal: controller.signal
+                        });
+                        
+                        clearTimeout(timeoutId);
+                        const endTime = performance.now();
+                        
+                        pingResults[ip] = {
+                            online: true,
+                            latency: Math.round(endTime - startTime),
+                            method: 'http_fetch'
+                        };
+                        
+                        console.log(`✅ ${ip} - ONLINE (${pingResults[ip].latency}ms)`);
+                        
+                    } catch (httpError) {
+                        console.log(`❌ ${ip} - HTTP falhou: ${httpError.message}`);
+                        
+                        // Tentar WebSocket como fallback
+                        try {
+                            const ws = new WebSocket(`ws://${ip}:80`);
+                            const wsStartTime = performance.now();
+                            
+                            pingResults[ip] = await new Promise((resolve) => {
+                                ws.onopen = () => {
+                                    const wsEndTime = performance.now();
+                                    ws.close();
+                                    resolve({
+                                        online: true,
+                                        latency: Math.round(wsEndTime - wsStartTime),
+                                        method: 'websocket'
+                                    });
+                                };
+                                
+                                ws.onerror = () => {
+                                    resolve({
+                                        online: false,
+                                        latency: null,
+                                        method: 'websocket_error'
+                                    });
+                                };
+                                
+                                setTimeout(() => {
+                                    ws.close();
+                                    resolve({
+                                        online: false,
+                                        latency: null,
+                                        method: 'websocket_timeout'
+                                    });
+                                }, 3000);
+                            });
+                            
+                            console.log(`🔌 ${ip} - WebSocket: ${pingResults[ip].online ? 'ONLINE' : 'OFFLINE'}`);
+                            
+                        } catch (wsError) {
+                            console.log(`❌ ${ip} - WebSocket falhou: ${wsError.message}`);
+                            pingResults[ip] = {
+                                online: false,
+                                latency: null,
+                                method: 'connection_failed'
+                            };
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error(`💥 Erro geral para ${ip}:`, error.message);
+                    pingResults[ip] = {
+                        online: false,
+                        latency: null,
+                        method: 'error',
+                        error: error.message
+                    };
+                }
+                
+                // Atualizar progresso
+                currentProgress++;
+                updateProgress(currentProgress, ips.length);
+                
+                // Atualizar display em tempo real
+                displayPrinterDetails();
+                
+                // Pequena pausa para visualizar
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            console.log('🎉 Ping local concluído!', pingResults);
+            
+            // Mostrar resumo final
+            showSummary();
+            
+            // Esconder progresso
+            document.getElementById('progress-container').style.display = 'none';
+        }
+
+        function resetDisplay() {
+            pingResults = {};
+            currentProgress = 0;
+            document.getElementById('progress-container').style.display = 'none';
+            document.getElementById('results-container').innerHTML = '';
+        }
+
+        // Mostrar detalhes iniciais
+        displayPrinterDetails();
+        
+        console.log('✅ Sistema de ping local carregado!');
+    </script>
+</body>
+</html>
