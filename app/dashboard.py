@@ -5649,13 +5649,13 @@ def render_impressoras():
                     🔍 **IPs únicos:** {len(set(printer_ips))}
                     """)
                     
-                    # Mostrar detalhes das impressoras
-                    with st.expander(f"📋 **Detalhes de todas as {len(printer_ips)} impressoras**", expanded=False):
-                        for ip in printer_ips:
-                            details = printer_details[ip]
-                            st.write(f"""
-                            **IP:** `{ip}` | **Local:** {details['local']} | **Modelo:** {details['modelo']} | **Serial:** {details['serial']}
-                            """)
+                    # Mostrar detalhes das impressoras com status em tempo real
+                    with st.expander(f"📋 **Detalhes de todas as {len(printer_ips)} impressoras**", expanded=True):
+                        # Container para detalhes das impressoras com status
+                        st.markdown('<div id="printer-details-container"></div>', unsafe_allow_html=True)
+                        
+                        # Exibir detalhes iniciais (sem status ainda)
+                        displayPrinterDetails(printer_details, {{}});
                     
                     # Executar ping local via JavaScript para TODAS as impressoras
                     st.markdown(f"""
@@ -5663,6 +5663,74 @@ def render_impressoras():
                     // Sistema de ping local para TODAS as impressoras do CSV
                     const printerIPs = {printer_ips};
                     const printerDetails = {printer_details};
+                    
+                    // Função para exibir detalhes das impressoras com status
+                    function displayPrinterDetails(details, pingResults) {{
+                        const container = document.getElementById('printer-details-container');
+                        if (!container) return;
+                        
+                        let html = '';
+                        for (const [ip, detail] of Object.entries(details)) {{
+                            const pingResult = pingResults[ip];
+                            const statusColor = pingResult && pingResult.online ? '#4caf50' : '#f44336';
+                            const statusIcon = pingResult && pingResult.online ? '✅' : '❌';
+                            const statusText = pingResult ? (pingResult.online ? 'ONLINE' : 'OFFLINE') : '⏳ Aguardando...';
+                            const latencyText = pingResult && pingResult.latency ? `(${{pingResult.latency}}ms)` : '';
+                            const methodText = pingResult ? pingResult.method : '';
+                            
+                            html += `
+                            <div style="
+                                background: white;
+                                border: 2px solid ${{statusColor}};
+                                border-radius: 10px;
+                                padding: 15px;
+                                margin: 10px 0;
+                                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                            ">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <h4 style="margin: 0 0 10px 0; color: #333;">
+                                            ${{statusIcon}} <strong>${{ip}}</strong> ${{latencyText}}
+                                        </h4>
+                                        <p style="margin: 5px 0; color: #666;">
+                                            <strong>Local:</strong> ${{detail.local}} | 
+                                            <strong>Modelo:</strong> ${{detail.modelo}} | 
+                                            <strong>Serial:</strong> ${{detail.serial}}
+                                        </p>
+                                        <p style="margin: 5px 0; color: #666;">
+                                            <strong>Status Manual:</strong> ${{detail.status_manual}} | 
+                                            <strong>Método:</strong> ${{methodText}}
+                                        </p>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="
+                                            color: ${{statusColor}}; 
+                                            font-weight: bold; 
+                                            font-size: 18px;
+                                            padding: 8px 16px;
+                                            border-radius: 20px;
+                                            background: ${{statusColor}}20;
+                                            border: 2px solid ${{statusColor}};
+                                        ">
+                                            ${{statusText}}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            `;
+                        }}
+                        container.innerHTML = html;
+                    }}
+                    
+                    // Função para atualizar detalhes de uma impressora específica
+                    function updatePrinterDetails(ip, pingResult) {{
+                        const currentResults = window.currentPingResults || {{}};
+                        currentResults[ip] = pingResult;
+                        window.currentPingResults = currentResults;
+                        
+                        // Atualizar display com novo resultado
+                        displayPrinterDetails(printerDetails, currentResults);
+                    }}
                     
                     // Função para executar ping local de todas as impressoras
                     async function executeCompleteLocalPing() {{
@@ -5747,6 +5815,9 @@ def render_impressoras():
                                 completed++;
                                 updateProgress(completed, totalIPs);
                                 
+                                // Atualizar detalhes da impressora em tempo real
+                                updatePrinterDetails(ip, pingResult);
+                                
                             }} catch (error) {{
                                 results[ip] = {{
                                     online: false,
@@ -5756,6 +5827,9 @@ def render_impressoras():
                                 }};
                                 completed++;
                                 updateProgress(completed, totalIPs);
+                                
+                                // Atualizar detalhes da impressora em tempo real
+                                updatePrinterDetails(ip, results[ip]);
                             }}
                         }}
                         
