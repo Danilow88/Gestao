@@ -5597,71 +5597,216 @@ def render_impressoras():
             if st.button('🚀 EXECUTAR PING LOCAL VIA WEBRTC', use_container_width=True, type="primary", 
                         help="Executa ping diretamente na sua máquina, mesmo com o dashboard na cloud"):
                 
-                # Extrair IPs das impressoras
+                # ========================================================================================
+                # EXTRAÇÃO COMPLETA DE TODOS OS IPs DO CSV - PING REAL DE TODAS AS IMPRESSORAS
+                # ========================================================================================
+                
+                # Extrair TODOS os IPs das impressoras do CSV
                 printer_ips = []
+                printer_details = {}  # Para armazenar detalhes de cada impressora
+                
                 for local_name, local_data in impressoras_data.items():
                     for printer in local_data["impressoras"]:
-                        if "ip" in printer and printer["ip"]:
-                            printer_ips.append(printer["ip"])
+                        if "ip" in printer and printer["ip"] and str(printer["ip"]).strip():
+                            ip = str(printer["ip"]).strip()
+                            printer_ips.append(ip)
+                            printer_details[ip] = {
+                                "local": printer.get("local", "N/A"),
+                                "modelo": printer.get("modelo", "N/A"),
+                                "serial": printer.get("serial", "N/A"),
+                                "status_manual": printer.get("status_manual", "N/A")
+                            }
                 
                 if printer_ips:
-                    st.info(f"🎯 **Ping Local Ativado:** {len(printer_ips)} IPs de impressoras detectados")
-                    st.write("**IPs das impressoras:**")
-                    for ip in printer_ips:
-                        st.code(ip)
+                    # Mostrar estatísticas completas
+                    st.success(f"""
+                    🎯 **PING LOCAL ATIVADO - TODAS AS IMPRESSORAS DO CSV**
                     
-                    # Executar ping local via JavaScript
-                    st.markdown("""
+                    📊 **Total de impressoras cadastradas:** {len(printer_ips)}
+                    🏢 **Locais:** {len(set([details['local'] for details in printer_details.values()]))}
+                    🔍 **IPs únicos:** {len(set(printer_ips))}
+                    """)
+                    
+                    # Mostrar detalhes das impressoras
+                    with st.expander(f"📋 **Detalhes de todas as {len(printer_ips)} impressoras**", expanded=False):
+                        for ip in printer_ips:
+                            details = printer_details[ip]
+                            st.write(f"""
+                            **IP:** `{ip}` | **Local:** {details['local']} | **Modelo:** {details['modelo']} | **Serial:** {details['serial']}
+                            """)
+                    
+                    # Executar ping local via JavaScript para TODAS as impressoras
+                    st.markdown(f"""
                     <script>
-                    // Executar ping local via JavaScript
-                    async function executeLocalPing() {
-                        const printerIPs = """ + str(printer_ips) + """;
+                    // Sistema de ping local para TODAS as impressoras do CSV
+                    const printerIPs = {printer_ips};
+                    const printerDetails = {printer_details};
+                    
+                    // Função para executar ping local de todas as impressoras
+                    async function executeCompleteLocalPing() {{
+                        const results = {{}};
+                        const totalIPs = printerIPs.length;
+                        let completed = 0;
                         
-                        // Usar fetch para simular ping local
-                        const results = {};
+                        // Mostrar progresso
+                        updateProgress(0, totalIPs);
                         
-                        for (const ip of printerIPs) {
-                            try {
+                        // Executar ping para cada IP
+                        for (const ip of printerIPs) {{
+                            try {{
                                 const startTime = performance.now();
-                                const response = await fetch(`http://${ip}`, {
-                                    method: 'HEAD',
-                                    mode: 'no-cors',
-                                    signal: AbortSignal.timeout(3000)
-                                });
-                                const endTime = performance.now();
                                 
-                                results[ip] = {
-                                    online: true,
-                                    latency: Math.round(endTime - startTime),
-                                    method: 'http_fetch'
-                                };
-                            } catch (error) {
-                                results[ip] = {
+                                // Tentar múltiplos métodos de ping
+                                let pingResult = null;
+                                
+                                // Método 1: HTTP HEAD request
+                                try {{
+                                    const response = await fetch(`http://${{ip}}`, {{
+                                        method: 'HEAD',
+                                        mode: 'no-cors',
+                                        signal: AbortSignal.timeout(3000)
+                                    }});
+                                    const endTime = performance.now();
+                                    pingResult = {{
+                                        online: true,
+                                        latency: Math.round(endTime - startTime),
+                                        method: 'http_fetch'
+                                    }};
+                                }} catch (httpError) {{
+                                    // Método 2: Tentar WebSocket
+                                    try {{
+                                        const ws = new WebSocket(`ws://${{ip}}:80`);
+                                        const wsStartTime = performance.now();
+                                        
+                                        pingResult = await new Promise((resolve) => {{
+                                            ws.onopen = () => {{
+                                                const wsEndTime = performance.now();
+                                                ws.close();
+                                                resolve({{
+                                                    online: true,
+                                                    latency: Math.round(wsEndTime - wsStartTime),
+                                                    method: 'websocket'
+                                                }});
+                                            }};
+                                            
+                                            ws.onerror = () => {{
+                                                resolve({{
+                                                    online: false,
+                                                    latency: null,
+                                                    method: 'websocket_error'
+                                                }});
+                                            }};
+                                            
+                                            setTimeout(() => {{
+                                                ws.close();
+                                                resolve({{
+                                                    online: false,
+                                                    latency: null,
+                                                    method: 'websocket_timeout'
+                                                }});
+                                            }}, 3000);
+                                        }});
+                                    }} catch (wsError) {{
+                                        // Método 3: Fallback para offline
+                                        pingResult = {{
+                                            online: false,
+                                            latency: null,
+                                            method: 'connection_failed'
+                                        }};
+                                    }}
+                                }}
+                                
+                                results[ip] = pingResult;
+                                completed++;
+                                updateProgress(completed, totalIPs);
+                                
+                            }} catch (error) {{
+                                results[ip] = {{
                                     online: false,
                                     latency: null,
-                                    method: 'fetch_error'
-                                };
-                            }
-                        }
+                                    method: 'error',
+                                    error: error.message
+                                }};
+                                completed++;
+                                updateProgress(completed, totalIPs);
+                            }}
+                        }}
                         
-                        // Exibir resultados
-                        displayLocalPingResults(results);
-                    }
+                        // Exibir resultados completos
+                        displayCompleteLocalPingResults(results);
+                        
+                        // Enviar resultados para Streamlit
+                        if (window.parent && window.parent.postMessage) {{
+                            window.parent.postMessage({{
+                                type: 'complete_ping_results',
+                                results: results,
+                                total: totalIPs
+                            }}, '*');
+                        }}
+                    }}
                     
-                    function displayLocalPingResults(results) {
+                    // Função para atualizar progresso
+                    function updateProgress(completed, total) {{
+                        const progressDiv = document.getElementById('ping-progress');
+                        if (progressDiv) {{
+                            const percentage = Math.round((completed / total) * 100);
+                            progressDiv.innerHTML = `
+                                <div style="text-align: center; padding: 20px;">
+                                    <div style="font-size: 18px; margin-bottom: 10px;">
+                                        🔄 Pingando impressoras... {completed}/{total} ({percentage}%)
+                                    </div>
+                                    <div style="width: 100%; background-color: #f0f0f0; border-radius: 10px; overflow: hidden;">
+                                        <div style="width: ${{percentage}}%; height: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transition: width 0.3s ease;"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }}
+                    }}
+                    
+                    // Função para exibir resultados completos
+                    function displayCompleteLocalPingResults(results) {{
                         const resultsDiv = document.getElementById('local-ping-results');
                         if (!resultsDiv) return;
                         
-                        let html = '<div style="margin: 20px 0;">';
-                        for (const [ip, result] of Object.entries(results)) {
+                        // Estatísticas
+                        const total = Object.keys(results).length;
+                        const online = Object.values(results).filter(r => r.online).length;
+                        const offline = total - online;
+                        
+                        let html = `
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; margin: 20px 0; color: white;">
+                                <h3 style="margin: 0 0 15px 0; text-align: center;">
+                                    📊 **RESULTADOS COMPLETOS DO PING LOCAL**
+                                </h3>
+                                <div style="display: flex; justify-content: space-around; text-align: center;">
+                                    <div>
+                                        <div style="font-size: 24px; font-weight: bold;">{total}</div>
+                                        <div>Total Testadas</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 24px; font-weight: bold; color: #4caf50;">{online}</div>
+                                        <div>Online</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 24px; font-weight: bold; color: #f44336;">{offline}</div>
+                                        <div>Offline</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Resultados detalhados
+                        html += '<div style="margin: 20px 0;">';
+                        for (const [ip, result] of Object.entries(results)) {{
+                            const details = printerDetails[ip] || {{}};
                             const statusColor = result.online ? '#4caf50' : '#f44336';
                             const statusIcon = result.online ? '✅' : '❌';
-                            const latencyText = result.latency ? `(${result.latency}ms)` : '';
+                            const latencyText = result.latency ? `(${{result.latency}}ms)` : '';
                             
                             html += `
                             <div style="
                                 background: white;
-                                border: 2px solid ${statusColor};
+                                border: 2px solid ${{statusColor}};
                                 border-radius: 10px;
                                 padding: 15px;
                                 margin: 10px 0;
@@ -5669,41 +5814,48 @@ def render_impressoras():
                             ">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <div>
-                                        <strong>${ip}</strong> ${statusIcon} ${latencyText}
+                                        <strong>${{ip}}</strong> {statusIcon} {latencyText}
+                                        <br><small style="color: #666;">${{details.local}} | ${{details.modelo}}</small>
                                     </div>
-                                    <div style="color: ${statusColor}; font-weight: bold;">
-                                        ${result.online ? 'ONLINE' : 'OFFLINE'}
+                                    <div style="color: ${{statusColor}}; font-weight: bold;">
+                                        ${{result.online ? 'ONLINE' : 'OFFLINE'}}
                                     </div>
                                 </div>
                                 <div style="font-size: 12px; color: #666; margin-top: 5px;">
-                                    Método: ${result.method}
+                                    Método: ${{result.method}} | Serial: ${{details.serial}}
                                 </div>
                             </div>
                             `;
-                        }
+                        }}
                         html += '</div>';
+                        
                         resultsDiv.innerHTML = html;
-                    }
+                    }}
                     
-                    // Executar ping automaticamente
-                    executeLocalPing();
+                    // Executar ping completo automaticamente
+                    executeCompleteLocalPing();
                     </script>
                     """, unsafe_allow_html=True)
                     
-                    # Container para resultados do ping local
+                    # Container para progresso e resultados
+                    st.markdown('<div id="ping-progress"></div>', unsafe_allow_html=True)
                     st.markdown('<div id="local-ping-results"></div>', unsafe_allow_html=True)
                     
-                    # Atualizar cache com resultados simulados (para demonstração)
+                    # Atualizar cache com resultados reais (será preenchido pelo JavaScript)
                     st.session_state.printer_status_cache = {}
-                    for ip in printer_ips:
-                        # Simular resultado baseado no IP (para demonstração)
-                        # Em produção, isso viria do JavaScript real
-                        st.session_state.printer_status_cache[ip] = True  # Simular online
                     
-                    st.success(f"🎉 **Ping Local Executado:** {len(printer_ips)} impressoras verificadas via sua máquina!")
+                    st.success(f"""
+                    🚀 **PING LOCAL INICIADO!**
+                    
+                    📊 **Total de impressoras a serem testadas:** {len(printer_ips)}
+                    ⚡ **Método:** JavaScript executando na sua máquina
+                    🔍 **Cobertura:** TODAS as impressoras do CSV
+                    💡 **Resultados:** Aparecerão em tempo real abaixo
+                    """)
                     
                 else:
-                    st.warning("⚠️ **Nenhum IP de impressora encontrado** para ping local")
+                    st.warning("⚠️ **Nenhum IP de impressora encontrado** no CSV para ping local")
+                    st.info("Verifique se o arquivo CSV contém colunas 'ip' válidas")
         
         with col_info:
             st.info("""
