@@ -5661,11 +5661,16 @@ def render_impressoras():
                                 
                                 // Método 1: HTTP HEAD request
                                 try {{
+                                    const controller = new AbortController();
+                                    const timeoutId = setTimeout(() => controller.abort(), 3000);
+                                    
                                     const response = await fetch(`http://${{ip}}`, {{
                                         method: 'HEAD',
                                         mode: 'no-cors',
-                                        signal: AbortSignal.timeout(3000)
+                                        signal: controller.signal
                                     }});
+                                    
+                                    clearTimeout(timeoutId);
                                     const endTime = performance.now();
                                     pingResult = {{
                                         online: true,
@@ -5753,7 +5758,7 @@ def render_impressoras():
                             progressDiv.innerHTML = `
                                 <div style="text-align: center; padding: 20px;">
                                     <div style="font-size: 18px; margin-bottom: 10px;">
-                                        🔄 Pingando impressoras... {completed}/{total} ({percentage}%)
+                                        🔄 Pingando impressoras... ${{completed}}/${{total}} (${{percentage}}%)
                                     </div>
                                     <div style="width: 100%; background-color: #f0f0f0; border-radius: 10px; overflow: hidden;">
                                         <div style="width: ${{percentage}}%; height: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transition: width 0.3s ease;"></div>
@@ -5780,15 +5785,15 @@ def render_impressoras():
                                 </h3>
                                 <div style="display: flex; justify-content: space-around; text-align: center;">
                                     <div>
-                                        <div style="font-size: 24px; font-weight: bold;">{total}</div>
+                                        <div style="font-size: 24px; font-weight: bold;">${{total}}</div>
                                         <div>Total Testadas</div>
                                     </div>
                                     <div>
-                                        <div style="font-size: 24px; font-weight: bold; color: #4caf50;">{online}</div>
+                                        <div style="font-size: 24px; font-weight: bold; color: #4caf50;">${{online}}</div>
                                         <div>Online</div>
                                     </div>
                                     <div>
-                                        <div style="font-size: 24px; font-weight: bold; color: #f44336;">{offline}</div>
+                                        <div style="font-size: 24px; font-weight: bold; color: #f44336;">${{offline}}</div>
                                         <div>Offline</div>
                                     </div>
                                 </div>
@@ -5814,7 +5819,7 @@ def render_impressoras():
                             ">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <div>
-                                        <strong>${{ip}}</strong> {statusIcon} {latencyText}
+                                        <strong>${{ip}}</strong> ${{statusIcon}} ${{latencyText}}
                                         <br><small style="color: #666;">${{details.local}} | ${{details.modelo}}</small>
                                     </div>
                                     <div style="color: ${{statusColor}}; font-weight: bold;">
