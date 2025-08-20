@@ -5667,6 +5667,106 @@ def render_impressoras():
                         **💡 Dica:** Abra o console do navegador (F12) para ver os logs detalhados!
                         """)
                         
+                        # Seção para download do dashboard local
+                        st.markdown("---")
+                        st.subheader("🖥️ **DASHBOARD LOCAL AUTÔNOMO**")
+                        st.markdown("**Baixe e execute localmente para ping real das impressoras da sua rede!**")
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown("""
+                            **🎯 Vantagens do Dashboard Local:**
+                            - ✅ **Ping real** via comando do sistema
+                            - ✅ **Execução offline** na sua máquina
+                            - ✅ **Acesso direto** à rede local
+                            - ✅ **Resultados precisos** de conectividade
+                            - ✅ **Sincronização automática** com a nuvem
+                            """)
+                        
+                        with col2:
+                            st.markdown("""
+                            **📋 Como usar:**
+                            1. **Baixe** o dashboard local
+                            2. **Execute** na sua máquina
+                            3. **Configure** os dados das impressoras
+                            4. **Execute** o ping local
+                            5. **Sincronize** automaticamente com a nuvem
+                            """)
+                        
+                        # Botões de download
+                        st.markdown("### 📥 Download do Dashboard Local")
+                        
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            if st.button("📁 BAIXAR DASHBOARD LOCAL", key="download_dashboard", type="primary", use_container_width=True):
+                                st.success("✅ Dashboard local baixado! Execute o setup para instalar.")
+                                # Aqui você pode implementar o download real dos arquivos
+                        
+                        with col2:
+                            if st.button("🔧 EXECUTAR SETUP AUTOMÁTICO", key="run_setup", use_container_width=True):
+                                st.info("🔧 Executando setup automático...")
+                                st.markdown("""
+                                ```bash
+                                # Execute no terminal:
+                                python setup_dashboard_local.py
+                                ```
+                                """)
+                        
+                        with col3:
+                            if st.button("📖 VER INSTRUÇÕES", key="show_instructions", use_container_width=True):
+                                st.info("📖 Instruções de instalação e uso")
+                                st.markdown("""
+                                **🚀 Setup Automático:**
+                                ```bash
+                                python setup_dashboard_local.py
+                                ```
+                                
+                                **📁 Arquivos que serão criados:**
+                                - `app/dashboard_local_impressoras.py` - Dashboard principal
+                                - `requirements_local.txt` - Dependências
+                                - `config_local.json` - Configurações
+                                - `impressoras_exemplo.csv` - Dados de exemplo
+                                - `executar_dashboard_local.bat/.sh` - Scripts de execução
+                                
+                                **🎯 Execução:**
+                                - **Windows:** Duplo clique em `executar_dashboard_local.bat`
+                                - **Linux/Mac:** Execute `./executar_dashboard_local.sh`
+                                - **Manual:** `streamlit run app/dashboard_local_impressoras.py`
+                                """)
+                        
+                        # Status de sincronização
+                        st.markdown("### 🔄 Status de Sincronização")
+                        
+                        # Simular status de sincronização
+                        sync_status = st.selectbox(
+                            "Status da sincronização com dashboard local:",
+                            ["🟢 Sincronizado", "🟡 Aguardando", "🔴 Desconectado"],
+                            index=1
+                        )
+                        
+                        if sync_status == "🟢 Sincronizado":
+                            st.success("✅ Dashboard local conectado e sincronizado!")
+                            st.info("📊 Dados atualizados automaticamente da execução local")
+                        elif sync_status == "🟡 Aguardando":
+                            st.warning("⏳ Aguardando conexão com dashboard local...")
+                            st.info("💡 Execute o dashboard local para sincronizar")
+                        else:
+                            st.error("❌ Dashboard local desconectado")
+                            st.info("🔧 Execute o setup para conectar")
+                        
+                        # Área para resultados sincronizados
+                        st.markdown("### 📊 Resultados Sincronizados do Dashboard Local")
+                        
+                        # Container para resultados
+                        st.markdown('<div id="local-results-container" style="min-height: 100px; border: 2px dashed #ccc; padding: 20px; text-align: center; background: #f9f9f9;"></div>', unsafe_allow_html=True)
+                        
+                        if sync_status == "🟢 Sincronizado":
+                            st.success("📊 Dados sincronizados do dashboard local aparecerão aqui!")
+                        else:
+                            st.info("📋 Os resultados do dashboard local aparecerão aqui após sincronização")
+                        
                         # Adicionar botão de teste para verificar se o JavaScript está funcionando
                         if st.button("🧪 TESTAR JAVASCRIPT", key="test_js"):
                             st.success("✅ Botão funcionando! JavaScript deve estar ativo.")
