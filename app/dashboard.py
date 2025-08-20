@@ -5661,13 +5661,23 @@ def render_impressoras():
                     st.markdown(f"""
                     <script>
                     // Sistema de ping local para TODAS as impressoras do CSV
+                    console.log('🚀 Sistema de ping local carregado!');
+                    console.log('📊 IPs das impressoras:', {printer_ips});
+                    console.log('📋 Detalhes das impressoras:', {printer_details});
+                    
                     const printerIPs = {printer_ips};
                     const printerDetails = {printer_details};
                     
                     // Função para exibir detalhes das impressoras com status
                     function displayPrinterDetails(details, pingResults) {{
+                        console.log('🔄 Atualizando detalhes das impressoras...');
                         const container = document.getElementById('printer-details-container');
-                        if (!container) return;
+                        console.log('📦 Container encontrado:', container);
+                        
+                        if (!container) {{
+                            console.error('❌ Container não encontrado!');
+                            return;
+                        }}
                         
                         let html = '';
                         for (const [ip, detail] of Object.entries(details)) {{
@@ -5734,6 +5744,7 @@ def render_impressoras():
                     
                     // Função para executar ping local de todas as impressoras
                     async function executeCompleteLocalPing() {{
+                        console.log('🚀 Iniciando ping local para', printerIPs.length, 'impressoras...');
                         const results = {{}};
                         const totalIPs = printerIPs.length;
                         let completed = 0;
@@ -5743,6 +5754,7 @@ def render_impressoras():
                         
                         // Executar ping para cada IP
                         for (const ip of printerIPs) {{
+                            console.log('🏓 Pingando:', ip);
                             try {{
                                 const startTime = performance.now();
                                 
@@ -5832,6 +5844,8 @@ def render_impressoras():
                                 updatePrinterDetails(ip, results[ip]);
                             }}
                         }}
+                        
+                        console.log('🎉 Ping local concluído!', results);
                         
                         // Exibir resultados completos
                         displayCompleteLocalPingResults(results);
@@ -5935,6 +5949,8 @@ def render_impressoras():
                     
                     // Executar ping completo automaticamente
                     executeCompleteLocalPing();
+                    
+                    console.log('✅ Script de ping local carregado com sucesso!');
                     </script>
                     """, unsafe_allow_html=True)
                     
