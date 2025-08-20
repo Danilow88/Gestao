@@ -670,6 +670,50 @@ def load_impressoras_from_csv():
         return {}
 
 # ========================================================================================
+# FUNÇÕES AUXILIARES PARA GADGETS
+# ========================================================================================
+
+def load_gadgets_valores_csv():
+    """Carrega dados dos gadgets e valores do CSV"""
+    try:
+        if 'gadgets_valores_csv' not in st.session_state:
+            # Dados padrão se não houver CSV
+            st.session_state.gadgets_valores_csv = pd.DataFrame({
+                'item_id': ['Headset-spk', 'Mouse-spk', 'Teclado k120-spk', 'Adaptadores usb c-spk'],
+                'name': ['Headset', 'Mouse', 'Teclado k120', 'Adaptadores usb c'],
+                'description': ['Plantronics blackwire', 'M90', 'Logitech kq120', 'Geonav'],
+                'building': ['Spark', 'Spark', 'Spark', 'Spark'],
+                'cost': [260.0, 31.90, 90.0, 360.0],
+                'fornecedor': ['Plantronics', 'Microsoft', 'Logitech', 'Geonav']
+            })
+        return True
+    except Exception as e:
+        st.error(f"Erro ao carregar dados dos gadgets: {e}")
+        return False
+
+def get_andares_options(building):
+    """Retorna lista de andares disponíveis para um prédio específico"""
+    andares_map = {
+        'Spark': ['', '1° Andar', '2° Andar', '3° Andar', '4° Andar', '5° Andar'],
+        'HQ1': ['', 'Térreo', '1° Andar', '2° Andar', '3° Andar', '4° Andar'],
+        'HQ2': ['', 'Térreo', '1° Andar', '2° Andar', '3° Andar'],
+        'SPARK': ['', '1° Andar', '2° Andar', '3° Andar', '4° Andar', '5° Andar']
+    }
+    return andares_map.get(building, ['', 'Térreo', '1° Andar', '2° Andar', '3° Andar'])
+
+def save_gadgets_data():
+    """Salva dados dos gadgets no session state"""
+    try:
+        if 'gadgets_data' in st.session_state:
+            # Aqui você pode implementar persistência em arquivo ou banco
+            st.success("✅ Dados dos gadgets salvos com sucesso!")
+            return True
+        return False
+    except Exception as e:
+        st.error(f"Erro ao salvar dados dos gadgets: {e}")
+        return False
+
+# ========================================================================================
 # TEMA NUBANK - CORES E ESTILOS
 # ========================================================================================
 
@@ -5858,6 +5902,110 @@ def run_local_script(filename):
     
     with tab_config:
         render_config_gadgets()
+
+def render_controle_gadgets():
+    """Renderiza a interface principal de controle de gadgets"""
+    st.title("🎮 Controle de Gadgets")
+    st.markdown("Sistema completo para gerenciar gadgets, perdas e análises")
+    
+    # Inicializar dados se necessário
+    if 'gadgets_data' not in st.session_state:
+        st.session_state.gadgets_data = pd.DataFrame({
+            'item_id': ['Headset-spk', 'Mouse-spk', 'Teclado k120-spk', 'Adaptadores usb c-spk'],
+            'item_name': ['Headset', 'Mouse', 'Teclado k120', 'Adaptadores usb c'],
+            'description': ['Plantronics blackwire', 'M90', 'Logitech kq120', 'Geonav'],
+            'building': ['Spark', 'Spark', 'Spark', 'Spark'],
+            'cost': [260.0, 31.90, 90.0, 360.0],
+            'fornecedor': ['Plantronics', 'Microsoft', 'Logitech', 'Geonav'],
+            'quantidade_perdida': [0, 0, 0, 0],
+            'andar': ['', '', '', ''],
+            'observacoes': ['', '', '', ''],
+            'data_registro': [datetime.now().strftime('%d/%m/%Y')] * 4
+        })
+    
+    # Abas principais
+    tab_perdas, tab_registro, tab_analises, tab_estoque, tab_config = st.tabs([
+        "📊 Visão Geral", 
+        "✏️ Registrar Perdas", 
+        "📈 Análises", 
+        "📦 Controle de Estoque", 
+        "⚙️ Configurações"
+    ])
+    
+    with tab_perdas:
+        st.subheader("📊 Resumo de Perdas de Gadgets")
+        
+        if not st.session_state.gadgets_data.empty:
+            # Métricas principais
+            col1, col2, col3, col4 = st.columns(4)
+            
+            total_perdas = st.session_state.gadgets_data['quantidade_perdida'].sum()
+            valor_total_perdas = (st.session_state.gadgets_data['quantidade_perdida'] * 
+                                st.session_state.gadgets_data['cost']).sum()
+            
+            with col1:
+                st.metric("Total de Perdas", f"{total_perdas:,.0f}")
+            with col2:
+                st.metric("Valor Total Perdas", f"R$ {valor_total_perdas:,.2f}")
+            with col3:
+                tipos_afetados = len(st.session_state.gadgets_data[st.session_state.gadgets_data['quantidade_perdida'] > 0])
+                st.metric("Tipos Afetados", tipos_afetados)
+            with col4:
+                if total_perdas > 0:
+                    perda_media = valor_total_perdas / total_perdas
+                    st.metric("Perda Média", f"R$ {perda_media:.2f}")
+                else:
+                    st.metric("Perda Média", "R$ 0,00")
+            
+            # Tabela de perdas
+            st.subheader("📋 Detalhes das Perdas")
+            perdas_com_valor = st.session_state.gadgets_data[st.session_state.gadgets_data['quantidade_perdida'] > 0].copy()
+            
+            if not perdas_com_valor.empty:
+                perdas_com_valor['valor_total_perda'] = perdas_com_valor['quantidade_perdida'] * perdas_com_valor['cost']
+                
+                st.dataframe(
+                    perdas_com_valor[['item_name', 'building', 'quantidade_perdida', 'cost', 'valor_total_perda', 'data_registro']],
+                    use_container_width=True,
+                    column_config={
+                        "item_name": "Item",
+                        "building": "Prédio",
+                        "quantidade_perdida": "Qtd Perdida",
+                        "cost": st.column_config.NumberColumn("Custo Unit.", format="R$ %.2f"),
+                        "valor_total_perda": st.column_config.NumberColumn("Valor Total", format="R$ %.2f"),
+                        "data_registro": "Data"
+                    }
+                )
+            else:
+                st.info("📋 Nenhuma perda registrada ainda")
+        else:
+            st.info("📋 Nenhum dado de gadgets disponível")
+    
+    with tab_registro:
+        render_registro_perdas()
+    
+    with tab_analises:
+        render_analises_gadgets()
+    
+    with tab_estoque:
+        render_controle_estoque()
+    
+    with tab_config:
+        render_config_gadgets()
+
+def render_agente_matt():
+    """Renderiza interface do Agente Matt (assistente IA)"""
+    st.subheader("🤖 Agente Matt - Assistente IA")
+    st.info("🔧 Em desenvolvimento - Assistente inteligente para análise de gadgets")
+    
+    # Placeholder para futuras funcionalidades do agente
+    with st.expander("💡 Funcionalidades Planejadas"):
+        st.markdown("""
+        - 📊 Análise preditiva de perdas
+        - 🎯 Recomendações de reposição
+        - 📈 Insights automáticos
+        - 🔍 Detecção de padrões
+        """)
 
 def init_estoque_data():
     """Inicializa os dados de controle de estoque"""
@@ -15746,6 +15894,132 @@ def render_gaming_loading_screen():
         time.sleep(0.5)
         st.session_state.loading_complete = True
         st.rerun()
+
+def render_barcode_entry():
+    """Renderiza a página de entrada de estoque via código de barras"""
+    st.markdown("## ☰ Entrada de Estoque")
+    
+    # Inicializar dados de entrada no session_state se não existir
+    if 'entry_inventory' not in st.session_state:
+        st.session_state.entry_inventory = pd.DataFrame(columns=[
+            'item_nome', 'marca', 'modelo', 'tag', 'serial', 'valor', 
+            'fornecedor', 'nota_fiscal', 'data_entrada', 'status', 'observacoes', 'po'
+        ])
+    
+    st.subheader("■ Adicionar Novo Item")
+    
+    with st.form("entrada_form"):
+        # Seção de Informações Básicas
+        st.markdown("### 📋 Informações Básicas do Item")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            item_nome = st.text_input("○ Nome do Item *", placeholder="Ex: Notebook Dell")
+            marca = st.text_input("▣ Marca *", placeholder="Ex: Dell")
+            modelo = st.text_input("⚙ Modelo", placeholder="Ex: Latitude 5520")
+            tag = st.text_input("▣ Tag Patrimonial *", placeholder="Ex: SPK001")
+        
+        with col2:
+            serial = st.text_input("● Número Serial", placeholder="Ex: DL123456")
+            valor = st.number_input("$ Valor (R$) *", min_value=0.0, step=0.01)
+            fornecedor = st.text_input("▢ Fornecedor *", placeholder="Ex: Dell Brasil")
+            status = st.selectbox("◐ Status Inicial", 
+                                 options=["✓ Disponível", "⧖ Em uso", "⚙ Em análise", "📦 Estoque"],
+                                 index=3)
+        
+        # Seção de Documentação
+        st.markdown("### 📄 Documentação e Códigos")
+        col3, col4 = st.columns(2)
+        
+        with col3:
+            nota_fiscal = st.text_input("⎙ Nota Fiscal *", placeholder="Ex: NF-2024-001234")
+        
+        with col4:
+            po = st.text_input("📋 PO", placeholder="Ex: PO-2024-001")
+            data_entrada = st.date_input("⌚ Data de Entrada", value=pd.Timestamp.now().date())
+        
+        # Seção de Observações
+        st.markdown("### 💬 Informações Adicionais")
+        observacoes = st.text_area("📝 Observações", placeholder="Informações adicionais...", height=100)
+        
+        st.divider()
+        
+        # Validação e Botões de Ação
+        col_submit, col_clear = st.columns(2)
+        
+        with col_submit:
+            if st.form_submit_button("→ Adicionar ao Estoque", type="primary", use_container_width=True):
+                # Validação dos campos obrigatórios
+                required_fields = [item_nome, marca, tag, valor, fornecedor, nota_fiscal]
+                if all(required_fields):
+                    # Criar novo item
+                    new_item = pd.DataFrame({
+                        'item_nome': [item_nome],
+                        'marca': [marca],
+                        'modelo': [modelo],
+                        'tag': [tag],
+                        'serial': [serial],
+                        'valor': [valor],
+                        'fornecedor': [fornecedor],
+                        'nota_fiscal': [nota_fiscal],
+                        'data_entrada': [data_entrada],
+                        'status': [status],
+                        'observacoes': [observacoes],
+                        'po': [po]
+                    })
+                    
+                    # Adicionar ao inventário
+                    st.session_state.entry_inventory = pd.concat([st.session_state.entry_inventory, new_item], ignore_index=True)
+                    
+                    st.success(f"✓ Item '{item_nome}' adicionado com sucesso!")
+                    st.info(f"📋 Tag: {tag} | Nota Fiscal: {nota_fiscal}")
+                    
+                else:
+                    st.error("× Preencha todos os campos obrigatórios (*)")
+        
+        with col_clear:
+            if st.form_submit_button("🗑️ Limpar Formulário", use_container_width=True):
+                st.rerun()
+    
+    # Histórico de Entradas Recentes
+    if not st.session_state.entry_inventory.empty:
+        st.divider()
+        st.subheader("📊 Histórico de Entradas Recentes")
+        
+        # Métricas rápidas
+        col_metric1, col_metric2, col_metric3 = st.columns(3)
+        
+        with col_metric1:
+            total_items = len(st.session_state.entry_inventory)
+            st.metric("📦 Total de Itens", total_items)
+        
+        with col_metric2:
+            valor_total = st.session_state.entry_inventory['valor'].sum()
+            st.metric("💰 Valor Total", f"R$ {valor_total:,.2f}")
+        
+        with col_metric3:
+            itens_hoje = len(st.session_state.entry_inventory[
+                pd.to_datetime(st.session_state.entry_inventory['data_entrada']).dt.date == pd.Timestamp.now().date()
+            ])
+            st.metric("📅 Adicionados Hoje", itens_hoje)
+        
+        # Tabela de histórico
+        st.dataframe(st.session_state.entry_inventory, use_container_width=True)
+
+def render_barcode_exit():
+    """Renderiza a página de saída de estoque via código de barras"""
+    st.markdown("## ☲ Saída de Estoque")
+    st.info("🔧 Sistema de saída de estoque em desenvolvimento")
+
+def render_movements():
+    """Renderiza a página de movimentações"""
+    st.markdown("## ⟲ Movimentações")
+    st.info("🔧 Sistema de movimentações em desenvolvimento")
+
+def render_reports():
+    """Renderiza a página de relatórios"""
+    st.markdown("## ▲ Relatórios")
+    st.info("🔧 Sistema de relatórios em desenvolvimento")
 
 def main():
     """Função principal do app"""
