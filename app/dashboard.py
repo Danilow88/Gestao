@@ -5559,7 +5559,7 @@ def execute_ping(ip):
                 latency = int(match.group(1)) if match else None
             else:
                 import re
-                match = re.search(r'time=(\d+\.?\d*) ms', output)
+                match = re.search(r'time=(\\d+\\.?\\d*) ms', output)
                 latency = float(match.group(1)) if match else None
             
             return {
@@ -5701,6 +5701,302 @@ def run_local_script(filename):
         
     except Exception as e:
         return False, f"❌ Erro ao executar script: {str(e)}"
+
+def generate_dashboard_impressoras():
+    """Gera o código completo do dashboard de impressoras"""
+    dashboard_content = '''#!/usr/bin/env python3
+"""
+🖨️ DASHBOARD COMPLETO DE IMPRESSORAS
+=====================================
+
+Dashboard standalone para monitoramento de impressoras da rede.
+Gerado automaticamente pelo sistema Finance Vibes.
+
+COMO USAR:
+1. Execute: streamlit run dashboard_impressoras.py
+2. Acesse: http://localhost:8501
+3. Configure os IPs das impressoras
+4. Execute ping automático
+
+REQUISITOS:
+- Python 3.6+
+- Streamlit: pip install streamlit
+- Acesso à rede local
+
+AUTOR: Sistema Finance Vibes (Gerado Automaticamente)
+VERSÃO: 1.0
+"""
+
+import streamlit as st
+import subprocess
+import platform
+import time
+import json
+import pandas as pd
+from datetime import datetime
+import os
+
+# Configuração da página
+st.set_page_config(
+    page_title="🖨️ Dashboard de Impressoras",
+    page_icon="🖨️",
+    layout="wide"
+)
+
+def execute_ping(ip):
+    """Executa ping para um IP específico"""
+    try:
+        if platform.system().lower() == "windows":
+            result = subprocess.run(
+                ["ping", "-n", "1", "-w", "1000", ip],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+        else:
+            result = subprocess.run(
+                ["ping", "-c", "1", "-W", "1", ip],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+        
+        if result.returncode == 0:
+            output = result.stdout
+            if platform.system().lower() == "windows":
+                import re
+                match = re.search(r'tempo[=<](\\d+)ms', output, re.IGNORECASE)
+                latency = int(match.group(1)) if match else None
+            else:
+                import re
+                match = re.search(r'time=(\\d+\\.?\\d*) ms', output)
+                latency = float(match.group(1)) if match else None
+            
+            return {
+                "online": True,
+                "latency": latency,
+                "method": "ping_command",
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            return {
+                "online": False,
+                "latency": None,
+                "method": "ping_failed",
+                "error": result.stderr,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+    except subprocess.TimeoutExpired:
+        return {
+            "online": False,
+            "latency": None,
+            "method": "timeout",
+            "error": "Timeout ao executar ping",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "online": False,
+            "latency": None,
+            "method": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+def ping_all_printers(printer_ips):
+    """Executa ping para todas as impressoras"""
+    results = {}
+    
+    with st.spinner("🔍 Executando ping para todas as impressoras..."):
+        progress_bar = st.progress(0)
+        
+        for i, ip in enumerate(printer_ips):
+            st.write(f"📡 Testando {ip}...")
+            results[ip] = execute_ping(ip)
+            progress_bar.progress((i + 1) / len(printer_ips))
+            time.sleep(0.5)
+    
+    return results
+
+def main():
+    """Função principal do dashboard"""
+    st.title("🖨️ Dashboard de Impressoras")
+    st.markdown("**Monitoramento em tempo real das impressoras da rede**")
+    
+    # Sidebar para configuração
+    st.sidebar.header("⚙️ Configuração")
+    
+    # Configuração de IPs
+    st.sidebar.subheader("📡 IPs das Impressoras")
+    
+    num_printers = st.sidebar.number_input(
+        "Número de impressoras:", 
+        min_value=1, 
+        max_value=20, 
+        value=4
+    )
+    
+    printer_ips = []
+    for i in range(num_printers):
+        ip = st.sidebar.text_input(
+            f"IP da Impressora {i+1}:", 
+            key=f"ip_{i}", 
+            value=f"192.168.1.{100+i}"
+        )
+        if ip:
+            printer_ips.append(ip)
+    
+    # Botão para executar ping
+    if st.sidebar.button("🚀 EXECUTAR PING", type="primary", use_container_width=True):
+        if printer_ips:
+            st.session_state.ping_results = ping_all_printers(printer_ips)
+            st.rerun()
+        else:
+            st.error("❌ Configure pelo menos um IP de impressora!")
+    
+    # Botão para limpar resultados
+    if st.sidebar.button("🧹 LIMPAR RESULTADOS", use_container_width=True):
+        if "ping_results" in st.session_state:
+            del st.session_state.ping_results
+        st.rerun()
+    
+    # Área principal
+    if "ping_results" in st.session_state and st.session_state.ping_results:
+        results = st.session_state.ping_results
+        
+        # Estatísticas
+        total = len(results)
+        online = sum(1 for r in results.values() if r.get("online"))
+        offline = total - online
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total", total)
+        with col2:
+            st.metric("Online", online, delta=f"+{online}")
+        with col3:
+            st.metric("Offline", offline, delta=f"-{offline}")
+        with col4:
+            success_rate = (online / total * 100) if total > 0 else 0
+            st.metric("Taxa de Sucesso", f"{success_rate:.1f}%")
+        
+        # Resultados detalhados
+        st.subheader("📊 Status das Impressoras")
+        
+        for ip, result in results.items():
+            status_icon = "✅" if result.get("online") else "❌"
+            status_text = "ONLINE" if result.get("online") else "OFFLINE"
+            latency_text = f"({result['latency']}ms)" if result.get("latency") else ""
+            
+            with st.expander(f"{status_icon} {ip} - {status_text} {latency_text}", expanded=False):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.write(f"**Status:** {status_text}")
+                    st.write(f"**Método:** {result.get('method', 'N/A')}")
+                    st.write(f"**Timestamp:** {result.get('timestamp', 'N/A')}")
+                
+                with col2:
+                    if result.get("online"):
+                        st.success("🟢 Impressora Online")
+                        if result.get("latency"):
+                            st.info(f"**Latência:** {result['latency']}ms")
+                    else:
+                        st.error("🔴 Impressora Offline")
+                        if result.get("error"):
+                            st.error(f"**Erro:** {result['error']}")
+                
+                # Barra de status visual
+                if result.get("online"):
+                    st.progress(1.0, text="🟢 Online")
+                else:
+                    st.progress(0.0, text="🔴 Offline")
+        
+        # Tabela resumo
+        st.subheader("📋 Resumo em Tabela")
+        
+        summary_data = []
+        for ip, result in results.items():
+            summary_data.append({
+                "IP": ip,
+                "Status": "ONLINE" if result.get("online") else "OFFLINE",
+                "Latência": f"{result['latency']}ms" if result.get("latency") else "N/A",
+                "Método": result.get('method', 'N/A'),
+                "Timestamp": result.get('timestamp', 'N/A')
+            })
+        
+        summary_df = pd.DataFrame(summary_data)
+        st.dataframe(summary_df, use_container_width=True)
+        
+        # Botão para exportar resultados
+        if st.button("📤 EXPORTAR RESULTADOS", use_container_width=True):
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"ping_results_{timestamp}.json"
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(results, f, indent=2, ensure_ascii=False)
+            
+            st.success(f"✅ Resultados exportados para: {filename}")
+    
+    else:
+        st.info("📋 Configure os IPs das impressoras na barra lateral e execute o ping para ver os resultados.")
+    
+    # Informações do sistema
+    st.sidebar.header("ℹ️ Informações")
+    st.sidebar.write(f"**Versão:** 1.0")
+    st.sidebar.write(f"**Sistema:** {platform.system()}")
+    st.sidebar.write(f"**Python:** {platform.python_version()}")
+    
+    st.sidebar.header("📖 Como Usar")
+    st.sidebar.markdown("""
+    1. **Configure** os IPs das impressoras
+    2. **Clique** em EXECUTAR PING
+    3. **Aguarde** a execução completa
+    4. **Visualize** os resultados
+    5. **Exporte** se necessário
+    
+    **💡 Dica:** Mantenha os IPs configurados para uso futuro!
+    """)
+
+if __name__ == "__main__":
+    main()
+'''
+    return dashboard_content
+
+def run_dashboard_impressoras(filename):
+    """Executa o dashboard de impressoras automaticamente"""
+    try:
+        st.success(f"🚀 Iniciando dashboard de impressoras: {filename}")
+        
+        # Verificar se o Streamlit está instalado
+        try:
+            import streamlit
+            st.info("✅ Streamlit detectado! Iniciando dashboard...")
+        except ImportError:
+            st.warning("⚠️ Streamlit não encontrado. Instalando...")
+            import subprocess
+            subprocess.run(["pip", "install", "streamlit"], check=True)
+            st.success("✅ Streamlit instalado!")
+        
+        # Executar o dashboard
+        if platform.system().lower() == "windows":
+            subprocess.Popen(["streamlit", "run", filename], 
+                           stdout=subprocess.PIPE, 
+                           stderr=subprocess.PIPE,
+                           creationflags=subprocess.CREATE_NEW_CONSOLE)
+        else:
+            subprocess.Popen(["streamlit", "run", filename], 
+                           stdout=subprocess.PIPE, 
+                           stderr=subprocess.PIPE)
+        
+        st.success("✅ Dashboard iniciado! Acesse: http://localhost:8501")
+        st.info("💡 O dashboard abrirá automaticamente no seu navegador padrão.")
+        
+        return True, f"✅ Dashboard {filename} executado com sucesso!"
+        
+    except Exception as e:
+        return False, f"❌ Erro ao executar dashboard: {str(e)}"
 
 def render_impressoras():
     """Renderiza a página de Impressoras com verificação de conectividade"""
@@ -5899,7 +6195,7 @@ def render_impressoras():
                         # Botões de execução automática
                         st.markdown("### 🚀 Execução Automática Local")
                         
-                        col1, col2, col3 = st.columns(3)
+                        col1, col2, col3, col4 = st.columns(4)
                         
                         with col1:
                             if st.button("📥 BAIXAR E EXECUTAR LOCAL", key="download_and_run_local", type="primary", use_container_width=True):
@@ -5925,6 +6221,28 @@ def render_impressoras():
                                     st.error(f"❌ Erro ao executar localmente: {str(e)}")
                         
                         with col2:
+                            if st.button("🖨️ BAIXAR DASHBOARD IMPRESSORAS", key="download_dashboard_impressoras", type="primary", use_container_width=True):
+                                st.success("📥 Baixando dashboard de impressoras...")
+                                
+                                try:
+                                    # Criar o dashboard completo de impressoras
+                                    dashboard_content = generate_dashboard_impressoras()
+                                    
+                                    # Salvar o dashboard
+                                    dashboard_filename = f"dashboard_impressoras_{int(time.time())}.py"
+                                    with open(dashboard_filename, 'w', encoding='utf-8') as f:
+                                        f.write(dashboard_content)
+                                    
+                                    st.success(f"✅ Dashboard baixado: {dashboard_filename}")
+                                    st.info("🚀 Executando dashboard automaticamente...")
+                                    
+                                    # Executar o dashboard automaticamente
+                                    run_dashboard_impressoras(dashboard_filename)
+                                    
+                                except Exception as e:
+                                    st.error(f"❌ Erro ao baixar/executar dashboard: {str(e)}")
+                        
+                        with col3:
                             if st.button("📋 VER SCRIPT LOCAL", key="view_local_script", use_container_width=True):
                                 st.info("📋 Código do script local:")
                                 
@@ -5936,7 +6254,7 @@ def render_impressoras():
                                 if st.button("📋 COPIAR CÓDIGO", key="copy_code"):
                                     st.success("✅ Código copiado para a área de transferência!")
                         
-                        with col3:
+                        with col4:
                             if st.button("⚙️ CONFIGURAR IPs", key="configure_ips", use_container_width=True):
                                 st.info("⚙️ Configure os IPs das impressoras:")
                                 
