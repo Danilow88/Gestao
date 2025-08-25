@@ -2673,13 +2673,13 @@ def render_horizontal_navigation():
     # CSS para navegação horizontal responsiva com design premium
     st.markdown("""
     <style>
-    /* Header roxo estilo app bancário */
+    /* Header estilo foto - fundo preto */
     .nav-container {
-        background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+        background: #000000;
         border-radius: 0;
         padding: 0;
         margin: 0;
-        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+        box-shadow: none;
         position: relative;
         overflow: hidden;
     }
@@ -2701,7 +2701,7 @@ def render_horizontal_navigation():
         font-size: 2rem;
         font-weight: 700;
         margin: 0;
-        text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        text-shadow: none;
     }
     
     .user-info {
@@ -2711,10 +2711,10 @@ def render_horizontal_navigation():
         align-items: center;
         gap: 1rem;
         flex-wrap: wrap;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        text-shadow: none;
     }
     
-    /* Sistema de navegação estilo app bancário */
+    /* Sistema de navegação estilo foto - horizontal */
     .nav-grid {
         display: flex;
         flex-direction: row;
@@ -2728,18 +2728,18 @@ def render_horizontal_navigation():
         overflow-x: auto;
         padding: 1.5rem 2rem;
         width: 100%;
-        background: white;
-        border-radius: 0 0 20px 20px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        background: #000000;
+        border-radius: 0;
+        box-shadow: none;
     }
     
-    /* Botões de navegação estilo app bancário */
+    /* Botões de navegação estilo foto */
     .nav-button {
-        background: white;
-        border: 2px solid #E5E7EB;
-        color: #374151 !important;
+        background: #374151;
+        border: none;
+        color: white !important;
         padding: 0.8rem 1rem;
-        border-radius: 12px;
+        border-radius: 8px;
         text-align: center;
         cursor: pointer;
         transition: all 0.3s ease;
@@ -2751,65 +2751,47 @@ def render_horizontal_navigation():
         max-width: 110px;
         height: 45px;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
         justify-content: center;
         box-sizing: border-box;
         position: relative;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        gap: 0.4rem;
+        box-shadow: none;
+        gap: 0.5rem;
         flex-shrink: 0;
     }
     
     /* Ícone do botão */
     .nav-button-icon {
-        font-size: 1.2rem;
+        font-size: 1rem;
         line-height: 1;
-        color: #8B5CF6;
-        margin-bottom: 0.2rem;
+        color: white;
+        margin: 0;
     }
     
     /* Texto do botão */
     .nav-button-text {
-        font-size: 0.75rem;
+        font-size: 0.8rem;
         line-height: 1;
-        color: #6B7280;
-        font-weight: 500;
+        color: white;
+        font-weight: 600;
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 80px;
         text-align: center;
     }
     
-    /* Indicador de seleção ativa (borda roxa) */
+    /* Botão ativo - roxo vibrante como na foto */
     .nav-button-active {
-        border-color: #8B5CF6 !important;
-        background: #F3F4F6 !important;
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
-    }
-    
-    .nav-button-active .nav-button-icon {
-        color: #7C3AED;
-    }
-    
-    .nav-button-active .nav-button-text {
-        color: #374151;
-        font-weight: 600;
+        background: #8B5CF6 !important;
+        color: white !important;
+        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
     }
     
     /* Hover effect */
     .nav-button:hover {
-        border-color: #8B5CF6;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(139, 92, 246, 0.15);
-    }
-    
-    .nav-button:hover .nav-button-icon {
-        color: #7C3AED;
-    }
-    
-    .nav-button:hover .nav-button-text {
-        color: #374151;
+        background: #4B5563;
+        transform: translateY(-1px);
     }
     
     .nav-button::before {
@@ -3051,28 +3033,18 @@ def render_horizontal_navigation():
         </div>
         """, unsafe_allow_html=True)
     
-    # Páginas principais organizadas com nomes curtos
+    # Páginas principais organizadas exatamente como na foto
     pages = {
-        'dashboard': {'icon': '●', 'name': 'Dash', 'tooltip': 'Dashboard Principal'},
-        'inventario_unificado': {'icon': '●', 'name': 'Est', 'tooltip': 'Inventário Unificado'},
-        'impressoras': {'icon': '●', 'name': 'Print', 'tooltip': 'Controle de Impressoras'},
-        'controle_gadgets': {'icon': '●', 'name': 'Gad', 'tooltip': 'Controle de Gadgets'},
-        'entrada_estoque': {'icon': '●', 'name': 'Ent', 'tooltip': 'Entrada de Estoque'},
-        'saida_estoque': {'icon': '●', 'name': 'Sai', 'tooltip': 'Saída de Estoque'},
-        'movimentacoes': {'icon': '●', 'name': 'Mov', 'tooltip': 'Movimentações'},
-        'relatorios': {'icon': '●', 'name': 'Rel', 'tooltip': 'Relatórios'},
-        'cadastro_usuarios': {'icon': '●', 'name': 'Usr', 'tooltip': 'Cadastro de Usuários'},
-        'cadastro_produtos': {'icon': '●', 'name': 'Prod', 'tooltip': 'Cadastro de Produtos'},
-        'cadastro_fornecedores': {'icon': '●', 'name': 'Forn', 'tooltip': 'Cadastro de Fornecedores'},
-        'controle_serial': {'icon': '●', 'name': 'N/S', 'tooltip': 'Controle por N/S'},
-        'controle_sku': {'icon': '●', 'name': 'SKU', 'tooltip': 'Controle por SKU'},
-        'mapeamento_prateleiras': {'icon': '●', 'name': 'Prat', 'tooltip': 'Mapeamento de Prateleiras'},
-        'estoque_prateleiras': {'icon': '●', 'name': 'Est/P', 'tooltip': 'Estoque por Prateleira'}
+        'dashboard': {'icon': '■', 'name': 'Dash', 'tooltip': 'Dashboard Principal'},
+        'inventario_unificado': {'icon': '─', 'name': 'Estoque', 'tooltip': 'Inventário Unificado'},
+        'impressoras': {'icon': '■', 'name': 'Print', 'tooltip': 'Controle de Impressoras'},
+        'controle_gadgets': {'icon': '☰', 'name': 'Gadgets', 'tooltip': 'Controle de Gadgets'},
+        'entrada_estoque': {'icon': '☰', 'name': 'Entrada', 'tooltip': 'Entrada de Estoque'},
+        'saida_estoque': {'icon': '↗', 'name': 'Saída', 'tooltip': 'Saída de Estoque'},
+        'movimentacoes': {'icon': '↔', 'name': '', 'tooltip': 'Movimentações'},
+        'relatorios': {'icon': '─', 'name': 'Reports', 'tooltip': 'Relatórios'},
+        'entrada_automatica': {'icon': '●', 'name': 'SEFAZ', 'tooltip': 'Entrada Automática SEFAZ'}
     }
-    
-    # Se tem entrada automática, adicionar
-    if NFELIB_DISPONIVEL or PYNFE_DISPONIVEL:
-        pages['entrada_automatica'] = {'icon': '●', 'name': 'SEFAZ', 'tooltip': 'Entrada Automática SEFAZ'}
     
     # Criar navegação horizontal compacta
     st.markdown('<div class="nav-grid">', unsafe_allow_html=True)
