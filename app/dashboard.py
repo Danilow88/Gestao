@@ -2675,24 +2675,13 @@ def render_horizontal_navigation():
     <style>
     /* Reset e configurações base */
     .nav-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 20px;
-        padding: 2rem;
+        background: transparent;
+        border-radius: 0;
+        padding: 1rem 0;
         margin: 1rem 0;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        box-shadow: none;
         position: relative;
-        overflow: hidden;
-    }
-    
-    .nav-container::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-        pointer-events: none;
+        overflow: visible;
     }
     
     .nav-header {
@@ -2707,25 +2696,21 @@ def render_horizontal_navigation():
     }
     
     .nav-title {
-        color: white;
+        color: #333;
         font-size: 2.5rem;
         font-weight: 800;
         margin: 0;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        background: linear-gradient(45deg, #ffffff, #f0f0f0);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        text-shadow: none;
     }
     
     .user-info {
-        color: white;
+        color: #333;
         font-size: 1rem;
         display: flex;
         align-items: center;
         gap: 1rem;
         flex-wrap: wrap;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        text-shadow: none;
     }
     
     /* Sistema de navegação horizontal compacto */
