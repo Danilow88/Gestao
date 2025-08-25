@@ -2728,106 +2728,84 @@ def render_horizontal_navigation():
         text-shadow: 0 1px 2px rgba(0,0,0,0.3);
     }
     
-    /* Sistema de navegação horizontal compacto */
+    /* Sistema de navegação horizontal estilo foto */
     .nav-grid {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.8rem;
+        flex-direction: row;
+        gap: 1rem;
         margin-top: 1.5rem;
         position: relative;
         z-index: 2;
         justify-content: center;
         align-items: center;
+        flex-wrap: nowrap;
     }
     
-    /* Botões de navegação compactos com ícones */
+    /* Botões de navegação estilo foto */
     .nav-button {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: #8B5CF6;
+        border: none;
         color: white !important;
-        padding: 0.8rem;
-        border-radius: 12px;
+        padding: 0.8rem 1.5rem;
+        border-radius: 8px;
         text-align: center;
         cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.3s ease;
         font-weight: 600;
         text-decoration: none;
-        backdrop-filter: blur(15px);
         font-size: 0.9rem;
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        min-width: 60px;
-        max-width: 80px;
-        height: 60px;
+        min-width: 120px;
+        height: 45px;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
         justify-content: center;
         box-sizing: border-box;
         position: relative;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        gap: 0.3rem;
+        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+        gap: 0.5rem;
     }
     
     /* Ícone do botão */
     .nav-button-icon {
-        font-size: 1.4rem;
+        font-size: 1.2rem;
         line-height: 1;
-        margin-bottom: 0.2rem;
-    }
-    
-    /* Texto do botão (pequeno) */
-    .nav-button-text {
-        font-size: 0.7rem;
-        line-height: 1;
-        opacity: 0.9;
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    /* Tooltip que aparece ao passar o mouse */
-    .nav-button::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        bottom: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.9);
         color: white;
-        padding: 0.5rem 0.8rem;
-        border-radius: 8px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        white-space: nowrap;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s ease;
-        z-index: 1000;
-        margin-bottom: 0.5rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
     
-    .nav-button::before {
+    /* Texto do botão */
+    .nav-button-text {
+        font-size: 0.9rem;
+        line-height: 1;
+        color: white;
+        font-weight: 600;
+    }
+    
+    /* Indicador de seleção ativa (sublinhado coral) */
+    .nav-button-active::after {
         content: '';
         position: absolute;
-        bottom: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        border: 5px solid transparent;
-        border-top-color: rgba(0, 0, 0, 0.9);
-        opacity: 0;
-        visibility: hidden;
+        bottom: -2px;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: #FF6B6B;
+        border-radius: 2px;
         transition: all 0.3s ease;
-        margin-bottom: -0.5rem;
     }
     
-    /* Mostrar tooltip ao passar o mouse */
-    .nav-button:hover::after,
-    .nav-button:hover::before {
-        opacity: 1;
-        visibility: visible;
+    /* Hover effect */
+    .nav-button:hover {
+        background: #7C3AED;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+    }
+    
+    /* Estado ativo */
+    .nav-button-active {
+        background: #7C3AED !important;
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.5);
     }
     
     .nav-button::before {
@@ -2843,24 +2821,7 @@ def render_horizontal_navigation():
         border-radius: 16px;
     }
     
-    .nav-button:hover {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
-        transform: translateY(-2px) scale(1.05);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-        border-color: rgba(255, 255, 255, 0.4);
-    }
-    
-    .nav-button:hover::before {
-        opacity: 1;
-    }
-    
-    .nav-button-active {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.2) 100%) !important;
-        border: 2px solid rgba(255, 255, 255, 0.5) !important;
-        box-shadow: 0 8px 24px rgba(255, 255, 255, 0.2);
-        font-weight: 700;
-        transform: translateY(-1px);
-    }
+    /* Hover e estados já definidos acima */
     
     /* Estilos para botões do Streamlit dentro da navegação */
     .nav-container .stButton > button {
@@ -2919,25 +2880,24 @@ def render_horizontal_navigation():
         background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
     }
     
-    /* Responsividade para botões compactos */
+    /* Responsividade para botões estilo foto */
     @media (max-width: 1200px) {
         .nav-grid {
-            gap: 0.7rem;
+            gap: 0.8rem;
         }
         
         .nav-button {
-            height: 55px;
-            padding: 0.7rem;
-            min-width: 55px;
-            max-width: 70px;
+            min-width: 110px;
+            height: 42px;
+            padding: 0.7rem 1.3rem;
         }
         
         .nav-button-icon {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
         }
         
         .nav-button-text {
-            font-size: 0.65rem;
+            font-size: 0.85rem;
         }
     }
     
@@ -2950,22 +2910,22 @@ def render_horizontal_navigation():
         .nav-grid {
             gap: 0.6rem;
             justify-content: center;
+            flex-wrap: wrap;
         }
         
         .nav-button {
-            height: 50px;
-            padding: 0.6rem;
-            min-width: 50px;
-            max-width: 65px;
-            border-radius: 10px;
+            min-width: 100px;
+            height: 40px;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
         }
         
         .nav-button-icon {
-            font-size: 1.2rem;
+            font-size: 1rem;
         }
         
         .nav-button-text {
-            font-size: 0.6rem;
+            font-size: 0.8rem;
         }
         
         .nav-title {
@@ -2987,22 +2947,22 @@ def render_horizontal_navigation():
         
         .nav-grid {
             gap: 0.5rem;
+            flex-direction: column;
         }
         
         .nav-button {
-            height: 45px;
-            padding: 0.5rem;
-            min-width: 45px;
-            max-width: 60px;
-            border-radius: 8px;
+            min-width: 90px;
+            height: 38px;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
         }
         
         .nav-button-icon {
-            font-size: 1.1rem;
+            font-size: 0.9rem;
         }
         
         .nav-button-text {
-            font-size: 0.55rem;
+            font-size: 0.75rem;
         }
         
         .nav-title {
@@ -3079,37 +3039,37 @@ def render_horizontal_navigation():
         </div>
         """, unsafe_allow_html=True)
     
-    # Páginas principais organizadas com ícones modernos e tooltips
+    # Páginas principais organizadas com ícones estilo foto
     pages = {
-        'dashboard': {'icon': '📊', 'name': 'Dash', 'tooltip': 'Dashboard Principal'},
-        'inventario_unificado': {'icon': '📦', 'name': 'Estoque', 'tooltip': 'Inventário Unificado'},
-        'impressoras': {'icon': '🖨️', 'name': 'Print', 'tooltip': 'Controle de Impressoras'},
-        'controle_gadgets': {'icon': '📱', 'name': 'Gadgets', 'tooltip': 'Controle de Gadgets'},
-        'entrada_estoque': {'icon': '⬇️', 'name': 'Entrada', 'tooltip': 'Entrada de Estoque'},
-        'saida_estoque': {'icon': '⬆️', 'name': 'Saída', 'tooltip': 'Saída de Estoque'},
-        'movimentacoes': {'icon': '🔄', 'name': 'Mov', 'tooltip': 'Movimentações'},
-        'relatorios': {'icon': '📈', 'name': 'Reports', 'tooltip': 'Relatórios'},
-        'cadastro_usuarios': {'icon': '👥', 'name': 'Users', 'tooltip': 'Cadastro de Usuários'},
-        'cadastro_produtos': {'icon': '📦', 'name': 'Prod', 'tooltip': 'Cadastro de Produtos'},
-        'cadastro_fornecedores': {'icon': '🏢', 'name': 'Forn', 'tooltip': 'Cadastro de Fornecedores'},
-        'controle_serial': {'icon': '🔢', 'name': 'N/S', 'tooltip': 'Controle por N/S'},
-        'controle_sku': {'icon': '🏷️', 'name': 'SKU', 'tooltip': 'Controle por SKU'},
-        'mapeamento_prateleiras': {'icon': '📋', 'name': 'Prat', 'tooltip': 'Mapeamento de Prateleiras'},
-        'estoque_prateleiras': {'icon': '🗂️', 'name': 'Est/Prat', 'tooltip': 'Estoque por Prateleira'}
+        'dashboard': {'icon': '●', 'name': 'Dashboard', 'tooltip': 'Dashboard Principal'},
+        'inventario_unificado': {'icon': '●', 'name': 'Estoque', 'tooltip': 'Inventário Unificado'},
+        'impressoras': {'icon': '●', 'name': 'Impressoras', 'tooltip': 'Controle de Impressoras'},
+        'controle_gadgets': {'icon': '●', 'name': 'Gadgets', 'tooltip': 'Controle de Gadgets'},
+        'entrada_estoque': {'icon': '●', 'name': 'Entrada', 'tooltip': 'Entrada de Estoque'},
+        'saida_estoque': {'icon': '●', 'name': 'Saída', 'tooltip': 'Saída de Estoque'},
+        'movimentacoes': {'icon': '●', 'name': 'Movimentações', 'tooltip': 'Movimentações'},
+        'relatorios': {'icon': '●', 'name': 'Relatórios', 'tooltip': 'Relatórios'},
+        'cadastro_usuarios': {'icon': '●', 'name': 'Usuários', 'tooltip': 'Cadastro de Usuários'},
+        'cadastro_produtos': {'icon': '●', 'name': 'Produtos', 'tooltip': 'Cadastro de Produtos'},
+        'cadastro_fornecedores': {'icon': '●', 'name': 'Fornecedores', 'tooltip': 'Cadastro de Fornecedores'},
+        'controle_serial': {'icon': '●', 'name': 'Controle N/S', 'tooltip': 'Controle por N/S'},
+        'controle_sku': {'icon': '●', 'name': 'Controle SKU', 'tooltip': 'Controle por SKU'},
+        'mapeamento_prateleiras': {'icon': '●', 'name': 'Prateleiras', 'tooltip': 'Mapeamento de Prateleiras'},
+        'estoque_prateleiras': {'icon': '●', 'name': 'Estoque/Prat', 'tooltip': 'Estoque por Prateleira'}
     }
     
     # Se tem entrada automática, adicionar
     if NFELIB_DISPONIVEL or PYNFE_DISPONIVEL:
-        pages['entrada_automatica'] = {'icon': '⚡', 'name': 'SEFAZ', 'tooltip': 'Entrada Automática SEFAZ'}
+        pages['entrada_automatica'] = {'icon': '●', 'name': 'SEFAZ', 'tooltip': 'Entrada Automática SEFAZ'}
     
-    # Criar grid responsivo para os botões compactos
+    # Criar navegação horizontal estilo foto
     st.markdown('<div class="nav-grid">', unsafe_allow_html=True)
     
     for page_key, page_info in pages.items():
         is_active = st.session_state.current_page == page_key
         active_class = "nav-button-active" if is_active else ""
         
-        # Criar botão com ícone e texto compacto
+        # Criar botão estilo foto
         button_html = f"""
         <div class="nav-button {active_class}" data-tooltip="{page_info['tooltip']}">
             <div class="nav-button-icon">{page_info['icon']}</div>
