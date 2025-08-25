@@ -2673,22 +2673,23 @@ def render_horizontal_navigation():
     # CSS para navegação horizontal responsiva com design premium
     st.markdown("""
     <style>
-    /* Reset e configurações base */
+    /* Header roxo estilo app bancário */
     .nav-container {
-        background: transparent;
+        background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
         border-radius: 0;
-        padding: 1rem 0;
-        margin: 1rem 0;
-        box-shadow: none;
+        padding: 0;
+        margin: 0;
+        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
         position: relative;
-        overflow: visible;
+        overflow: hidden;
     }
     
     .nav-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 2rem;
+        padding: 1.5rem 2rem;
+        margin-bottom: 0;
         flex-wrap: wrap;
         gap: 1rem;
         position: relative;
@@ -2696,109 +2697,119 @@ def render_horizontal_navigation():
     }
     
     .nav-title {
-        color: #333;
-        font-size: 2.5rem;
-        font-weight: 800;
+        color: white;
+        font-size: 2rem;
+        font-weight: 700;
         margin: 0;
-        text-shadow: none;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
     
     .user-info {
-        color: #333;
+        color: white;
         font-size: 1rem;
         display: flex;
         align-items: center;
         gap: 1rem;
         flex-wrap: wrap;
-        text-shadow: none;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
     }
     
-    /* Sistema de navegação horizontal compacto */
+    /* Sistema de navegação estilo app bancário */
     .nav-grid {
         display: flex;
         flex-direction: row;
-        gap: 0.5rem;
-        margin-top: 1.5rem;
+        gap: 0.8rem;
+        margin-top: 0;
         position: relative;
         z-index: 2;
         justify-content: center;
         align-items: center;
         flex-wrap: nowrap;
         overflow-x: auto;
-        padding: 0.5rem;
+        padding: 1.5rem 2rem;
         width: 100%;
+        background: white;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     }
     
-    /* Botões de navegação compactos */
+    /* Botões de navegação estilo app bancário */
     .nav-button {
-        background: #8B5CF6;
-        border: none;
-        color: white !important;
-        padding: 0.5rem 0.8rem;
-        border-radius: 6px;
+        background: white;
+        border: 2px solid #E5E7EB;
+        color: #374151 !important;
+        padding: 0.8rem 1rem;
+        border-radius: 12px;
         text-align: center;
         cursor: pointer;
         transition: all 0.3s ease;
         font-weight: 600;
         text-decoration: none;
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         white-space: nowrap;
-        min-width: 80px;
-        max-width: 100px;
-        height: 35px;
+        min-width: 90px;
+        max-width: 110px;
+        height: 45px;
         display: flex;
-        flex-direction: row;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         box-sizing: border-box;
         position: relative;
-        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
-        gap: 0.3rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        gap: 0.4rem;
         flex-shrink: 0;
     }
     
     /* Ícone do botão */
     .nav-button-icon {
-        font-size: 0.9rem;
+        font-size: 1.2rem;
         line-height: 1;
-        color: white;
+        color: #8B5CF6;
+        margin-bottom: 0.2rem;
     }
     
     /* Texto do botão */
     .nav-button-text {
         font-size: 0.75rem;
         line-height: 1;
-        color: white;
-        font-weight: 600;
+        color: #6B7280;
+        font-weight: 500;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 60px;
+        max-width: 80px;
+        text-align: center;
     }
     
-    /* Indicador de seleção ativa (sublinhado coral) */
-    .nav-button-active::after {
-        content: '';
-        position: absolute;
-        bottom: -2px;
-        left: 0;
-        width: 100%;
-        height: 2px;
-        background: #FF6B6B;
-        border-radius: 1px;
-        transition: all 0.3s ease;
+    /* Indicador de seleção ativa (borda roxa) */
+    .nav-button-active {
+        border-color: #8B5CF6 !important;
+        background: #F3F4F6 !important;
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+    }
+    
+    .nav-button-active .nav-button-icon {
+        color: #7C3AED;
+    }
+    
+    .nav-button-active .nav-button-text {
+        color: #374151;
+        font-weight: 600;
     }
     
     /* Hover effect */
     .nav-button:hover {
-        background: #7C3AED;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        border-color: #8B5CF6;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(139, 92, 246, 0.15);
     }
     
-    /* Estado ativo */
-    .nav-button-active {
-        background: #7C3AED !important;
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.5);
+    .nav-button:hover .nav-button-icon {
+        color: #7C3AED;
+    }
+    
+    .nav-button:hover .nav-button-text {
+        color: #374151;
     }
     
     .nav-button::before {
@@ -2873,102 +2884,101 @@ def render_horizontal_navigation():
         background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
     }
     
-    /* Responsividade para botões compactos */
+    /* Responsividade para design estilo app bancário */
     @media (max-width: 1200px) {
         .nav-grid {
-            gap: 0.4rem;
+            gap: 0.6rem;
+            padding: 1.2rem 1.5rem;
         }
         
         .nav-button {
-            min-width: 75px;
-            height: 32px;
-            padding: 0.4rem 0.7rem;
+            min-width: 80px;
+            height: 40px;
+            padding: 0.6rem 0.8rem;
         }
         
         .nav-button-icon {
-            font-size: 0.8rem;
+            font-size: 1.1rem;
         }
         
         .nav-button-text {
             font-size: 0.7rem;
-            max-width: 55px;
+            max-width: 70px;
         }
     }
     
     @media (max-width: 768px) {
         .nav-container {
-            padding: 1.5rem;
-            border-radius: 16px;
+            padding: 0;
+        }
+        
+        .nav-header {
+            padding: 1rem 1.5rem;
         }
         
         .nav-grid {
-            gap: 0.4rem;
+            gap: 0.5rem;
             justify-content: flex-start;
             flex-wrap: nowrap;
             overflow-x: auto;
+            padding: 1rem 1.5rem;
+            border-radius: 0 0 15px 15px;
         }
         
         .nav-button {
-            min-width: 70px;
-            height: 30px;
-            padding: 0.4rem 0.6rem;
-            border-radius: 5px;
+            min-width: 75px;
+            height: 38px;
+            padding: 0.6rem 0.8rem;
+            border-radius: 10px;
             flex-shrink: 0;
         }
         
         .nav-button-icon {
-            font-size: 0.75rem;
+            font-size: 1rem;
         }
         
         .nav-button-text {
             font-size: 0.65rem;
-            max-width: 50px;
-        }
-        
-        .nav-title {
-            font-size: 2rem;
-        }
-        
-        .nav-header {
-            flex-direction: column;
-            text-align: center;
-            margin-bottom: 1.5rem;
-        }
-    }
-    
-    @media (max-width: 480px) {
-        .nav-container {
-            padding: 1rem;
-            border-radius: 12px;
-        }
-        
-        .nav-grid {
-            gap: 0.3rem;
-            flex-direction: row;
-            justify-content: flex-start;
-            padding-left: 0.5rem;
-            padding-right: 0.5rem;
-        }
-        
-        .nav-button {
-            min-width: 65px;
-            height: 28px;
-            padding: 0.3rem 0.5rem;
-            border-radius: 5px;
-            flex-shrink: 0;
-        }
-        
-        .nav-button-icon {
-            font-size: 0.7rem;
-        }
-        
-        .nav-button-text {
-            font-size: 0.6rem;
-            max-width: 45px;
+            max-width: 65px;
         }
         
         .nav-title {
             font-size: 1.8rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .nav-header {
+            padding: 0.8rem 1rem;
+        }
+        
+        .nav-grid {
+            gap: 0.4rem;
+            flex-direction: row;
+            justify-content: flex-start;
+            padding: 0.8rem 1rem;
+            border-radius: 0 0 12px 12px;
+        }
+        
+        .nav-button {
+            min-width: 70px;
+            height: 35px;
+            padding: 0.5rem 0.7rem;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+        
+        .nav-button-icon {
+            font-size: 0.9rem;
+        }
+        
+        .nav-button-text {
+            font-size: 0.6rem;
+            max-width: 60px;
+        }
+        
+        .nav-title {
+            font-size: 1.6rem;
         }
     }
     
