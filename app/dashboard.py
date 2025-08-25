@@ -2728,41 +2728,106 @@ def render_horizontal_navigation():
         text-shadow: 0 1px 2px rgba(0,0,0,0.3);
     }
     
-    /* Sistema de navegação em grid responsivo */
+    /* Sistema de navegação horizontal compacto */
     .nav-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
         margin-top: 1.5rem;
         position: relative;
         z-index: 2;
+        justify-content: center;
+        align-items: center;
     }
     
-    /* Botões de navegação principais */
+    /* Botões de navegação compactos com ícones */
     .nav-button {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
-        border: 2px solid rgba(255, 255, 255, 0.3);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         color: white !important;
-        padding: 1.5rem 1rem;
-        border-radius: 16px;
+        padding: 0.8rem;
+        border-radius: 12px;
         text-align: center;
         cursor: pointer;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        font-weight: 700;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-weight: 600;
         text-decoration: none;
-        backdrop-filter: blur(20px);
-        font-size: 1rem;
+        backdrop-filter: blur(15px);
+        font-size: 0.9rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        min-width: 0;
-        height: 80px;
+        min-width: 60px;
+        max-width: 80px;
+        height: 60px;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         box-sizing: border-box;
         position: relative;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        gap: 0.3rem;
+    }
+    
+    /* Ícone do botão */
+    .nav-button-icon {
+        font-size: 1.4rem;
+        line-height: 1;
+        margin-bottom: 0.2rem;
+    }
+    
+    /* Texto do botão (pequeno) */
+    .nav-button-text {
+        font-size: 0.7rem;
+        line-height: 1;
+        opacity: 0.9;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Tooltip que aparece ao passar o mouse */
+    .nav-button::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 0.5rem 0.8rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        z-index: 1000;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .nav-button::before {
+        content: '';
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 5px solid transparent;
+        border-top-color: rgba(0, 0, 0, 0.9);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        margin-bottom: -0.5rem;
+    }
+    
+    /* Mostrar tooltip ao passar o mouse */
+    .nav-button:hover::after,
+    .nav-button:hover::before {
+        opacity: 1;
+        visibility: visible;
     }
     
     .nav-button::before {
@@ -2779,10 +2844,10 @@ def render_horizontal_navigation():
     }
     
     .nav-button:hover {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.2) 100%);
-        transform: translateY(-4px) scale(1.02);
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
-        border-color: rgba(255, 255, 255, 0.5);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        border-color: rgba(255, 255, 255, 0.4);
     }
     
     .nav-button:hover::before {
@@ -2790,11 +2855,11 @@ def render_horizontal_navigation():
     }
     
     .nav-button-active {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.3) 100%) !important;
-        border: 2px solid rgba(255, 255, 255, 0.6) !important;
-        box-shadow: 0 12px 40px rgba(255, 255, 255, 0.2);
-        font-weight: 800;
-        transform: translateY(-2px);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.2) 100%) !important;
+        border: 2px solid rgba(255, 255, 255, 0.5) !important;
+        box-shadow: 0 8px 24px rgba(255, 255, 255, 0.2);
+        font-weight: 700;
+        transform: translateY(-1px);
     }
     
     /* Estilos para botões do Streamlit dentro da navegação */
@@ -2854,17 +2919,25 @@ def render_horizontal_navigation():
         background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
     }
     
-    /* Responsividade */
+    /* Responsividade para botões compactos */
     @media (max-width: 1200px) {
         .nav-grid {
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: 0.8rem;
+            gap: 0.7rem;
         }
         
         .nav-button {
-            height: 70px;
-            padding: 1.2rem 0.8rem;
-            font-size: 0.95rem;
+            height: 55px;
+            padding: 0.7rem;
+            min-width: 55px;
+            max-width: 70px;
+        }
+        
+        .nav-button-icon {
+            font-size: 1.3rem;
+        }
+        
+        .nav-button-text {
+            font-size: 0.65rem;
         }
     }
     
@@ -2875,15 +2948,24 @@ def render_horizontal_navigation():
         }
         
         .nav-grid {
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 0.7rem;
+            gap: 0.6rem;
+            justify-content: center;
         }
         
         .nav-button {
-            height: 65px;
-            padding: 1rem 0.7rem;
-            font-size: 0.9rem;
-            border-radius: 14px;
+            height: 50px;
+            padding: 0.6rem;
+            min-width: 50px;
+            max-width: 65px;
+            border-radius: 10px;
+        }
+        
+        .nav-button-icon {
+            font-size: 1.2rem;
+        }
+        
+        .nav-button-text {
+            font-size: 0.6rem;
         }
         
         .nav-title {
@@ -2904,15 +2986,23 @@ def render_horizontal_navigation():
         }
         
         .nav-grid {
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 0.6rem;
+            gap: 0.5rem;
         }
         
         .nav-button {
-            height: 60px;
-            padding: 0.8rem 0.6rem;
-            font-size: 0.85rem;
-            border-radius: 12px;
+            height: 45px;
+            padding: 0.5rem;
+            min-width: 45px;
+            max-width: 60px;
+            border-radius: 8px;
+        }
+        
+        .nav-button-icon {
+            font-size: 1.1rem;
+        }
+        
+        .nav-button-text {
+            font-size: 0.55rem;
         }
         
         .nav-title {
@@ -2989,41 +3079,74 @@ def render_horizontal_navigation():
         </div>
         """, unsafe_allow_html=True)
     
-    # Páginas principais organizadas em grupos lógicos
+    # Páginas principais organizadas com ícones modernos e tooltips
     pages = {
-        'dashboard': '📊 Dash',
-        'inventario_unificado': '📦 Estoque',
-        'impressoras': '🖨️ Print',
-        'controle_gadgets': '📱 Gadgets',
-        'entrada_estoque': '⬇️ Entrada',
-        'saida_estoque': '⬆️ Saída',
-        'movimentacoes': '🔄 Movimentações',
-        'relatorios': '📈 Reports',
-        'cadastro_usuarios': '👥 Users',
-        'cadastro_produtos': '📦 Produtos',
-        'cadastro_fornecedores': '🏢 Fornecedores',
-        'controle_serial': '🔢 N/S',
-        'controle_sku': '🏷️ SKU',
-        'mapeamento_prateleiras': '📋 Prateleiras',
-        'estoque_prateleiras': '🗂️ Estoque/Prateleira'
+        'dashboard': {'icon': '📊', 'name': 'Dashboard', 'tooltip': 'Painel Principal'},
+        'inventario_unificado': {'icon': '📦', 'name': 'Estoque', 'tooltip': 'Inventário Unificado'},
+        'impressoras': {'icon': '🖨️', 'name': 'Print', 'tooltip': 'Controle de Impressoras'},
+        'controle_gadgets': {'icon': '📱', 'name': 'Gadgets', 'tooltip': 'Controle de Gadgets'},
+        'entrada_estoque': {'icon': '⬇️', 'name': 'Entrada', 'tooltip': 'Entrada de Estoque'},
+        'saida_estoque': {'icon': '⬆️', 'name': 'Saída', 'tooltip': 'Saída de Estoque'},
+        'movimentacoes': {'icon': '🔄', 'name': 'Mov', 'tooltip': 'Movimentações'},
+        'relatorios': {'icon': '📈', 'name': 'Reports', 'tooltip': 'Relatórios'},
+        'cadastro_usuarios': {'icon': '👥', 'name': 'Users', 'tooltip': 'Cadastro de Usuários'},
+        'cadastro_produtos': {'icon': '📦', 'name': 'Prod', 'tooltip': 'Cadastro de Produtos'},
+        'cadastro_fornecedores': {'icon': '🏢', 'name': 'Forn', 'tooltip': 'Cadastro de Fornecedores'},
+        'controle_serial': {'icon': '🔢', 'name': 'N/S', 'tooltip': 'Controle por N/S'},
+        'controle_sku': {'icon': '🏷️', 'name': 'SKU', 'tooltip': 'Controle por SKU'},
+        'mapeamento_prateleiras': {'icon': '📋', 'name': 'Prat', 'tooltip': 'Mapeamento de Prateleiras'},
+        'estoque_prateleiras': {'icon': '🗂️', 'name': 'Est/Prat', 'tooltip': 'Estoque por Prateleira'}
     }
     
     # Se tem entrada automática, adicionar
     if NFELIB_DISPONIVEL or PYNFE_DISPONIVEL:
-        pages['entrada_automatica'] = '⚡ SEFAZ'
+        pages['entrada_automatica'] = {'icon': '⚡', 'name': 'SEFAZ', 'tooltip': 'Entrada Automática SEFAZ'}
     
-    # Criar grid responsivo para os botões
+    # Criar grid responsivo para os botões compactos
     st.markdown('<div class="nav-grid">', unsafe_allow_html=True)
     
-    for page_key, page_name in pages.items():
+    for page_key, page_info in pages.items():
         is_active = st.session_state.current_page == page_key
-        button_style = "primary" if is_active else "secondary"
+        active_class = "nav-button-active" if is_active else ""
         
-        if st.button(page_name, key=f"nav_{page_key}", use_container_width=True, type=button_style):
-            st.session_state.current_page = page_key
-            st.rerun()
+        # Criar botão clicável com ícone e texto compacto
+        button_html = f"""
+        <div class="nav-button {active_class}" data-tooltip="{page_info['tooltip']}" 
+             onclick="window.parent.postMessage({{type: 'navigation', page: '{page_key}'}}, '*')">
+            <div class="nav-button-icon">{page_info['icon']}</div>
+            <div class="nav-button-text">{page_info['name']}</div>
+        </div>
+        """
+        
+        # Usar st.markdown para renderizar o HTML personalizado
+        st.markdown(button_html, unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Adicionar JavaScript para capturar cliques nos botões
+    st.markdown("""
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const buttons = document.querySelectorAll('.nav-button');
+        buttons.forEach(button => {
+            button.addEventListener('click', function() {
+                const page = this.getAttribute('onclick').match(/page: '([^']+)'/)[1];
+                // Enviar mensagem para o Streamlit
+                window.parent.postMessage({
+                    type: 'navigation',
+                    page: page
+                }, '*');
+            });
+        });
+    });
+    </script>
+    """, unsafe_allow_html=True)
+    
+    # Botões Streamlit invisíveis para capturar cliques
+    for page_key, page_info in pages.items():
+        if st.button(f" ", key=f"nav_{page_key}", help=page_info['tooltip'], use_container_width=False, label_visibility="collapsed"):
+            st.session_state.current_page = page_key
+            st.rerun()
     
     # Seção administrativa (se for admin)
     if is_admin_user:
