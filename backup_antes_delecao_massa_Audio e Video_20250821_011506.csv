@@ -1,0 +1,19 @@
+tag,itens,categoria,modelo,serial,marca,valor,data_compra,fornecedor,po,nota_fiscal,uso,qtd,prateleira,rua,setor,box,conferido,local
+AUD001,Headset Plantronics,audio e video,Voyager 4220,PLT4220001,Plantronics,1200.0,2024-01-18 00:00:00.000000,Plantronics,PO-AUD-001,NF-003001,Call Center,30,Prateleira F,Rua F1,Audio Zone Foxtrot,Caixa F1,True,
+AUD002,Caixa de Som JBL,audio e video,Charge 5,JBLCH5001,JBL,600.0,2024-02-22 00:00:00.000000,JBL Brasil,PO-AUD-002,NF-003002,Eventos/Reuniões,8,Prateleira F,Rua F2,Audio Zone Foxtrot,Caixa F2,True,
+AUD003,Microfone Blue Yeti,audio e video,Blue Yeti Nano,BLUYETI001,Blue Microphones,400.0,2024-03-08 00:00:00.000000,Blue Microphones,PO-AUD-003,NF-003003,Podcast/Gravação,4,Prateleira G,Rua G1,Studio Zone Golf,Caixa G1,False,
+AUD004,Webcam Logitech C920,audio e video,C920 HD Pro,LGTC920001,Logitech,350.0,2024-02-12 00:00:00.000000,Logitech,PO-AUD-004,NF-003004,Videoconferência,18,Prateleira F,Rua F1,Audio Zone Foxtrot,Caixa F3,True,
+AUD005,Adaptador USB-C Hub,audio e video,PowerExpand 11-in-1,ANKPOW001,Anker,300.0,2024-01-28 00:00:00.000000,Anker Brasil,PO-AUD-005,NF-003005,Conectividade Hub,15,Prateleira C,Rua C2,TechStop Gamma,Caixa C3,True,
+tag000,1,audio e video,1,AUTO0029,e,1111.0,2025-08-21 00:00:00.000000,1,11111,1111111,Geral,1,Prateleira A,Rua A1,Monitor Zone Delta,1,False,hq1
+IMP2508210030174,Video Wall,audio e video,,AUTO0247,,0.0,2025-08-21 00:30:23.247842,,PO-IMP-20250821,NF-IMP2508210030,Geral,1,A Definir,A Definir,Geral,,False,HQ1 - 8º Andar
+IMP2508210030175,Video Wall,audio e video,,AUTO0247,,0.0,2025-08-21 00:30:23.247842,,PO-IMP-20250821,NF-IMP2508210030,Geral,1,A Definir,A Definir,Geral,,False,HQ1 - 8º Andar
+IMP2508210030180,Video Wall,audio e video,,AUTO0247,,0.0,2025-08-21 00:30:23.247842,,PO-IMP-20250821,NF-IMP2508210030,Geral,1,A Definir,A Definir,Geral,,False,HQ1 - 8º Andar
+IMP2508210030181,Video Wall,audio e video,,AUTO0247,,0.0,2025-08-21 00:30:23.247842,,PO-IMP-20250821,NF-IMP2508210030,Geral,1,A Definir,A Definir,Geral,,False,HQ1 - 8º Andar
+IMP2508210030174,Video Wall,audio e video,,AUTO0463,,0.0,2025-08-21 00:30:37.499768,,PO-IMP-20250821,NF-IMP2508210030,Geral,1,A Definir,A Definir,Geral,,False,HQ1 - 8º Andar
+IMP2508210030175,Video Wall,audio e video,,AUTO0463,,0.0,2025-08-21 00:30:37.499768,,PO-IMP-20250821,NF-IMP2508210030,Geral,1,A Definir,A Definir,Geral,,False,HQ1 - 8º Andar
+IMP2508210030180,Video Wall,audio e video,,AUTO0463,,0.0,2025-08-21 00:30:37.499768,,PO-IMP-20250821,NF-IMP2508210030,Geral,1,A Definir,A Definir,Geral,,False,HQ1 - 8º Andar
+IMP2508210030181,Video Wall,audio e video,,AUTO0463,,0.0,2025-08-21 00:30:37.499768,,PO-IMP-20250821,NF-IMP2508210030,Geral,1,A Definir,A Definir,Geral,,False,HQ1 - 8º Andar
+IMP2508210030174,Video Wall,audio e video,,AUTO0679,,0.0,2025-08-21 00:30:52.892621,,PO-IMP-20250821,NF-IMP2508210030,Geral,1,A Definir,A Definir,Geral,,False,HQ1 - 8º Andar
+IMP2508210030175,Video Wall,audio e video,,AUTO0679,,0.0,2025-08-21 00:30:52.892621,,PO-IMP-20250821,NF-IMP2508210030,Geral,1,A Definir,A Definir,Geral,,False,HQ1 - 8º Andar
+IMP2508210030180,Video Wall,audio e video,,AUTO0679,,0.0,2025-08-21 00:30:52.892621,,PO-IMP-20250821,NF-IMP2508210030,Geral,1,A Definir,A Definir,Geral,,False,HQ1 - 8º Andar
+IMP2508210030181,Video Wall,audio e video,,AUTO0679,,0.0,2025-08-21 00:30:52.892621,,PO-IMP-20250821,NF-IMP2508210030,Geral,1,A Definir,A Definir,Geral,,False,HQ1 - 8º Andar

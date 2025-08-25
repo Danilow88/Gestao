@@ -13,11 +13,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import requests
-import json
-import os
-from typing import Optional, Dict, List
-import io
 import json
 import uuid
 import subprocess
@@ -306,26 +301,9 @@ def load_impressoras_from_csv():
         
         impressoras_data = {}
         
-        # Agrupar por building (HQ1, HQ2, SPARK) se existir, senão usar andar
-        if 'building' in df.columns:
-            coluna_local = 'building'
-        elif 'andar' in df.columns:
-            coluna_local = 'andar'
-        else:
-            # Se não houver coluna de local, usar apenas os dados disponíveis
-            impressoras_data = {}
-            for idx, row in df.iterrows():
-                local = row.get('building', row.get('andar', 'Local não informado'))
-                if local not in impressoras_data:
-                    impressoras_data[local] = {
-                        "info": {"login": "admin", "senha": "Ultravioleta"},
-                        "impressoras": []
-                    }
-                # ... resto do código
-                return impressoras_data
-        
-        for local in df[coluna_local].unique():
-            impressoras_local = df[df[coluna_local] == local]
+        # Agrupar por local (HQ1, HQ2, SPARK)
+        for local in df['local'].unique():
+            impressoras_local = df[df['local'] == local]
             
             impressoras_data[local] = {
                 "info": {"login": "admin", "senha": "Ultravioleta"},
@@ -4581,7 +4559,7 @@ def load_printers_from_csv():
             'marca': 'Epson',  # Marca Epson
             'tag': df['serial'],  # Usar serial como tag
             'tipo': 'Multifuncional',  # WF-C5790 é multifuncional (Impressora/Scanner/Copiadora)
-            'local': df.get('building', df.get('andar', 'Local não informado')) + ' - ' + df.get('descricao_local', ''),
+            'local': df['local'] + ' - ' + df['descricao_local'],
             'status': df['status_manual'].map({'Ativo': '✓ Ativo', 'Manutenção': '● Manutenção'}).fillna('✓ Ativo'),
             'valor': 3200.00,  # Valor atualizado para EPSON WF-C5790
             'data_compra': pd.to_datetime('2023-01-01'),  # Data padrão
@@ -5855,14 +5833,14 @@ def render_barcode_entry():
     </style>
     """, unsafe_allow_html=True)
     
-    with st.expander('📷 Scanner de Nota Fiscal', expanded=False):
+    with st.expander('<i class="fas fa-camera icon icon-scan"></i> Scanner de Nota Fiscal', expanded=False):
         st.markdown("""
         <div style="text-align: center; padding: 1rem 0;">
             <h3 style="color: #9333EA; margin: 0;">
-                📱 Scanner Inteligente de Códigos
+                <i class="fas fa-qrcode" style="margin-right: 0.5rem;"></i>Scanner Inteligente de Códigos
             </h3>
             <p style="color: #666; margin: 0.5rem 0;">
-                📊 Escaneie códigos de barras em tempo real ou faça upload de imagens
+                <i class="fas fa-barcode" style="margin-right: 0.5rem;"></i>Escaneie códigos de barras em tempo real ou faça upload de imagens
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -5872,21 +5850,21 @@ def render_barcode_entry():
         <div style="background: #10B981; 
                     padding: 1rem; border-radius: 8px; margin: 1rem 0; color: white;">
             <h4 style="margin: 0;">
-                ✅ Scanner Real Ativo
+                <i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>Scanner Real Ativo
             </h4>
             <p style="margin: 0;">
-                👁️ Detecção automática de códigos em tempo real disponível!
+                <i class="fas fa-eye" style="margin-right: 0.5rem;"></i>Detecção automática de códigos em tempo real disponível!
             </p>
         </div>
         """, unsafe_allow_html=True)
         
         tab_camera, tab_upload = st.tabs([
-            '📹 Câmera Real-Time', 
-            '📤 Upload & Análise'
+            '<i class="fas fa-video icon icon-scan"></i> Câmera Real-Time', 
+            '<i class="fas fa-upload icon icon-info"></i> Upload & Análise'
         ])
         
         with tab_camera:
-            st.markdown('### 📹 Captura em Tempo Real')
+            st.markdown('### <i class="fas fa-video icon icon-scan"></i> Captura em Tempo Real', unsafe_allow_html=True)
             
             # Scanner sempre ativo - bibliotecas instaladas
             try:
@@ -7171,7 +7149,7 @@ def init_gadgets_data():
         if not load_gadgets_data():
             # Se não houver dados salvos, criar DataFrame vazio
             st.session_state.gadgets_data = pd.DataFrame({
-                'timestamp': [],
+                'data': [],
                 'item_id': [],
                 'name': [],
                 'description': [],
@@ -7184,14 +7162,56 @@ def init_gadgets_data():
                 'observacoes': []
             })
             # Garantir que a coluna 'andar' seja string
-            # Comentado - coluna andar não existe mais
+            st.session_state.gadgets_data['andar'] = st.session_state.gadgets_data['andar'].astype(str)
     
     # Sempre garantir que a coluna 'andar' seja string (SOMENTE se os dados existem)
-        # Sempre carregar valores CSV (cria dados padrão se não existir)
-        load_gadgets_valores_csv()
-        
-        # Carregar valores de referência para perdas
-        load_gadgets_valores_referencia()
+    if hasattr(st.session_state, 'gadgets_data') and 'andar' in st.session_state.gadgets_data.columns:
+        # Evitar conversões desnecessárias que podem causar problemas
+        if st.session_state.gadgets_data['andar'].dtype != 'object':
+            st.session_state.gadgets_data['andar'] = st.session_state.gadgets_data['andar'].astype(str)
+            st.session_state.gadgets_data['andar'] = st.session_state.gadgets_data['andar'].replace('nan', '')
+            st.session_state.gadgets_data['andar'] = st.session_state.gadgets_data['andar'].replace('None', '')
+    
+    if 'gadgets_valores_csv' not in st.session_state:
+        # Tentar carregar do arquivo, se não existir usar dados padrão
+        if not load_gadgets_valores_csv():
+            st.session_state.gadgets_valores_csv = pd.DataFrame({
+                'item_id': [
+                    'Headset-spk', 'Mouse-spk', 'Teclado k120-spk', 'Adaptadores usb c-spk',
+                    'Headset-hq1', 'Mouse-hq1', 'Teclado k120-hq1', 'Adaptadores usb c-hq1',
+                    'Headset-hq2', 'Mouse-hq2', 'Teclado k120-hq2', 'Adaptadores usb c-hq2'
+                ],
+                'name': [
+                    'Headset', 'Mouse', 'Teclado k120', 'Adaptadores usb c',
+                    'Headset', 'Mouse', 'Teclado k120', 'Adaptadores usb c',
+                    'Headset', 'Mouse', 'Teclado k120', 'Adaptadores usb c'
+                ],
+                'description': [
+                    'Plantronics blackwire', 'M90', 'Logitech kq120', 'Geonav',
+                    'Plantronics blackwire', 'M90', 'Logitech kq120', 'Geonav',
+                    'Plantronics blackwire', 'M90', 'Logitech kq120', 'Geonav'
+                ],
+                'building': [
+                    'Spark', 'Spark', 'Spark', 'Spark',
+                    'HQ1', 'HQ1', 'HQ1', 'HQ1',
+                    'HQ2', 'HQ2', 'HQ2', 'HQ2'
+                ],
+                'cost': [
+                    260.0, 31.90, 90.0, 360.0,
+                    260.0, 31.90, 90.0, 360.0,
+                    260.0, 31.90, 90.0, 360.0
+                ],
+                'fornecedor': [
+                    'Plantronics', 'Microsoft', 'Logitech', 'Geonav',
+                    'Plantronics', 'Microsoft', 'Logitech', 'Geonav',
+                    'Plantronics', 'Microsoft', 'Logitech', 'Geonav'
+                ],
+                'quantidade_reposicao': [
+                    10, 15, 15, 10,  # Spark
+                    5, 15, 20, 5,    # HQ1
+                    5, 10, 15, 5     # HQ2
+                ]
+            })
 
 def migrate_gadgets_to_unified_inventory():
     """Migra os dados de gadgets para o inventário unificado"""
@@ -7235,7 +7255,7 @@ def migrate_gadgets_to_unified_inventory():
                     break
             
             # Gerar tag única
-            building_code = row.get("building", row.get("andar", "LOCAL")).upper()
+            building_code = row['building'].upper()
             item_code = row['name'][:3].upper()
             tag = f"{building_code}{item_code}{len(migrated_data)+1:03d}"
             
@@ -7252,7 +7272,7 @@ def migrate_gadgets_to_unified_inventory():
                 'fornecedor': row['fornecedor'],
                 'estado': '✓ Excelente',
                 'qtd': int(row.get('quantidade_reposicao', 1)),
-                'local': building_map.get(building_code, building_code),
+                'local': building_map.get(row['building'], row['building']),
                 'observacoes': f"Migrado de gadgets - Qtd Reposição: {row.get('quantidade_reposicao', 'N/A')}",
                 'conferido': True
             }
@@ -7289,176 +7309,36 @@ def load_gadgets_valores_csv():
     """Carrega valores dos gadgets de um arquivo CSV"""
     try:
         # Tentar carregar do arquivo CSV de valores
-        if os.path.exists("gadgets_valores.csv"):
-            df = pd.read_csv("gadgets_valores.csv")
-            
-            # Verificar se tem as colunas essenciais (exceto quantidade_reposicao)
-            essential_columns = ['item_id', 'name', 'description', 'building', 'cost']
-            if all(col in df.columns for col in essential_columns):
-                # Se não tem a coluna quantidade_reposicao, adicionar com valores padrão
-                if 'quantidade_reposicao' not in df.columns:
-                    # Valores padrão baseados no building
-                    df['quantidade_reposicao'] = df['building'].map({
-                        'Spark': 10,
-                        'HQ1': 5, 
-                        'HQ2': 5
-                    }).fillna(5)  # Valor padrão se building não for reconhecido
-                    
-                    # Salvar o arquivo atualizado
-                    df.to_csv("gadgets_valores.csv", index=False)
-                    st.info("📋 Arquivo CSV atualizado automaticamente com coluna de reposição")
+        df = pd.read_csv("gadgets_valores.csv")
+        
+        # Verificar se tem as colunas essenciais (exceto quantidade_reposicao)
+        essential_columns = ['item_id', 'name', 'description', 'building', 'cost']
+        if all(col in df.columns for col in essential_columns):
+            # Se não tem a coluna quantidade_reposicao, adicionar com valores padrão
+            if 'quantidade_reposicao' not in df.columns:
+                # Valores padrão baseados no building
+                df['quantidade_reposicao'] = df['building'].map({
+                    'Spark': 10,
+                    'HQ1': 5, 
+                    'HQ2': 5
+                }).fillna(5)  # Valor padrão se building não for reconhecido
                 
-                st.session_state.gadgets_valores_csv = df
-                return True
-            else:
-                missing_cols = [col for col in essential_columns if col not in df.columns]
-                st.error(f"CSV deve conter pelo menos as colunas: {', '.join(missing_cols)} (faltando)")
-                return False
-        else:
-            # Se não existir, criar dados padrão
-            return create_default_gadgets_valores_csv()
+                # Salvar o arquivo atualizado
+                df.to_csv("gadgets_valores.csv", index=False)
+                st.info("📋 Arquivo CSV atualizado automaticamente com coluna de reposição")
             
+            st.session_state.gadgets_valores_csv = df
+            return True
+        else:
+            missing_cols = [col for col in essential_columns if col not in df.columns]
+            st.error(f"CSV deve conter pelo menos as colunas: {', '.join(missing_cols)} (faltando)")
+            return False
+    except FileNotFoundError:
+        # Se não existir, usar dados padrão
+        return False
     except Exception as e:
         st.error(f"Erro ao carregar CSV de valores: {e}")
-        # Em caso de erro, criar dados padrão
-        return create_default_gadgets_valores_csv()
-
-def create_default_gadgets_valores_csv():
-    """Cria dados padrão para gadgets se não existir arquivo CSV"""
-    try:
-        # Dados padrão baseados na imagem fornecida
-        dados_padrao = [
-            {'item_id': 'Headset-spk', 'name': 'Headset', 'description': 'Plantronics blackwire', 'building': 'Spark', 'cost': 260.00, 'fornecedor': 'Plantronics', 'quantidade_reposicao': 10},
-            {'item_id': 'Mouse-spk', 'name': 'Mouse', 'description': 'M90', 'building': 'Spark', 'cost': 31.90, 'fornecedor': 'Microsoft', 'quantidade_reposicao': 15},
-            {'item_id': 'Teclado k120-spk', 'name': 'Teclado k120', 'description': 'Logitech kq120', 'building': 'Spark', 'cost': 90.00, 'fornecedor': 'Logitech', 'quantidade_reposicao': 15},
-            {'item_id': 'Adaptadores usb c-spk', 'name': 'Adaptadores usb c', 'description': 'Geonav', 'building': 'Spark', 'cost': 360.00, 'fornecedor': 'Geonav', 'quantidade_reposicao': 10},
-            {'item_id': 'Headset-hq1', 'name': 'Headset', 'description': 'Plantronics blackwire', 'building': 'HQ1', 'cost': 260.00, 'fornecedor': 'Plantronics', 'quantidade_reposicao': 5},
-            {'item_id': 'Mouse-hq1', 'name': 'Mouse', 'description': 'M90', 'building': 'HQ1', 'cost': 31.90, 'fornecedor': 'Microsoft', 'quantidade_reposicao': 15},
-            {'item_id': 'Teclado k120-hq1', 'name': 'Teclado k120', 'description': 'Logitech kq120', 'building': 'HQ1', 'cost': 90.00, 'fornecedor': 'Logitech', 'quantidade_reposicao': 20},
-            {'item_id': 'Adaptadores usb c-hq1', 'name': 'Adaptadores usb c', 'description': 'Geonav', 'building': 'HQ1', 'cost': 360.00, 'fornecedor': 'Geonav', 'quantidade_reposicao': 5},
-            {'item_id': 'Headset-hq2', 'name': 'Headset', 'description': 'Plantronics blackwire', 'building': 'HQ2', 'cost': 260.00, 'fornecedor': 'Plantronics', 'quantidade_reposicao': 5},
-            {'item_id': 'Mouse-hq2', 'name': 'Mouse', 'description': 'M90', 'building': 'HQ2', 'cost': 31.90, 'fornecedor': 'Microsoft', 'quantidade_reposicao': 10},
-            {'item_id': 'Teclado k120-hq2', 'name': 'Teclado k120', 'description': 'Logitech kq120', 'building': 'HQ2', 'cost': 90.00, 'fornecedor': 'Logitech', 'quantidade_reposicao': 15},
-            {'item_id': 'Adaptadores usb c-hq2', 'name': 'Adaptadores usb c', 'description': 'Geonav', 'building': 'HQ2', 'cost': 360.00, 'fornecedor': 'Geonav', 'quantidade_reposicao': 5}
-        ]
-        
-        df_padrao = pd.DataFrame(dados_padrao)
-        
-        # Salvar dados padrão no CSV
-        df_padrao.to_csv("gadgets_valores.csv", index=False)
-        
-        # Carregar no session state
-        st.session_state.gadgets_valores_csv = df_padrao
-        
-        st.success("📋 **Arquivo CSV padrão criado e carregado!**")
-        st.info("💡 Os dados padrão foram baseados na sua tabela atual")
-        
-        return True
-        
-    except Exception as e:
-        st.error(f"Erro ao criar dados padrão: {e}")
         return False
-
-def load_gadgets_valores_referencia():
-    """Carrega valores de referência dos gadgets de um arquivo JSON"""
-    try:
-        if os.path.exists("gadgets_valores_referencia.json"):
-            with open("gadgets_valores_referencia.json", "r", encoding="utf-8") as f:
-                valores = json.load(f)
-                st.session_state.gadgets_valores_referencia = valores
-                return True
-        else:
-            # Valores padrão se não existir arquivo (todos >= 0.01)
-            valores_padrao = {
-                'Mouse': 31.90,
-                'Teclado': 90.00,
-                'Headset': 149.90,
-                'Adaptador USB-C': 45.90,
-                'Monitor': 299.90,
-                'Webcam': 89.90,
-                'Cabo USB': 19.90,
-                'Mousepad': 29.90,
-                'Fone de Ouvido': 79.90,
-                'Carregador': 39.90,
-                'Hub USB': 89.90,
-                'Impressora': 399.90,
-                'Scanner': 199.90
-            }
-            
-            # Garantir que todos os valores sejam >= 0.01
-            for key, value in valores_padrao.items():
-                if value < 0.01:
-                    valores_padrao[key] = 0.01
-            
-            st.session_state.gadgets_valores_referencia = valores_padrao
-            # Salvar valores padrão
-            save_gadgets_valores_referencia()
-            return True
-    except Exception as e:
-        st.error(f"Erro ao carregar valores de referência: {e}")
-        return False
-
-def save_gadgets_valores_referencia():
-    """Salva valores de referência dos gadgets em arquivo JSON"""
-    try:
-        if 'gadgets_valores_referencia' in st.session_state:
-            with open("gadgets_valores_referencia.json", "w", encoding="utf-8") as f:
-                json.dump(st.session_state.gadgets_valores_referencia, f, ensure_ascii=False, indent=2)
-            return True
-        return False
-    except Exception as e:
-        st.error(f"Erro ao salvar valores de referência: {e}")
-        return False
-
-def save_gadgets_valores_csv_auto():
-    """Salva automaticamente os valores dos gadgets em CSV quando há mudanças"""
-    try:
-        if 'gadgets_valores_csv' in st.session_state and not st.session_state.gadgets_valores_csv.empty:
-            # Criar backup antes de salvar
-            backup_filename = f"gadgets_valores_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-            st.session_state.gadgets_valores_csv.to_csv(backup_filename, index=False)
-            
-            # Salvar no arquivo principal
-            st.session_state.gadgets_valores_csv.to_csv("gadgets_valores.csv", index=False)
-            
-            # Atualizar o estado anterior para comparação
-            st.session_state.valores_editor_previous = st.session_state.gadgets_valores_csv.copy()
-            
-            # Marcar timestamp de salvamento
-            st.session_state.last_save_timestamp = datetime.now()
-            
-            return True
-        return False
-    except Exception as e:
-        st.error(f"❌ Erro ao salvar valores automaticamente: {e}")
-        return False
-
-def get_gadgets_valores_referencia():
-    """Obtém valores de referência de forma segura, inicializando se necessário"""
-    try:
-        if 'gadgets_valores_referencia' not in st.session_state:
-            load_gadgets_valores_referencia()
-        
-        valores = st.session_state.get('gadgets_valores_referencia', {})
-        
-        # Garantir que todos os valores sejam >= 0.01
-        valores_validos = {}
-        for key, value in valores.items():
-            if isinstance(value, (int, float)) and value >= 0.01:
-                valores_validos[key] = value
-            else:
-                valores_validos[key] = 0.01  # Valor padrão se inválido
-        
-        return valores_validos
-    except Exception as e:
-        st.error(f"Erro ao obter valores de referência: {e}")
-        # Retornar valores padrão válidos em caso de erro
-        return {
-            'Mouse': 31.90,
-            'Teclado': 90.00,
-            'Headset': 149.90,
-            'Adaptador USB-C': 45.90
-        }
 
 def save_inventory_data():
     """Salva os dados do inventário unificado em arquivo CSV"""
@@ -7518,12 +7398,9 @@ def load_inventory_data_from_csv():
             if 'qtd' in df.columns:
                 df['qtd'] = pd.to_numeric(df['qtd'], errors='coerce').fillna(1)
             
-            # Garantir que a coluna 'local' existe (usar building se disponível)
+            # Garantir que a coluna 'local' existe
             if 'local' not in df.columns:
-                if 'building' in df.columns:
-                    df['local'] = df['building'] + ' - ' + df.get('andar', 'Andar não informado')
-                else:
-                    df['local'] = 'HQ1 - 8º Andar'  # Valor padrão
+                df['local'] = 'HQ1 - 8º Andar'  # Valor padrão
             
             return {'unified': df}, latest_file
         else:
@@ -7534,297 +7411,54 @@ def load_inventory_data_from_csv():
         return load_inventory_data(), None
 
 def save_gadgets_data():
-    """Salva os dados de gadgets em arquivo CSV - VERSÃO SUPER ROBUSTA"""
+    """Salva os dados de gadgets em arquivo CSV"""
     try:
-        print("💾 Salvando dados de gadgets...")
-        
-        if 'gadgets_data' in st.session_state and not st.session_state.gadgets_data.empty:
-            # Salvar com nome consistente
-            filename = "gadgets_perdas.csv"
-            
-            # Verificar se o diretório é gravável
-            import os
-            if not os.access('.', os.W_OK):
-                error_msg = "❌ Sem permissão de escrita no diretório atual"
-                print(error_msg)
-                st.error(error_msg)
-                return False
-            
-            # Salvar dados
+        if not st.session_state.gadgets_data.empty:
+            filename = f"gadgets_perdas_{datetime.now().strftime('%Y%m%d')}.csv"
             st.session_state.gadgets_data.to_csv(filename, index=False)
             
-            # Verificar se o arquivo foi criado
-            if os.path.exists(filename):
-                file_size = os.path.getsize(filename)
-                success_msg = f"✅ Dados salvos em {filename}: {len(st.session_state.gadgets_data)} registros ({file_size} bytes)"
-                print(success_msg)
-                
-                # Marcar que os dados foram salvos
-                st.session_state.gadgets_data_last_saved = datetime.now()
-                
-                # Mostrar sucesso na interface
-                st.success(f"💾 Dados salvos com sucesso: {len(st.session_state.gadgets_data)} registros")
-                return True
-            else:
-                error_msg = "❌ Arquivo não foi criado após salvamento"
-                print(error_msg)
-                st.error(error_msg)
-                return False
+            # Marcar que os dados foram salvos para evitar recarregamento
+            st.session_state.gadgets_data_last_saved = datetime.now()
+            
+            return True
         else:
-            # Se dados estão vazios, criar arquivo vazio com estrutura correta
-            filename = "gadgets_perdas.csv"
-            empty_df = pd.DataFrame(columns=[
-                'timestamp', 'name', 'quantidade', 'cost', 'valor_total',
-                'building', 'andar', 'responsavel', 'motivo', 'observacoes', 'status',
-                'mes', 'ano', 'id'
-            ])
-            empty_df.to_csv(filename, index=False)
+            # Se dados estão vazios, ainda assim salvar arquivo vazio
+            filename = f"gadgets_perdas_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=[
+                'data', 'item_id', 'name', 'description', 'building', 
+                'andar', 'quantidade', 'cost', 'valor_total', 'periodo', 'observacoes'
+            ]).to_csv(filename, index=False)
             
             st.session_state.gadgets_data_last_saved = datetime.now()
-            success_msg = f"✅ Arquivo vazio criado: {filename}"
-            print(success_msg)
-            st.info(success_msg)
             return True
-            
     except Exception as e:
-        error_msg = f"❌ Erro ao salvar dados: {e}"
-        print(error_msg)
-        st.error(error_msg)
-        return False
-
-# 📊 INTEGRAÇÃO GOOGLE SHEETS - BANCO DE DADOS REMOTO
-def load_google_sheets_data(sheet_type: str = 'inventory') -> Optional[pd.DataFrame]:
-    """
-    Carrega dados de uma planilha do Google Sheets
-    
-    Args:
-        sheet_type: 'inventory' ou 'perdas'
-    """
-    try:
-        # Configuração da planilha
-        spreadsheet_id = '1IMcXLIyOJOANhfxKfzYlwtBqtsXJfRMhCPmoKQdCtdY'
-        
-        # Selecionando a aba correta
-        if sheet_type == 'inventory':
-            gid = '1546013624'  # Aba Inventory
-        else:
-            gid = '0'  # Aba principal (perdas)
-        
-        # URL para acesso CSV
-        url = f'https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv&gid={gid}'
-        
-        # Tentar carregar dados
-        response = requests.get(url, timeout=10)
-        
-        if response.status_code == 200 and 'html' not in response.text.lower()[:100]:
-            # Sucesso - dados CSV válidos
-            df = pd.read_csv(io.StringIO(response.text))
-            
-            # Filtrar linhas vazias
-            df = df.dropna(how='all')
-            
-            # Padronizar colunas conforme necessário
-            if sheet_type == 'inventory':
-                df = process_inventory_columns(df)
-            
-            st.success(f"✅ Dados carregados do Google Sheets ({sheet_type.upper()}): {len(df)} registros")
-            return df
-            
-        elif response.status_code == 403:
-            st.error("""
-            🔒 **PLANILHA PRIVADA DETECTADA!**
-            
-            **Para tornar sua planilha pública:**
-            1. Abra a planilha no Google Sheets
-            2. Clique em **"Compartilhar"** (canto superior direito)
-            3. Clique em **"Alterar para qualquer pessoa com o link"**
-            4. Selecione **"Qualquer pessoa na internet"**
-            5. Defina permissão como **"Visualizador"** 
-            6. Clique **"Concluído"**
-            
-            ✅ **Depois execute o teste abaixo!**
-            """)
-            return None
-        elif response.status_code == 404:
-            st.error("❌ **PLANILHA NÃO ENCONTRADA!**\n\nVerifique se a URL/ID da planilha está correto.")
-            return None
-        else:
-            st.warning(f"⚠️ Erro ao acessar planilha: Status {response.status_code}")
-            st.info("""
-            💡 **POSSÍVEIS SOLUÇÕES:**
-            • Verifique se a planilha está pública
-            • Confirme se a URL/ID está correto
-            • Execute o teste de conectividade abaixo
-            """)
-            return None
-            
-    except requests.exceptions.RequestException:
-        st.error("❌ Erro de conexão com Google Sheets")
-        return None
-    except Exception as e:
-        st.error(f"❌ Erro ao processar planilha: {str(e)}")
-        return None
-
-def process_inventory_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Processa e padroniza colunas da planilha de inventário"""
-    try:
-        # Mapeamento de colunas possíveis para padrão do sistema
-        column_mapping = {
-            'item': 'name',
-            'produto': 'name',
-            'nome': 'name',
-            'descricao': 'description',
-            'descrição': 'description',
-            'desc': 'description',
-            'quantidade': 'quantidade',
-            'qtd': 'quantidade',
-            'qty': 'quantidade',
-            'valor': 'cost',
-            'preco': 'cost',
-            'price': 'cost',
-            'custo': 'cost',
-            'data': 'data',
-            'date': 'data',
-            'local': 'building',
-            'predio': 'building',
-            'building': 'building',
-            'andar': 'andar',
-            'floor': 'andar',
-            'obs': 'observacoes',
-            'observacao': 'observacoes',
-            'observações': 'observacoes',
-            'notes': 'observacoes'
-        }
-        
-        # Renomear colunas
-        df_processed = df.rename(columns={k: v for k, v in column_mapping.items() if k in df.columns})
-        
-        # Garantir colunas obrigatórias
-        required_columns = ['name', 'quantidade', 'cost', 'data']
-        for col in required_columns:
-            if col not in df_processed.columns:
-                if col == 'data':
-                    df_processed[col] = datetime.now()
-                elif col in ['quantidade', 'cost']:
-                    df_processed[col] = 0
-                else:
-                    df_processed[col] = ""
-        
-        # Conversões de tipos
-        if 'data' in df_processed.columns:
-            df_processed['timestamp'] = pd.to_datetime(df_processed['timestamp'], errors='coerce')
-        
-        # Calcular valor total se não existir
-        if 'valor_total' not in df_processed.columns:
-            df_processed['valor_total'] = df_processed['quantidade'] * df_processed['cost']
-        
-        # Adicionar colunas extras se necessário
-        for col in ['item_id', 'description', 'building', 'andar', 'periodo', 'observacoes']:
-            if col not in df_processed.columns:
-                if col == 'item_id':
-                    df_processed[col] = range(len(df_processed))
-                else:
-                    df_processed[col] = ""
-        
-        return df_processed
-        
-    except Exception as e:
-        st.error(f"Erro ao processar colunas: {e}")
-        return df
-
-def sync_to_google_sheets(df: pd.DataFrame, sheet_type: str = 'perdas'):
-    """
-    Sincroniza dados locais para Google Sheets
-    NOTA: Esta função requer autenticação da API do Google Sheets
-    """
-    try:
-        st.info("🔄 **SINCRONIZAÇÃO COM GOOGLE SHEETS**")
-        st.info("Para sincronização completa, é necessário configurar a API do Google Sheets")
-        st.info("Por enquanto, você pode exportar os dados e colar manualmente na planilha")
-        
-        # Gerar CSV para exportação manual
-        csv_data = df.to_csv(index=False)
-        st.download_button(
-            label="📥 Baixar CSV para Upload Manual",
-            data=csv_data,
-            file_name=f"matt_export_{sheet_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime='text/csv'
-        )
-        
-        return True
-        
-    except Exception as e:
-        st.error(f"Erro na sincronização: {e}")
+        st.error(f"Erro ao salvar dados: {e}")
         return False
 
 def load_gadgets_data():
-    """Carrega os dados de gadgets - VERSÃO CORRIGIDA"""
-    
-    print("🔄 Carregando dados de gadgets...")
-    
-    # PRIORIDADE 1: Carregar do arquivo local gadgets_perdas.csv
-    try:
-        import os
-        if os.path.exists("gadgets_perdas.csv"):
-            df = pd.read_csv("gadgets_perdas.csv")
-            
-            # Verificar se o arquivo tem dados
-            if not df.empty:
-                # Converter timestamp para datetime se existir
-                if 'timestamp' in df.columns:
-                    df['timestamp'] = pd.to_datetime(df['timestamp'])
-                
-                st.session_state.gadgets_data = df
-                st.session_state.data_source = 'local_csv'
-                print(f"✅ Dados carregados de gadgets_perdas.csv: {len(df)} registros")
-                st.success(f"📁 Dados carregados: {len(df)} perdas registradas")
-                return True
-            else:
-                print("📁 Arquivo gadgets_perdas.csv existe mas está vazio")
-        else:
-            print("📁 Arquivo gadgets_perdas.csv não encontrado")
-            
-    except Exception as e:
-        print(f"❌ Erro ao carregar gadgets_perdas.csv: {e}")
-    
-    # PRIORIDADE 2: Tentar carregar do Google Sheets (se habilitado)
-    try:
-        sheets_data = load_google_sheets_data('inventory')
-        if sheets_data is not None and len(sheets_data) > 0:
-            # Processar dados do Google Sheets
-            st.session_state.data_source = 'google_sheets'
-            print(f"✅ Dados carregados do Google Sheets: {len(sheets_data)} registros")
-            return True
-    except Exception as e:
-        print(f"❌ Erro ao carregar do Google Sheets: {e}")
-    
-    # PRIORIDADE 3: Tentar carregar arquivos antigos (fallback)
+    """Carrega os dados de gadgets salvos"""
     try:
         import glob
+        # Procurar arquivo mais recente
         files = glob.glob("gadgets_perdas_*.csv")
         if files:
             latest_file = max(files, key=lambda x: x.split('_')[-1])
             df = pd.read_csv(latest_file)
+            df['data'] = pd.to_datetime(df['data'])
             
             # Garantir que a coluna 'andar' seja string
-            st.session_state.data_source = 'local_csv_legacy'
-            print(f"✅ Dados carregados de arquivo legado: {len(df)} registros")
-            st.info(f"📁 Dados carregados de arquivo legado: {len(df)} registros")
-            return True
+            if 'andar' in df.columns:
+                df['andar'] = df['andar'].astype(str)
+                df['andar'] = df['andar'].replace('nan', '')
+                df['andar'] = df['andar'].replace('None', '')
             
+            st.session_state.gadgets_data = df
+            
+            return True
     except Exception as e:
-        print(f"❌ Erro ao carregar arquivos legados: {e}")
-    
-    # PRIORIDADE 4: Se nenhum dado foi carregado, criar DataFrame vazio
-    print("📁 Criando DataFrame vazio para novos dados")
-    st.session_state.gadgets_data = pd.DataFrame(columns=[
-        'timestamp', 'name', 'quantidade', 'cost', 'valor_total',
-        'building', 'andar', 'responsavel', 'motivo', 'observacoes', 'status',
-        'mes', 'ano', 'id'
-    ])
-    st.session_state.data_source = 'empty'
-    st.info("📁 Sistema inicializado com DataFrame vazio")
-    return True
+        if hasattr(st, 'sidebar'):
+            st.sidebar.error(f"× Erro ao carregar dados: {e}")
+    return False
 
 def get_andares_options(building):
     """Retorna opções de andares baseado no prédio em ordem numérica"""
@@ -7843,13 +7477,13 @@ def calcular_necessidade_compra(df_perdas, budget):
         return {}
     
     # Obter perdas do último mês
-    ultimo_mes = df_perdas['timestamp'].max()
+    ultimo_mes = df_perdas['data'].max()
     mes_atual = ultimo_mes.month
     ano_atual = ultimo_mes.year
     
     perdas_mes = df_perdas[
-        (df_perdas['timestamp'].dt.month == mes_atual) & 
-        (df_perdas['timestamp'].dt.year == ano_atual)
+        (df_perdas['data'].dt.month == mes_atual) & 
+        (df_perdas['data'].dt.year == ano_atual)
     ]
     
     if perdas_mes.empty:
@@ -7884,7 +7518,7 @@ def calcular_necessidade_compra(df_perdas, budget):
         
         recomendacoes[item_id] = {
             'name': row['name'],
-            'building': row.get("building", row.get("andar", "LOCAL")),
+            'building': row['building'],
             'quantidade_perdida': quantidade_perdida,
             'quantidade_recomendada': quantidade_recomendada,
             'custo_unitario': custo_unitario,
@@ -8023,795 +7657,29 @@ def connect_to_ai_agent(user_message, context_data=None):
         # Fallback final
         return generate_local_ai_response(user_message, context_data)
 
-def get_real_prices_from_csv():
-    """Extrai preços EXCLUSIVAMENTE REAIS da planilha gadgets_valores.csv - SEM dados fictícios"""
-    prices = {}
-    
-    # PRIORIDADE ABSOLUTA: Carregar preços APENAS do CSV gadgets_valores.csv
-    if 'gadgets_valores_csv' in st.session_state and not st.session_state.gadgets_valores_csv.empty:
-        valores_csv = st.session_state.gadgets_valores_csv
-        for _, row in valores_csv.iterrows():
-            item_name = row['name'].lower().strip()
-            cost = row.get('cost', 0)
-            if cost > 0:
-                # Mapear nomes EXATOS da planilha para os padrões do sistema
-                if 'mouse' in item_name:
-                    prices['mouse_gamer'] = float(cost)
-                    prices['mouse'] = float(cost)
-                elif 'headset' in item_name or 'fone' in item_name:
-                    prices['headset_premium'] = float(cost)
-                    prices['headset'] = float(cost)
-                elif 'teclado' in item_name:
-                    prices['teclado_mecanico'] = float(cost)
-                    prices['teclado'] = float(cost)
-                elif 'adaptador' in item_name or 'usb' in item_name:
-                    prices['adaptador_usb'] = float(cost)
-                    prices['adaptador'] = float(cost)
-    
-    # BACKUP: Se CSV não existe, usar valores das perdas registradas (dados reais também)
-    if not prices and 'gadgets_data' in st.session_state and not st.session_state.gadgets_data.empty:
-        perdas_df = st.session_state.gadgets_data
-        if 'cost' in perdas_df.columns and 'name' in perdas_df.columns:
-            # Calcular preços médios REAIS baseados nas perdas registradas
-            precos_medios = perdas_df.groupby('name')['cost'].mean()
-            for item_name, preco_medio in precos_medios.items():
-                if preco_medio > 0:
-                    item_lower = item_name.lower().strip()
-                    if 'mouse' in item_lower:
-                        prices['mouse_gamer'] = float(preco_medio)
-                        prices['mouse'] = float(preco_medio)
-                    elif 'headset' in item_lower or 'fone' in item_lower:
-                        prices['headset_premium'] = float(preco_medio)
-                        prices['headset'] = float(preco_medio)
-                    elif 'teclado' in item_lower:
-                        prices['teclado_mecanico'] = float(preco_medio)
-                        prices['teclado'] = float(preco_medio)
-                    elif 'adaptador' in item_lower or 'usb' in item_lower:
-                        prices['adaptador_usb'] = float(preco_medio)
-                        prices['adaptador'] = float(preco_medio)
-    
-    # FALLBACK: Se não há dados CSV nem perdas, usar valores de referência das configurações
-    if not prices and 'gadgets_valores_referencia' in st.session_state:
-        valores_ref = st.session_state.gadgets_valores_referencia
-        for item_name, valor in valores_ref.items():
-            if valor > 0:
-                item_lower = item_name.lower().strip()
-                if 'mouse' in item_lower:
-                    prices['mouse_gamer'] = float(valor)
-                    prices['mouse'] = float(valor)
-                elif 'headset' in item_lower or 'fone' in item_lower:
-                    prices['headset_premium'] = float(valor)
-                    prices['headset'] = float(valor)
-                elif 'teclado' in item_lower:
-                    prices['teclado_mecanico'] = float(valor)
-                    prices['teclado'] = float(valor)
-                elif 'adaptador' in item_lower or 'usb' in item_lower:
-                    prices['adaptador_usb'] = float(valor)
-                    prices['adaptador'] = float(valor)
-    
-    # IMPORTANTE: SEM FALLBACK FICTÍCIO - retornar apenas dados reais encontrados
-    return prices
-
-def get_loss_based_quantities():
-    """Calcula quantidades EXCLUSIVAMENTE baseadas em dados reais: perdas registradas + CSV - SEM dados fictícios"""
-    quantities = {}
-    
-    # PRIORIDADE 1: Usar perdas registradas reais
-    if 'gadgets_data' in st.session_state and not st.session_state.gadgets_data.empty:
-        perdas_df = st.session_state.gadgets_data
-        
-        # Análise das perdas nos últimos 30 dias (se houver dados)
-        from datetime import datetime, timedelta
-        if 'timestamp' in perdas_df.columns:
-            data_limite = datetime.now() - timedelta(days=30)
-            perdas_recentes = perdas_df[pd.to_datetime(perdas_df['timestamp']) >= data_limite]
-            if perdas_recentes.empty:
-                perdas_recentes = perdas_df  # Usar todos os dados se não há dados recentes
-        else:
-            perdas_recentes = perdas_df
-        
-        if not perdas_recentes.empty and 'name' in perdas_recentes.columns:
-            # Agrupar perdas por item
-            perdas_por_item = perdas_recentes.groupby('name')['quantidade'].sum()
-            
-            for item_name, total_perdido in perdas_por_item.items():
-                # Calcular quantidade recomendada: perdas * fator de segurança (2x) SEM mínimo fixo
-                qtd_recomendada = max(1, int(total_perdido * 2))
-                
-                item_lower = item_name.lower().strip()
-                if 'mouse' in item_lower:
-                    quantities['mouse_gamer'] = qtd_recomendada
-                elif 'headset' in item_lower or 'fone' in item_lower:
-                    quantities['headset_premium'] = qtd_recomendada
-                elif 'teclado' in item_lower:
-                    quantities['teclado_mecanico'] = qtd_recomendada
-                elif 'adaptador' in item_lower or 'usb' in item_lower:
-                    quantities['adaptador_usb'] = qtd_recomendada
-    
-    # PRIORIDADE 2: Se não tem perdas registradas, usar quantidades de reposição do CSV (dados reais)
-    if not quantities and 'gadgets_valores_csv' in st.session_state:
-        valores_csv = st.session_state.gadgets_valores_csv
-        if not valores_csv.empty and 'quantidade_reposicao' in valores_csv.columns:
-            for _, row in valores_csv.iterrows():
-                item_name = row['name'].lower().strip()
-                qtd_reposicao = row.get('quantidade_reposicao', 0)
-                
-                if qtd_reposicao > 0:  # Só usar se tem valor real no CSV
-                    if 'mouse' in item_name:
-                        quantities['mouse_gamer'] = max(quantities.get('mouse_gamer', 0), int(qtd_reposicao))
-                    elif 'headset' in item_name or 'fone' in item_name:
-                        quantities['headset_premium'] = max(quantities.get('headset_premium', 0), int(qtd_reposicao))
-                    elif 'teclado' in item_name:
-                        quantities['teclado_mecanico'] = max(quantities.get('teclado_mecanico', 0), int(qtd_reposicao))
-                    elif 'adaptador' in item_name or 'usb' in item_name:
-                        quantities['adaptador_usb'] = max(quantities.get('adaptador_usb', 0), int(qtd_reposicao))
-    
-    # FALLBACK: Se não há dados de perdas nem CSV, usar quantidades baseadas nos valores de referência
-    if not quantities and 'gadgets_valores_referencia' in st.session_state:
-        valores_ref = st.session_state.gadgets_valores_referencia
-        for item_name, valor in valores_ref.items():
-            if valor > 0:
-                item_lower = item_name.lower().strip()
-                # Quantidade padrão baseada no valor (itens mais caros = menos unidades)
-                if valor > 200:
-                    qtd_padrao = 5
-                elif valor > 100:
-                    qtd_padrao = 10
-                elif valor > 50:
-                    qtd_padrao = 15
-                else:
-                    qtd_padrao = 20
-                
-                if 'mouse' in item_lower:
-                    quantities['mouse_gamer'] = qtd_padrao
-                elif 'headset' in item_lower or 'fone' in item_lower:
-                    quantities['headset_premium'] = qtd_padrao
-                elif 'teclado' in item_lower:
-                    quantities['teclado_mecanico'] = qtd_padrao
-                elif 'adaptador' in item_lower or 'usb' in item_lower:
-                    quantities['adaptador_usb'] = qtd_padrao
-    
-    # IMPORTANTE: SEM FALLBACK FICTÍCIO - retornar apenas dados reais encontrados
-    return quantities
-
-def format_recommendations_details(recommendations):
-    """Formata os detalhes das recomendações de forma limpa e sem problemas de caracteres"""
-    if not recommendations:
-        return "Nenhuma recomendação disponível"
-    
-    details = []
-    for rec in recommendations:
-        item = rec['item']
-        quantity = rec['quantity']
-        price = rec['price']
-        total_cost = rec['total_cost']
-        
-        detail_line = f"• **{item}**: {quantity}x - R$ {total_cost:,.2f} (R$ {price:.2f} cada)"
-        details.append(detail_line)
-    
-    return '\n'.join(details)
-
-def optimize_budget_consumption(budget, real_prices, base_quantities):
-    """Otimiza o consumo do orçamento TOTAL sem deixar sobras, distribuindo inteligentemente entre itens"""
-    if not real_prices or budget <= 0:
-        return {}
-    
-    # Lista de itens disponíveis com seus preços
-    available_items = []
-    for item, price in real_prices.items():
-        base_qty = base_quantities.get(item, 1)
-        available_items.append({
-            'item': item,
-            'price': price,
-            'base_qty': base_qty,
-            'priority_score': 1.0  # Base
-        })
-    
-        # 🎯 SISTEMA DE PRIORIZAÇÃO: ADAPTADORES E HEADSETS SEMPRE RECEBEM MAIS UNIDADES
-    # Não divide igualmente entre gadgets - prioriza itens estratégicos
-    # Prioridade: Headset (5.0) > Adaptador USB-C (4.5) > Mouse (2.0) > Teclado (1.0) - ADAPTADORES E HEADSETS SEMPRE PRIORITÁRIOS
-    for item_data in available_items:
-        item_name = item_data['item'].lower()
-        if 'headset' in item_name:
-            item_data['priority_score'] = 5.0  # PRIORIDADE MÁXIMA - sempre mais unidades
-        elif 'adaptador' in item_name or 'usb' in item_name:
-            item_data['priority_score'] = 4.5  # PRIORIDADE MÁXIMA - sempre mais unidades
-        elif 'mouse' in item_name:
-            item_data['priority_score'] = 2.0  # Prioridade média - menos unidades
-        elif 'teclado' in item_name:
-            item_data['priority_score'] = 1.0  # Prioridade baixa - menos unidades
-    
-    # Ordernar por prioridade (maior primeiro) e depois por custo-benefício
-    available_items.sort(key=lambda x: (x['priority_score'], -x['price']), reverse=True)
-    
-    # Algoritmo de otimização de orçamento AGRESSIVO para usar 100% do budget
-    optimized_quantities = {}
-    remaining_budget = budget
-    
-    # FASE 1: Alocar quantidades base para todos os itens (essenciais)
-    for item_data in available_items:
-        item = item_data['item']
-        price = item_data['price']
-        base_qty = item_data['base_qty']
-        
-        cost_base = base_qty * price
-        if remaining_budget >= cost_base:
-            optimized_quantities[item] = base_qty
-            remaining_budget -= cost_base
-        elif remaining_budget >= price:
-            # Se não cabe a quantidade base, pelo menos 1 unidade
-            optimized_quantities[item] = 1
-            remaining_budget -= price
-    
-    # FASE 2: Distribuir orçamento restante de forma ULTRA inteligente
-    max_iterations = 500  # Muito mais iterações para garantir uso total
-    iteration = 0
-    
-    while remaining_budget > 0 and iteration < max_iterations:
-        iteration += 1
-        budget_used_this_round = False
-        
-        # Tentar adicionar 1 unidade de cada item por ordem de prioridade
-        for item_data in available_items:
-            item = item_data['item']
-            price = item_data['price']
-            
-            if item in optimized_quantities and remaining_budget >= price:
-                # Verificar se vale a pena adicionar mais unidades deste item
-                current_qty = optimized_quantities[item]
-                priority_score = item_data['priority_score']
-                
-                # Limite dinâmico ULTRA AGRESSIVO para consumir TODO o orçamento SEM SOBRAS
-                max_reasonable = min(
-                    int(budget * 1.0 / price),  # SEM LIMITE PERCENTUAL - pode usar todo orçamento!
-                    int(budget / price)  # Máximo possível baseado no orçamento total
-                )
-                
-                if current_qty < max_reasonable:
-                    optimized_quantities[item] += 1
-                    remaining_budget -= price
-                    budget_used_this_round = True
-        
-        # Se não conseguiu usar nenhum orçamento nesta rodada, tentar forçar o uso
-        if not budget_used_this_round:
-            # Encontrar o item mais barato que ainda cabe no orçamento
-            cheapest_affordable = None
-            for item_data in available_items:
-                if item_data['price'] <= remaining_budget:
-                    if cheapest_affordable is None or item_data['price'] < cheapest_affordable['price']:
-                        cheapest_affordable = item_data
-            
-            if cheapest_affordable:
-                item = cheapest_affordable['item']
-                price = cheapest_affordable['price']
-                if item in optimized_quantities:
-                    optimized_quantities[item] += 1
-                else:
-                    optimized_quantities[item] = 1
-                remaining_budget -= price
-            else:
-                # Nenhum item cabe no orçamento restante
-                break
-    
-    # FASE 3: FORÇA BRUTA TOTAL - ELIMINAR QUALQUER SOBRA (modo ultra agressivo)
-    force_iterations = 0
-    while remaining_budget > 0 and force_iterations < 10:  # Múltiplas tentativas
-        force_iterations += 1
-        
-        # Ordenar itens por preço (do mais barato ao mais caro) para maximizar uso
-        available_items_by_price = sorted(available_items, key=lambda x: x['price'])
-        
-        budget_consumed_this_round = False
-        
-        # Tentar usar TODO orçamento restante com QUALQUER item
-        for item_data in available_items_by_price:
-            if remaining_budget <= 0:
-                break
-                
-            item = item_data['item'] 
-            price = item_data['price']
-            
-            if price <= remaining_budget:
-                # Adicionar MÁXIMO possível deste item
-                max_qty_possible = int(remaining_budget / price)
-                
-                if max_qty_possible > 0:
-                    if item in optimized_quantities:
-                        optimized_quantities[item] += max_qty_possible
-                    else:
-                        optimized_quantities[item] = max_qty_possible
-                    
-                    remaining_budget -= max_qty_possible * price
-                    budget_consumed_this_round = True
-        
-        # Se não conseguiu usar nada nesta rodada, parar
-        if not budget_consumed_this_round:
-            break
-    
-    # FASE 4: ÚLTIMA TENTATIVA - FORÇA TOTAL NO ITEM MAIS BARATO
-    if remaining_budget > 0:
-        cheapest_item = min(available_items, key=lambda x: x['price'])
-        if cheapest_item['price'] <= remaining_budget:
-            item = cheapest_item['item']
-            price = cheapest_item['price'] 
-            final_qty = int(remaining_budget / price)
-            
-            if final_qty > 0:
-                if item in optimized_quantities:
-                    optimized_quantities[item] += final_qty
-                else:
-                    optimized_quantities[item] = final_qty
-                remaining_budget -= final_qty * price
-    
-    return optimized_quantities
-
-def generate_huginn_based_recommendations():
-    """Gera recomendações específicas baseadas nos dados dos agentes Huginn e valores reais do CSV"""
-    try:
-        huginn_data = connect_to_huginn()
-        if not huginn_data:
-            return None
-        
-        budget = st.session_state.get('matt_budget', 50000)
-        
-        # Carregar APENAS preços reais do CSV
-        real_prices = get_real_prices_from_csv()
-        
-        # Carregar APENAS quantidades baseadas em dados reais
-        loss_based_quantities = get_loss_based_quantities()
-        
-        # VALIDAÇÃO CRÍTICA: Se não há dados reais, NÃO gerar recomendações fictícias
-        if not real_prices:
-            return None  # Forçar uso do sistema de fallback que explica sobre CSV
-        
-        # Verificar se há dados dos agentes conectados
-        if huginn_data.get('connection_status') == 'connected':
-            processed_data = huginn_data.get('processed_data', {})
-            smart_recs = processed_data.get('smart_recommendations', [])
-            
-            if smart_recs:
-                # Usar recomendações reais dos agentes com dados do CSV
-                recommendations = []
-                total_cost = 0
-                
-                # OTIMIZAR USO COMPLETO DO ORÇAMENTO COM AGENTES HUGINN
-                # Preparar dados base dos agentes para otimização
-                huginn_base_quantities = {}
-                for rec in smart_recs:
-                    item = rec.get('item', 'gadget')
-                    qty_huginn = rec.get('quantity', 1)
-                    qty_losses = loss_based_quantities.get(item, qty_huginn)
-                    huginn_base_quantities[item] = max(qty_huginn, qty_losses)
-                
-                # Aplicar otimização de orçamento
-                optimized_quantities = optimize_budget_consumption(budget, real_prices, huginn_base_quantities)
-                
-                recommendations = []
-                total_cost = 0
-                
-                for item, qty in optimized_quantities.items():
-                    # Buscar dados originais do agente
-                    rec_data = next((r for r in smart_recs if r.get('item') == item), {})
-                    priority = rec_data.get('priority', 'normal')
-                    savings = rec_data.get('savings_potential', 0)
-                    
-                    price = real_prices.get(item, 120)
-                    cost = qty * price
-                    
-                    recommendations.append({
-                        'item': item,
-                        'quantity': qty,
-                        'price': price,
-                        'total_cost': cost,
-                        'priority': priority,
-                        'savings': savings,
-                        'data_source': 'huginn_optimized'
-                    })
-                    total_cost += cost
-                
-                return {
-                    'source': 'huginn_agents_with_csv_data',
-                    'recommendations': recommendations,
-                    'total_cost': total_cost,
-                    'budget': budget,
-                    'agents_active': huginn_data.get('agents_found', 0)
-                }
-        
-        # Usar dados de fallback se conectado mas sem dados processados
-        elif huginn_data.get('connection_status') == 'fallback' or huginn_data.get('agents_active'):
-            smart_recs = huginn_data.get('smart_recommendations', [])
-            if smart_recs:
-                recommendations = []
-                total_cost = 0
-                
-                # OTIMIZAR USO COMPLETO DO ORÇAMENTO COM FALLBACK HUGINN
-                huginn_fallback_quantities = {}
-                for rec in smart_recs:
-                    item = rec.get('item', 'gadget')
-                    qty_huginn = rec.get('quantity', 1)
-                    qty_losses = loss_based_quantities.get(item, qty_huginn)
-                    huginn_fallback_quantities[item] = max(qty_huginn, qty_losses)
-                
-                # Aplicar otimização de orçamento com limites separados por prioridade
-                limite_prioritario = st.session_state.get('matt_limite_prioritario', 50)
-                limite_nao_prioritario = st.session_state.get('matt_limite_nao_prioritario', 20)
-                gadgets_preferidos = st.session_state.get('gadgets_preferidos', [])
-                
-                optimized_quantities = optimize_budget_consumption(
-                    budget, real_prices, huginn_fallback_quantities,
-                    limit_prioritario=limite_prioritario,
-                    limit_nao_prioritario=limite_nao_prioritario,
-                    prioritized_display_items=gadgets_preferidos
-                )
-                
-                recommendations = []
-                total_cost = 0
-                
-                for item, qty in optimized_quantities.items():
-                    # Buscar dados originais do agente
-                    rec_data = next((r for r in smart_recs if r.get('item') == item), {})
-                    priority = rec_data.get('priority', 'normal')
-                    savings = rec_data.get('savings_potential', 0)
-                    
-                    price = real_prices.get(item, 120)
-                    cost = qty * price
-                    
-                    recommendations.append({
-                        'item': item,
-                        'quantity': qty,
-                        'price': price,
-                        'total_cost': cost,
-                        'priority': priority,
-                        'savings': savings,
-                        'data_source': 'huginn_fallback_optimized'
-                    })
-                    total_cost += cost
-                
-                return {
-                    'source': 'huginn_fallback_with_csv_data',
-                    'recommendations': recommendations,
-                    'total_cost': total_cost,
-                    'budget': budget,
-                    'agents_active': huginn_data.get('agents_active', False)
-                }
-        
-        return None
-        
-    except Exception as e:
-        return None
-
 def generate_smart_purchase_recommendation(user_message, context_data=None):
-    """Gera recomendações de compra baseadas prioritariamente nos agentes Huginn"""
+    """Gera recomendações de compra baseadas em dados reais de perdas, orçamento e valores"""
     import pandas as pd
     from datetime import datetime, timedelta
     
-    # PRIORIDADE 1: Usar dados dos agentes Huginn
-    huginn_recs = generate_huginn_based_recommendations()
-    if huginn_recs and huginn_recs['recommendations']:
-        recommendations = huginn_recs['recommendations']
-        total_cost = huginn_recs['total_cost']
-        budget = huginn_recs['budget']
-        source = huginn_recs['source']
-        
-        # Gerar lista de compras direta
-        compras_diretas = []
-        detalhes_compras = []
-        
-        for rec in recommendations:
-            item_name = rec['item'].replace('_', ' ').title()
-            qty = rec['quantity']
-            priority = rec['priority']
-            
-            # Emojis por prioridade
-            priority_emoji = "🔴" if priority == 'urgente' or priority == 'alta' else "🟡" if priority == 'média' or priority == 'medium' else "🟢"
-            
-            compras_diretas.append(f"COMPRE {qty} {item_name.upper()}")
-            detalhes_compras.append(f"• {priority_emoji} **{item_name}**: {qty}x - R$ {rec['total_cost']:,.2f}")
-            
-            if rec.get('savings', 0) > 0:
-                detalhes_compras[-1] += f" (Economia: R$ {rec['savings']:,.2f})"
-        
-        # Comandos de compra formatados
-        comandos_compra = '\n'.join([f"🛒 {cmd}" for cmd in compras_diretas])
-        detalhes_formatados = '\n'.join(detalhes_compras)
-        
-        # Determinar label da fonte com base nos dados reais
-        if source == 'huginn_agents_with_csv_data':
-            source_label = "AGENTES HUGINN + DADOS REAIS DO CSV"
-        elif source == 'huginn_fallback_with_csv_data':
-            source_label = "AGENTES HUGINN + VALORES REAIS CADASTRADOS"
-        elif source == 'huginn_agents':
-            source_label = "AGENTES HUGINN EM TEMPO REAL"
-        else:
-            source_label = "AGENTES HUGINN (BACKUP)"
-        
-        # Forçar consumo integral do orçamento na apresentação
-        efficiency = 100.0
-        sobra = 0.0
-        
-        # Criar tabela editável do orçamento
-        budget_data = []
-        for rec in recommendations:
-            budget_data.append({
-                "Item": rec["item"].replace("_", " ").title(),
-                "Quantidade": rec["quantity"],
-                "Preço Unitário": f"R$ {rec["total_cost"]/rec["quantity"]:,.2f}",
-                "Custo Total": f"R$ {rec["total_cost"]:,.2f}",
-                "Prioridade": rec.get("priority", "Normal").title(),
-                "Editar Qtd": rec["quantity"]
-            })
-        
-        # Adicionar linha de totais
-        budget_data.append({
-            "Item": "**TOTAL GERAL**",
-            "Quantidade": sum([rec["quantity"] for rec in recommendations]),
-            "Preço Unitário": "-",
-            "Custo Total": f"R$ {total_cost:,.2f}",
-            "Prioridade": "-",
-            "Editar Qtd": "-"
-        })
-        
-        df_budget = pd.DataFrame(budget_data)
-        
-        # Criar tabela editável estilo Excel
-        st.markdown("### 📊 **TABELA EDITÁVEL DO ORÇAMENTO**")
-        st.markdown("💡 **Edite as quantidades diretamente na tabela abaixo:**")
-        
-        # Usar AgGrid para tabela editável
-        if HAS_AGGRID:
-            # Configurar AgGrid para edição
-            gb = GridOptionsBuilder.from_dataframe(df_budget)
-            gb.configure_column("Editar Qtd", editable=True, type=["numericColumn", "numberColumnFilter"])
-            gb.configure_column("Item", editable=False)
-            gb.configure_column("Quantidade", editable=False)
-            gb.configure_column("Preço Unitário", editable=False)
-            gb.configure_column("Custo Total", editable=False)
-            gb.configure_column("Prioridade", editable=False)
-            
-            grid_options = gb.build()
-            
-            # Renderizar tabela editável
-            grid_response = AgGrid(
-                df_budget,
-                gridOptions=grid_options,
-                data_return_mode="AS_INPUT",
-                update_mode=GridUpdateMode.MODEL_CHANGED,
-                fit_columns_on_grid_load=True,
-                theme="streamlit",
-                height=400,
-                allow_unsafe_jscode=True
-            )
-            
-            # Processar mudanças na tabela
-            if grid_response["data"] != df_budget.to_dict("records"):
-                st.success("✅ **Quantidades atualizadas!** Clique em \"Recalcular Orçamento\" para aplicar as mudanças.")
-                
-                # Botão para recalcular
-                if st.button("🔄 Recalcular Orçamento", type="primary"):
-                    # Atualizar quantidades e recalcular custos
-                    updated_data = grid_response["data"]
-                    new_total = 0
-                    
-                    for i, row in enumerate(updated_data[:-1]):  # Excluir linha de totais
-                        if isinstance(row["Editar Qtd"], (int, float)) and row["Editar Qtd"] > 0:
-                            # Recalcular custo total
-                            unit_price = float(row["Preço Unitário"].replace("R$ ", "").replace(",", ""))
-                            new_qty = int(row["Editar Qtd"])
-                            new_cost = new_qty * unit_price
-                            new_total += new_cost
-                            
-                            # Atualizar linha
-                            updated_data[i]["Quantidade"] = new_qty
-                            updated_data[i]["Custo Total"] = f"R$ {new_cost:,.2f}"
-                    
-                    # Atualizar linha de totais
-                    updated_data[-1]["Quantidade"] = sum([row["Quantidade"] for row in updated_data[:-1]])
-                    updated_data[-1]["Custo Total"] = f"R$ {new_total:,.2f}"
-                    
-                    st.success(f"💰 **Orçamento recalculado: R$ {new_total:,.2f}**")
-                    st.rerun()
-        else:
-            # Fallback para st.data_editor
-            edited_df = st.data_editor(
-                df_budget,
-                num_rows="dynamic",
-                use_container_width=True,
-                height=400
-            )
-            
-            if not edited_df.equals(df_budget):
-                st.success("✅ **Quantidades atualizadas!** Use \"Recalcular Orçamento\" para aplicar mudanças.")
-        
-        return f"""🤖 **MATT 2.0 + HUGINN - ORÇAMENTO OTIMIZADO POR IA**
+    # Verificar se temos dados de perdas
+    if 'gadgets_data' not in st.session_state or st.session_state.gadgets_data.empty:
+        return """📊 **MATT 2.0 - ANÁLISE INTELIGENTE**
 
-⚡ **ORÇAMENTO MAXIMIZADO PELOS AGENTES HUGINN:**
+⚠️ **Nenhum dado de perda registrado ainda.**
 
-{comandos_compra}
+Para receber recomendações personalizadas baseadas em dados reais:
+1. **Registre** algumas perdas de gadgets na aba "Registro de Perdas"
+2. **Configure** seu orçamento usando o comando: "definir budget R$ 50000"
+3. **Volte aqui** para análises detalhadas com dados reais
 
-📊 **DETALHAMENTO INTELIGENTE (QUANTIDADES OTIMIZADAS):**
-{detalhes_formatados}
+💡 **Com dados, posso analisar:**
+• Padrões de perda por item e período
+• ROI de cada gadget vs. frequência de perda
+• Otimização de compras por orçamento disponível
+• Previsão de necessidades futuras
 
-💰 **OTIMIZAÇÃO AUTOMÁTICA DE ORÇAMENTO:**
-• 🎯 **Custo Total:** R$ {total_cost:,.2f}
-• 💰 **Orçamento:** R$ {budget:,.2f}
-• ⚡ **Aproveitamento:** {max(100.0, efficiency):.1f}% (IA ULTRA OTIMIZADA!)
-• ✅ **ORÇAMENTO 100% CONSUMIDO!**
-
-🤖 **FONTE DOS DADOS:** {source_label}
-⏰ **ANÁLISE:** IA + Padrões de mercado + Otimização orçamentária
-📈 **CONFIANÇA:** Máxima (Huginn + Otimização automática)
-
-🎯 **VANTAGENS HUGINN + OTIMIZAÇÃO:**
-• 🧠 **IA Avançada** - Análise automatizada de mercado
-• ⚡ **Orçamento Zero Desperdício** - Máximo aproveitamento 
-• 📊 **Quantidades Inteligentes** - Balanceamento otimizado
-• 💰 **ROI Maximizado** - Eficiência quase 100%
-
-✅ **EXECUTAR:** Digite "confirmar compras"
-🔄 **AJUSTAR:** Digite "ajustar orçamento R$ [valor]"
-
-**🚀 POWERED BY HUGINN IA + OTIMIZADOR AUTOMÁTICO DE ORÇAMENTO** 🎯"""
-    
-    # FALLBACK CRÍTICO: Se não há dados do Huginn, verificar se existem dados reais no CSV
-    budget = context_data.get('matt_budget', 50000) if context_data else st.session_state.get('matt_budget', 50000)
-    
-    # Carregar APENAS dados reais - sem fallbacks fictícios
-    real_prices = get_real_prices_from_csv()
-    loss_based_quantities = get_loss_based_quantities()
-    
-    # VALIDAÇÃO CRÍTICA: Se não há preços reais, NÃO fazer recomendações fictícias
-    if not real_prices:
-        return f"""⚠️ **MATT 2.0 - DADOS REAIS NECESSÁRIOS**
-
-❌ **Não foi possível encontrar preços reais no sistema.**
-
-📋 **Para receber recomendações baseadas em dados reais, você precisa:**
-
-1. **📄 Carregar planilha gadgets_valores.csv** com:
-   • Coluna 'name' (nome dos itens)
-   • Coluna 'cost' (preços reais)
-   • Coluna 'quantidade_reposicao' (quantidades)
-
-2. **📝 OU registrar perdas** na aba "Registro de Perdas" com:
-   • Nome do item
-   • Quantidade perdida
-   • Valor unitário real
-
-💡 **Exemplo de CSV esperado:**
-```
-name,cost,quantidade_reposicao
-Mouse,31.90,15
-Headset,260.00,10
-Teclado k120,90.00,15
-Adaptadores usb c,360.00,10
-```
-
-🔍 **Status atual:**
-• CSV gadgets_valores: {'❌ Não encontrado' if 'gadgets_valores_csv' not in st.session_state else '⚠️ Sem dados válidos'}
-• Perdas registradas: {'❌ Nenhuma' if 'gadgets_data' not in st.session_state or st.session_state.gadgets_data.empty else f"{len(st.session_state.gadgets_data)} registros"}
-
-**❗ SEM dados reais cadastrados, não posso fazer recomendações confiáveis.**"""
-    
-    # Se há dados reais, processar recomendações
-    if real_prices:
-        # Lista de itens disponíveis nos dados reais
-        available_items = []
-        recommendations = []
-        total_cost = 0
-        
-        # APLICAR LIMITES INDIVIDUAIS E EXCLUSÕES
-        # Filtrar gadgets excluídos
-        if 'gadgets_excluidos' in st.session_state and st.session_state.gadgets_excluidos:
-            for gadget_excluido in st.session_state.gadgets_excluidos:
-                if gadget_excluido in real_prices:
-                    del real_prices[gadget_excluido]
-                if gadget_excluido in loss_based_quantities:
-                    del loss_based_quantities[gadget_excluido]
-        
-        # Aplicar limites individuais
-        if 'gadgets_limites_individuais' in st.session_state and st.session_state.gadgets_limites_individuais:
-            for gadget, limite in st.session_state.gadgets_limites_individuais.items():
-                if gadget in loss_based_quantities and loss_based_quantities[gadget] > limite:
-                    loss_based_quantities[gadget] = limite
-        
-        # OTIMIZAR USO COMPLETO DO ORÇAMENTO - SEM DEIXAR SOBRAS
-        optimized_quantities = optimize_budget_consumption(budget, real_prices, loss_based_quantities)
-        
-        if optimized_quantities:
-            # Unificar chaves equivalentes do otimizador para nomes simples
-            canonical_map = {
-                'mouse_gamer': 'mouse', 'mouse': 'mouse',
-                'headset_premium': 'headset', 'headset': 'headset',
-                'teclado_mecanico': 'teclado', 'teclado': 'teclado',
-                'adaptador_usb': 'adaptador usb c', 'adaptador': 'adaptador usb c'
-            }
-            qty_by_display = {'mouse': 0, 'headset': 0, 'teclado': 0, 'adaptador usb c': 0}
-            
-            for key, optimized_qty in optimized_quantities.items():
-                display = canonical_map.get(key)
-                if display:
-                    qty_by_display[display] += int(optimized_qty)
-            
-            # Tabela de preços por nome simples (preferindo chaves canônicas do CSV)
-            price_by_display = {
-                'mouse': real_prices.get('mouse_gamer') or real_prices.get('mouse', 0),
-                'headset': real_prices.get('headset_premium') or real_prices.get('headset', 0),
-                'teclado': real_prices.get('teclado_mecanico') or real_prices.get('teclado', 0),
-                'adaptador usb c': real_prices.get('adaptador_usb') or real_prices.get('adaptador', 0),
-            }
-            
-            recommendations = []
-            total_cost = 0
-            for display_name, qty in qty_by_display.items():
-                if qty > 0 and price_by_display.get(display_name, 0) > 0:
-                    price = float(price_by_display[display_name])
-                    cost = qty * price
-                    recommendations.append({
-                        'item': display_name,
-                        'quantity': qty,
-                        'price': price,
-                        'total_cost': cost
-                    })
-                    total_cost += cost
-        
-        if not recommendations:
-            return f"""💰 **MATT 2.0 - ORÇAMENTO INSUFICIENTE PARA DADOS REAIS**
-
-📊 **Orçamento:** R$ {budget:,.2f}
-💰 **Preços reais encontrados:**
-{chr(10).join([f"• {key.replace('_gamer', '').replace('_premium', '').replace('_mecanico', '').replace('_usb', ' usb c').replace('_', ' ').strip().title()}: R$ {price:.2f}" for key, price in real_prices.items()])}
-
-⚠️ **Orçamento insuficiente para comprar com preços reais cadastrados.**
-
-💡 **Ajuste o orçamento:**
-• Digite: "ajustar orçamento R$ {int(min(real_prices.values()) * 10)}" (mínimo sugerido)
-• Digite: "ajustar orçamento R$ {int(sum(real_prices.values()) * 2)}" (recomendado para diversidade)"""
-        
-        # Gerar resposta com dados EXCLUSIVAMENTE reais
-        compras_diretas = []
-        for rec in recommendations:
-            compras_diretas.append(f"COMPRE {rec['quantity']} {rec['item'].upper()}")
-        
-        comandos_compra = '\n'.join([f"🛒 {cmd}" for cmd in compras_diretas])
-        
-        # Informar fonte dos dados reais
-        if 'gadgets_valores_csv' in st.session_state and not st.session_state.gadgets_valores_csv.empty:
-            data_source = "📊 **Fonte:** Planilha gadgets_valores.csv (DADOS REAIS)"
-        elif 'gadgets_data' in st.session_state and not st.session_state.gadgets_data.empty:
-            total_perdas = len(st.session_state.gadgets_data)
-            data_source = f"📊 **Fonte:** {total_perdas} perdas registradas no sistema (DADOS REAIS)"
-        else:
-            data_source = "📊 **Fonte:** Dados reais encontrados no sistema"
-        
-        # Forçar consumo integral do orçamento na apresentação
-        efficiency = 100.0
-        sobra = 0.0
-        
-        return f"""🤖 **MATT 2.0 - ORÇAMENTO OTIMIZADO COM DADOS 100% REAIS**
-
-⚡ **ORÇAMENTO MAXIMIZADO - USO INTELIGENTE COMPLETO:**
-
-{comandos_compra}
-
-📊 **DETALHAMENTO (QUANTIDADES OTIMIZADAS + PREÇOS REAIS):**
-{format_recommendations_details(recommendations)}
-
-💰 **OTIMIZAÇÃO DE ORÇAMENTO:**
-• 🎯 **Custo Total:** R$ {total_cost:,.2f}
-• 💰 **Orçamento:** R$ {budget:,.2f}
-• ⚡ **Aproveitamento:** {max(100.0, efficiency):.1f}% (ULTRA OTIMIZADO!)
-• ✅ **ORÇAMENTO TOTALMENTE CONSUMIDO!**
-
-{data_source}
-
-🎯 **VANTAGENS DA OTIMIZAÇÃO:**
-• ✅ **Sem desperdício de orçamento** - Máximo uso inteligente
-• ✅ **Quantidades balanceadas** - Distribuição por prioridade
-• ✅ **Valores reais do CSV** - Zero dados fictícios
-• ✅ **Sem sobras** - Orçamento 100% utilizado
-
-✅ **EXECUTAR:** Digite "confirmar compras"
-🚀 **SISTEMA:** Orçamento otimizado automaticamente!"""
+**Vamos começar registrando algumas perdas para análise inteligente!** 🚀"""
 
     df = st.session_state.gadgets_data
     budget = context_data.get('matt_budget', 50000) if context_data else st.session_state.get('matt_budget', 50000)
@@ -8828,13 +7696,13 @@ Adaptadores usb c,360.00,10
     analise_perdas = df_recente.groupby('name').agg({
         'quantidade': 'sum',
         'valor_total': 'sum',
-        'cost': 'mean'  # Usar 'cost' em vez de 'valor_unit'
+        'valor_unit': 'mean'
     }).reset_index()
     
     # Calcular taxa de perda e prioridade
     analise_perdas['frequencia_perda'] = analise_perdas['quantidade']
     analise_perdas['custo_total_perdas'] = analise_perdas['valor_total']
-    analise_perdas['preco_medio'] = analise_perdas['cost']
+    analise_perdas['preco_medio'] = analise_perdas['valor_unit']
     analise_perdas['prioridade_score'] = (
         analise_perdas['frequencia_perda'] * 0.4 + 
         (analise_perdas['custo_total_perdas'] / analise_perdas['custo_total_perdas'].max()) * 100 * 0.6
@@ -9032,67 +7900,20 @@ def generate_local_ai_response(user_message, context_data=None):
         # Integrar recomendações do Huginn com análise local
         local_recommendations = generate_smart_purchase_recommendation(user_message, context_data)
         
-        # Verificar se há dados reais do Huginn
-        huginn_insights = ""
-        if huginn_data and huginn_data.get('connection_status') == 'connected':
-            processed_data = huginn_data.get('processed_data', {})
-            
-            # Insights de orçamento
-            budget_insights = processed_data.get('budget_insights', {})
-            if budget_insights:
-                huginn_insights += "\n\n💰 **ANÁLISE DE ORÇAMENTO HUGINN:**\n"
-                if 'allocated' in budget_insights:
-                    huginn_insights += f"• Orçamento Total: R$ {budget_insights.get('allocated', 0):,.2f}\n"
-                if 'spent' in budget_insights:
-                    huginn_insights += f"• Gasto Atual: R$ {budget_insights.get('spent', 0):,.2f}\n"
-                if 'remaining' in budget_insights:
-                    huginn_insights += f"• Disponível: R$ {budget_insights.get('remaining', 0):,.2f}\n"
-                if 'efficiency' in budget_insights:
-                    eff = budget_insights.get('efficiency', 0) * 100
-                    huginn_insights += f"• Eficiência: {eff:.1f}%\n"
-            
-            # Recomendações inteligentes
-            smart_recs = processed_data.get('smart_recommendations', [])
-            if smart_recs:
-                huginn_insights += "\n🛒 **RECOMENDAÇÕES INTELIGENTES HUGINN:**\n"
-                for i, rec in enumerate(smart_recs[:3], 1):  # Máximo 3
-                    item = rec.get('item', 'Item')
-                    qty = rec.get('quantity', 0)
-                    priority = rec.get('priority', 'normal')
-                    savings = rec.get('savings_potential', 0)
-                    
-                    priority_emoji = "🔴" if priority == 'urgente' else "🟡" if priority == 'média' else "🟢"
-                    huginn_insights += f"• {priority_emoji} **{item}**: {qty} unidades (Economia: R$ {savings:,.2f})\n"
-            
-            # Dados de perda
-            loss_patterns = processed_data.get('loss_patterns', {})
-            if loss_patterns:
-                huginn_insights += "\n📊 **PADRÕES DE PERDA DETECTADOS:**\n"
-                high_freq = loss_patterns.get('high_frequency', [])
-                if high_freq:
-                    huginn_insights += f"• Alta frequência: {', '.join(high_freq[:4])}\n"
-                    
-            huginn_insights += f"\n🤖 **Fonte:** {huginn_data.get('agents_found', 0)} agentes Huginn ativos"
-            
-            return local_recommendations + huginn_insights
-        
-        elif huginn_data and huginn_data.get('connection_status') == 'fallback':
-            # Dados de fallback dos agentes
-            huginn_insights = "\n\n🤖 **DADOS DOS AGENTES HUGINN (FALLBACK):**\n"
-            
-            market_intel = huginn_data.get('market_intelligence', {}).get('gadget_trends', {})
-            if market_intel:
-                huginn_insights += "📈 **Tendências de Mercado:**\n"
-                for item, data in market_intel.items():
-                    trend = data.get('price_trend', 'stable')
-                    rec = data.get('recommendation', 'monitor')
-                    trend_emoji = "📈" if trend == 'increasing' else "📉" if trend == 'decreasing' else "➡️"
-                    huginn_insights += f"• {item.replace('_', ' ').title()}: {trend_emoji} {trend} → {rec}\n"
-            
-            budget_data = huginn_data.get('budget_insights', {})
-            if budget_data:
-                huginn_insights += f"\n💰 **Orçamento:** R$ {budget_data.get('allocated_budget', 0):,.2f}"
-                huginn_insights += f" (Eficiência: {budget_data.get('efficiency', 0)*100:.0f}%)\n"
+        if huginn_data and huginn_data.get('agents_active'):
+            # Adicionar insights do Huginn
+            huginn_insights = ""
+            if 'ai_recommendations' in huginn_data.get('market_intelligence', {}):
+                huginn_insights = "\n\n🕷️ **INSIGHTS DOS AGENTES HUGINN:**\n"
+                for rec in huginn_data['market_intelligence']['ai_recommendations']:
+                    confidence = int(rec['confidence'] * 100)
+                    huginn_insights += f"• **{rec['item']}**: {rec['reasoning']} (Confiança: {confidence}%)\n"
+                
+            if huginn_data.get('market_intelligence', {}).get('cost_optimization_tip'):
+                tip = huginn_data['market_intelligence']['cost_optimization_tip']
+                huginn_insights += f"\n💡 **Dica de Otimização:** {tip}\n"
+                
+            huginn_insights += f"\n⚡ **Última atualização:** {huginn_data.get('last_update', 'N/A')}"
             
             return local_recommendations + huginn_insights
         
@@ -9100,54 +7921,10 @@ def generate_local_ai_response(user_message, context_data=None):
     
     # Perguntas sobre mercado/tendências - usar dados do Huginn
     elif any(word in message_lower for word in ['mercado', 'tendência', 'preço', 'trend', 'market']):
-        if huginn_data and huginn_data.get('connection_status') == 'connected':
-            # Dados reais dos agentes Huginn
-            processed_data = huginn_data.get('processed_data', {})
-            market_intelligence = processed_data.get('market_intelligence', {})
-            
-            response = f"📈 **MATT 2.0 + HUGINN - ANÁLISE DE MERCADO EM TEMPO REAL**\n\n"
-            response += f"🤖 **Fonte:** {huginn_data.get('agents_found', 0)} agentes ativos\n"
-            response += f"⏰ **Dados atualizados:** {huginn_data.get('timestamp', 'N/A')[:19].replace('T', ' ')}\n\n"
-            
-            # Dados de mercado dos agentes
-            if market_intelligence:
-                response += "📊 **ANÁLISE DE GADGETS:**\n"
-                for item_key, data in market_intelligence.items():
-                    if isinstance(data, dict):
-                        item_name = item_key.replace('_', ' ').title()
-                        avg_price = data.get('avg_price', 0)
-                        trend = data.get('trend', 'stable')
-                        recommendation = data.get('recommendation', 'monitor')
-                        
-                        trend_emoji = "📈" if trend == 'increasing' else "📉" if trend == 'decreasing' else "➡️"
-                        rec_emoji = "🔴" if recommendation == 'urgent_buy' else "🟡" if recommendation == 'wait_for_discount' else "🟢"
-                        
-                        response += f"• {rec_emoji} **{item_name}**: R$ {avg_price:.2f} {trend_emoji} {trend}\n"
-                        response += f"  Ação: {recommendation.replace('_', ' ').title()}\n"
-            
-            # Insights adicionais
-            insights = processed_data.get('insights', {})
-            if insights:
-                response += "\n💡 **INSIGHTS DO MERCADO:**\n"
-                if 'market_confidence' in insights:
-                    conf = insights['market_confidence'] * 100
-                    response += f"• Confiança do mercado: {conf:.1f}%\n"
-                if 'best_deals' in insights:
-                    deals = insights['best_deals']
-                    if deals:
-                        response += f"• Melhores oportunidades: {', '.join(deals)}\n"
-                if 'price_alerts' in insights:
-                    alerts = insights['price_alerts']
-                    if alerts:
-                        response += f"• Alertas de preço: {', '.join(alerts)}\n"
-            
-            return response
-            
-        elif huginn_data and (huginn_data.get('connection_status') == 'fallback' or huginn_data.get('agents_active')):
-            # Dados de fallback
+        if huginn_data and huginn_data.get('agents_active'):
             market_data = huginn_data.get('market_intelligence', {}).get('gadget_trends', {})
             
-            response = "📈 **MATT 2.0 + HUGINN - INTELIGÊNCIA DE MERCADO (BACKUP)**\n\n"
+            response = "📈 **MATT 2.0 + HUGINN - INTELIGÊNCIA DE MERCADO**\n\n"
             
             for item, data in market_data.items():
                 trend_emoji = "📈" if data['price_trend'] == 'increasing' else "📉" if data['price_trend'] == 'decreasing' else "➡️"
@@ -9198,167 +7975,78 @@ Especialista em gestão inteligente de gadgets corporativos.{huginn_status}
 **Como posso ajudar com inteligência combinada hoje?** ✨🕷️"""
 
 def connect_to_huginn():
-    """Conecta ao Huginn real para buscar dados dos agentes Matt 2.0"""
-    import requests
+    """Conecta ao Huginn local para buscar dados dos agentes IA especializados"""
+    import subprocess
     import json
+    import re
     from datetime import datetime, timedelta
     
     try:
-        # Configurações do Huginn
-        huginn_url = st.session_state.get('huginn_url', 'http://localhost:3000')
-        huginn_token = st.session_state.get('huginn_token', 'matt2-ai-auto-token-2024-huginn-api-key-active')
+        # Simular dados dos agentes IA do Huginn para Matt 2.0
+        # Em produção, isso seria substituído por API real do Huginn
         
-        # Headers para autenticação (se necessário)
-        headers = {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        }
+        current_time = datetime.now()
         
-        # Se houver token, adicionar ao header
-        if huginn_token and huginn_token != 'matt2-ai-auto-token-2024-huginn-api-key-active':
-            headers['Authorization'] = f'Bearer {huginn_token}'
-        
-        # 1. Primeiro, tentar buscar todos os agentes
-        agents_url = f"{huginn_url}/agents.json"
-        response = requests.get(agents_url, headers=headers, timeout=10)
-        
-        if response.status_code != 200:
-            # Se não conseguir acessar /agents.json, tentar URL alternativa
-            agents_url = f"{huginn_url}/agents"
-            response = requests.get(agents_url, headers=headers, timeout=10)
-        
-        if response.status_code == 200:
-            # Sucesso - processar dados dos agentes
-            try:
-                if 'application/json' in response.headers.get('Content-Type', ''):
-                    agents_data = response.json()
-                else:
-                    # Se não for JSON, fazer parsing HTML básico para buscar agentes Matt 2.0
-                    html_content = response.text
-                    import re
-                    
-                    # Buscar IDs dos agentes Matt 2.0 no HTML
-                    matt_agent_pattern = r'Matt 2\.0.*?agents/(\d+)'
-                    matt_agents = re.findall(matt_agent_pattern, html_content)
-                    
-                    agents_data = []
-                    for agent_id in matt_agents:
-                        agents_data.append({'id': int(agent_id), 'name': f'Matt 2.0 Agent {agent_id}'})
-                
-                # 2. Buscar eventos dos agentes Matt 2.0
-                matt_events = []
-                processed_data = {
-                    'market_intelligence': {},
-                    'budget_insights': {},
-                    'smart_recommendations': []
+        # Dados simulados baseados nos agentes criados
+        huginn_data = {
+            'timestamp': current_time.isoformat(),
+            'source': 'huginn_local_agents',
+            'agents_active': True,
+            'agents': [
+                {
+                    'id': 15,
+                    'name': 'Matt 2.0 Budget Optimizer',
+                    'type': 'budget_analysis',
+                    'status': 'active'
+                },
+                {
+                    'id': 16, 
+                    'name': 'Matt 2.0 Smart Recommendations',
+                    'type': 'purchase_recommendations',
+                    'status': 'active'
                 }
-                
-                for agent in agents_data:
-                    if isinstance(agent, dict) and 'Matt 2.0' in str(agent.get('name', '')):
-                        agent_id = agent.get('id')
-                        if agent_id:
-                            # Buscar eventos do agente específico
-                            try:
-                                events_url = f"{huginn_url}/agents/{agent_id}/events.json"
-                                events_response = requests.get(events_url, headers=headers, timeout=8)
-                                
-                                if events_response.status_code == 200:
-                                    events_data = events_response.json()
-                                    
-                                    # Processar eventos por tipo de agente
-                                    agent_name = agent.get('name', '')
-                                    if 'Market Intelligence' in agent_name:
-                                        for event in events_data[:3]:  # Últimos 3 eventos
-                                            payload = event.get('payload', {})
-                                            if payload.get('source') == 'huginn_market_intelligence':
-                                                processed_data['market_intelligence'] = payload.get('market_data', {})
-                                                processed_data['insights'] = payload.get('insights', {})
-                                                break
-                                    
-                                    elif 'Budget Optimizer' in agent_name:
-                                        for event in events_data[:3]:
-                                            payload = event.get('payload', {})
-                                            if payload.get('source') == 'huginn_budget_optimizer':
-                                                processed_data['budget_insights'] = payload.get('budget_status', {})
-                                                processed_data['loss_patterns'] = payload.get('loss_patterns', {})
-                                                processed_data['recommendations'] = payload.get('recommendations', {})
-                                                break
-                                    
-                                    elif 'Smart Recommendations' in agent_name:
-                                        for event in events_data[:3]:
-                                            payload = event.get('payload', {})
-                                            if payload.get('source') == 'huginn_smart_recommendations':
-                                                processed_data['smart_recommendations'] = payload.get('smart_recommendations', [])
-                                                processed_data['execution_plan'] = payload.get('execution_plan', {})
-                                                break
-                                    
-                                    # Adicionar eventos à lista
-                                    for event in events_data[:5]:  # Máximo 5 eventos por agente
-                                        matt_events.append({
-                                            'agent': agent_name,
-                                            'timestamp': event.get('created_at'),
-                                            'payload': event.get('payload', {})
-                                        })
-                                        
-                            except:
-                                continue
-                
-                # 3. Retornar dados estruturados
-                return {
-                    'timestamp': datetime.now().isoformat(),
-                    'source': 'huginn_real_agents',
-                    'connection_status': 'connected',
-                    'agents_found': len([a for a in agents_data if 'Matt 2.0' in str(a.get('name', ''))]),
-                    'events': matt_events,
-                    'processed_data': processed_data,
-                    'huginn_url': huginn_url
-                }
-                
-            except Exception as json_error:
-                # Fallback para dados simulados baseados nos agentes criados
-                return {
-                    'timestamp': datetime.now().isoformat(),
-                    'source': 'huginn_fallback_simulation',
-                    'connection_status': 'fallback',
-                    'message': 'Connected to Huginn but using simulated data',
+            ],
             'market_intelligence': {
                 'gadget_trends': {
                     'mouse_gaming': {'price_trend': 'stable', 'demand': 'high', 'recommendation': 'buy_now'},
                     'teclado_mecanico': {'price_trend': 'decreasing', 'demand': 'medium', 'recommendation': 'wait_discount'},
                     'headset_gamer': {'price_trend': 'increasing', 'demand': 'high', 'recommendation': 'urgent_buy'},
-                            'cabo_usb': {'price_trend': 'stable', 'demand': 'high', 'recommendation': 'buy_now'}
-                        }
+                    'monitor_4k': {'price_trend': 'stable', 'demand': 'low', 'recommendation': 'can_wait'}
                 },
                 'budget_insights': {
-                        'allocated_budget': 60000,
+                    'allocated_budget': 50000,
                     'current_spend_rate': 'normal',
                     'predicted_savings': 8500,
-                        'efficiency': 0.82,
-                        'high_priority_items': ['headset_gamer', 'mouse_gaming']
+                    'high_priority_items': ['headset_gamer', 'mouse_gaming'],
+                    'cost_optimization_tip': 'Aproveitar desconto em teclados mecânicos'
+                },
+                'ai_recommendations': [
+                    {
+                        'item': 'headset_gamer',
+                        'action': 'buy_urgent',
+                        'reasoning': 'Preços subindo 15% nos próximos 30 dias',
+                        'quantity': 10,
+                        'confidence': 0.89
                     },
-                    'smart_recommendations': [
-                        {'item': 'mouse_gamer', 'quantity': 40, 'priority': 'alta', 'savings_potential': 1650},
-                        {'item': 'adaptador_usb', 'quantity': 30, 'priority': 'média', 'savings_potential': 690},
-                        {'item': 'headset_premium', 'quantity': 15, 'priority': 'urgente', 'savings_potential': 2970},
-                        {'item': 'teclado_mecanico', 'quantity': 10, 'priority': 'alta', 'savings_potential': 2430}
-                    ],
-                    'events': [{'agent': 'Matt 2.0 Market Intelligence', 'message': 'Market analysis available'}]
-                }
+                    {
+                        'item': 'teclado_mecanico', 
+                        'action': 'buy_discounted',
+                        'reasoning': 'Desconto de 25% disponível por tempo limitado',
+                        'quantity': 15,
+                        'confidence': 0.94
+                    }
+                ]
+            },
+            'last_update': current_time.strftime('%H:%M:%S'),
+            'data_freshness': 'real_time',
+            'huginn_status': 'operational'
+        }
         
-        else:
-            # Não conseguiu conectar ao Huginn
-            return None
-            
-    except requests.exceptions.RequestException:
-        # Erro de conexão
-        return None
+        return huginn_data
+        
     except Exception as e:
-        # Outros erros - retornar dados de fallback
+        # Fallback com dados básicos
         return {
-            'timestamp': datetime.now().isoformat(),
-            'source': 'huginn_error_fallback',
-            'connection_status': 'error',
-            'message': f'Error connecting to Huginn: {str(e)[:100]}',
             'agents_active': False,
             'fallback': True,
             'message': 'Huginn temporarily unavailable - using local intelligence'
@@ -9367,16 +8055,20 @@ def connect_to_huginn():
 def process_matt_response(user_message):
     """IA conversacional avançada do Matt - Assistente inteligente completo com IA externa"""
     try:
-        import re
-        from datetime import datetime, timedelta
-        
+    import re
+    from datetime import datetime, timedelta
+    
         # Garantir que sempre temos uma mensagem
         if not user_message:
             user_message = "olá"
         
         init_gadgets_data()
-        message_lower = user_message.lower()
-        
+    message_lower = user_message.lower()
+    
+    # ====================================================================
+        # SISTEMA DE IA AVANÇADA - MATT 2.0 COM AGENTES EXTERNOS  
+    # ====================================================================
+    
         # PRIMEIRA TENTATIVA: IA EXTERNA AVANÇADA
         try:
             context_data = {
@@ -9419,7 +8111,7 @@ def process_matt_response(user_message):
             patterns = [r'R\$\s*(\d+)', r'(\d{4,})']
             for pattern in patterns:
                 match = re.search(pattern, user_message, re.IGNORECASE)
-                if match:
+            if match:
                     try:
                         novo_budget = float(match.group(1))
                         if novo_budget >= 1000:
@@ -9429,8 +8121,8 @@ def process_matt_response(user_message):
 ✅ **NOVO BUDGET:** R$ {novo_budget:,.2f}
 
 🔄 **Sistema recalculado!** Use os botões acima para gerar recomendações."""
-                    except:
-                        pass
+                except:
+                    pass
         
         # Fallback mais inteligente
         return f"""🤖 **MATT 2.0 - RESPOSTA INTELIGENTE**
@@ -9445,280 +8137,6 @@ def process_matt_response(user_message):
 
 💡 **Orçamento atual:** R$ {st.session_state.get('matt_budget', 50000):,.2f}
 ⚡ **Status:** Sistema ativo e monitorando"""
-
-def calcular_orcamento_com_valores_referencia(budget, headsets, adaptadores):
-    """Calcula orçamento usando valores de referência das configurações"""
-    try:
-        if not headsets and not adaptadores:
-            return {
-                'success': False,
-                'message': '❌ Nenhum headset ou adaptador configurado',
-                'orcamento': {}
-            }
-        
-        # Fase 1: Distribuição inicial 50/50
-        budget_headsets = budget * 0.5
-        budget_adaptadores = budget * 0.5
-        
-        orcamento = {}
-        total_custo = 0
-        
-        # Fase 2: Calcular quantidades para headsets
-        if headsets:
-            for nome, preco in headsets.items():
-                if preco > 0:
-                    qtd_maxima = int(budget_headsets / preco)
-                    if qtd_maxima > 0:
-                        orcamento[nome] = {
-                            'quantidade': qtd_maxima,
-                            'preco_unitario': preco,
-                            'custo_total': qtd_maxima * preco,
-                            'categoria': 'Headset'
-                        }
-                        total_custo += qtd_maxima * preco
-        
-        # Fase 3: Calcular quantidades para adaptadores
-        if adaptadores:
-            for nome, preco in adaptadores.items():
-                if preco > 0:
-                    qtd_maxima = int(budget_adaptadores / preco)
-                    if qtd_maxima > 0:
-                        orcamento[nome] = {
-                            'quantidade': qtd_maxima,
-                            'preco_unitario': preco,
-                            'custo_total': qtd_maxima * preco,
-                            'categoria': 'Adaptador USB-C'
-                        }
-                        total_custo += qtd_maxima * preco
-        
-        # Fase 4: Otimização final para usar 100% do orçamento
-        if total_custo < budget and orcamento:
-            # Calcular sobra
-            sobra = budget - total_custo
-            
-            # Distribuir sobra proporcionalmente entre os itens
-            for nome, dados in orcamento.items():
-                if sobra > 0 and dados['preco_unitario'] > 0:
-                    qtd_adicional = int(sobra / dados['preco_unitario'])
-                    if qtd_adicional > 0:
-                        orcamento[nome]['quantidade'] += qtd_adicional
-                        orcamento[nome]['custo_total'] += qtd_adicional * dados['preco_unitario']
-                        total_custo += qtd_adicional * dados['preco_unitario']
-                        sobra -= qtd_adicional * dados['preco_unitario']
-        
-        return {
-            'success': True,
-            'message': f'✅ Orçamento otimizado usando valores de referência',
-            'orcamento': orcamento,
-            'total_custo': total_custo,
-            'utilizacao_orcamento': (total_custo / budget) * 100 if budget > 0 else 0
-        }
-        
-    except Exception as e:
-        return {
-            'success': False,
-            'message': f'❌ Erro ao calcular orçamento: {str(e)}',
-            'orcamento': {}
-        }
-
-def calcular_orcamento_100_porcentagem(budget):
-    """Calcula orçamento 100% otimizado dividido entre adaptadores USB-C e headsets"""
-    try:
-        # PRIORIDADE 1: Usar dados reais do arquivo gadgets_valores.csv (preços de mercado)
-        if 'gadgets_valores_csv' in st.session_state and not st.session_state.gadgets_valores_csv.empty:
-            df = st.session_state.gadgets_valores_csv
-            
-            # DEBUG: Mostrar dados carregados
-            st.info(f"🔍 DEBUG: Dados carregados do CSV - {len(df)} registros")
-            
-            # Filtrar apenas headsets e adaptadores USB-C
-            df_headsets = df[df['name'].str.lower().str.contains('headset', case=False, na=False)]
-            df_adaptadores = df[df['name'].str.lower().str.contains('adaptador|usb|c', case=False, na=False)]
-            
-            # DEBUG: Mostrar resultados da filtragem
-
-            
-            # Verificar se encontrou dados
-            if df_headsets.empty and df_adaptadores.empty:
-                st.warning("⚠️ **Nenhum headset ou adaptador USB-C encontrado no CSV de valores!**")
-                st.info("📊 O arquivo `gadgets_valores.csv` deve conter headsets e adaptadores USB-C com preços reais")
-                
-                # Mostrar dados atuais do CSV
-                st.markdown("**📋 Dados atuais no CSV de valores:**")
-                st.dataframe(df[['name', 'cost', 'building']], use_container_width=True)
-                
-                # FALLBACK: Se não há dados no CSV, usar valores de referência das configurações
-                if 'gadgets_valores_referencia' in st.session_state:
-                    valores_ref = st.session_state.gadgets_valores_referencia
-                    headsets = {k: v for k, v in valores_ref.items() if 'headset' in k.lower()}
-                    adaptadores = {k: v for k, v in valores_ref.items() if any(word in k.lower() for word in ['adaptador', 'hub', 'cabo', 'usb-c', 'thunderbolt'])}
-                    
-                    if headsets or adaptadores:
-                        st.info("📊 **Usando valores de referência das configurações:**")
-                        st.info(f"🎧 {len(headsets)} headsets + 🔌 {len(adaptadores)} adaptadores USB-C")
-                        
-                        # Continuar com o cálculo usando valores de referência
-                        return calcular_orcamento_com_valores_referencia(budget, headsets, adaptadores)
-                    else:
-                        st.error("❌ **Nenhum headset ou adaptador USB-C configurado nas configurações!**")
-                        st.info("💡 Configure valores de referência nas configurações do Matt 2.0")
-                        return {
-                            'success': False,
-                            'message': '❌ Configure valores de referência para headsets e adaptadores USB-C',
-                            'orcamento': {}
-                        }
-                else:
-                    return {
-                        'success': False,
-                        'message': '❌ Adicione headsets e adaptadores USB-C ao CSV para criar o orçamento',
-                        'orcamento': {}
-                    }
-            
-            # Mostrar dados encontrados
-            st.info(f"📊 **Dados encontrados no CSV de valores:** {len(df_headsets)} headsets + {len(df_adaptadores)} adaptadores USB-C")
-            
-            if not df_headsets.empty:
-                st.info("🎧 **Headsets encontrados:**")
-                for _, row in df_headsets.iterrows():
-                    st.info(f"  • {row['name']} - R$ {row['cost']:.2f} ({row['building']})")
-            
-            if not df_adaptadores.empty:
-                st.info("🔌 **Adaptadores encontrados:**")
-                for _, row in df_adaptadores.iterrows():
-                    st.info(f"  • {row['name']} - R$ {row['cost']:.2f} ({row['building']})")
-            
-            # Calcular preços médios por categoria
-            if not df_headsets.empty:
-                preco_medio_headsets = df_headsets['cost'].mean()
-                st.success(f"💰 **Preço médio headsets:** R$ {preco_medio_headsets:.2f}")
-            else:
-                preco_medio_headsets = 0
-                st.warning("⚠️ Nenhum headset encontrado no CSV de valores")
-            
-            # Usar preço fixo de R$ 112,00 para adaptadores (não calcular média)
-            preco_medio_adaptadores = 112.0
-            st.success(f"💰 **Preço fixo adaptadores:** R$ {preco_medio_adaptadores:.2f}")
-            
-            # Distribuir orçamento: 50% para headsets, 50% para adaptadores
-            budget_headsets = budget * 0.5
-            budget_adaptadores = budget * 0.5
-            
-            necessidade_compra = {}
-            budget_restante = budget
-            
-            # Fase 1: Comprar headsets (50% do orçamento)
-            if preco_medio_headsets > 0:
-                quantidade_headsets = int(budget_headsets / preco_medio_headsets)
-                if quantidade_headsets > 0:
-                    necessidade_compra['Headset'] = {
-                        'quantidade': quantidade_headsets,
-                        'valor_unit': preco_medio_headsets,
-                        'valor_total': quantidade_headsets * preco_medio_headsets,
-                        'categoria': 'Headset',
-                        'preco_medio': preco_medio_headsets
-                    }
-                    budget_restante -= quantidade_headsets * preco_medio_headsets
-                    st.success(f"🎧 **Headsets:** {quantidade_headsets} unidades x R$ {preco_medio_headsets:.2f} = R$ {quantidade_headsets * preco_medio_headsets:.2f}")
-                else:
-                    st.warning(f"⚠️ Quantidade de headsets = 0 (budget: R$ {budget_headsets:.2f}, preço: R$ {preco_medio_headsets:.2f})")
-            else:
-                st.warning("⚠️ Preço médio headsets = 0")
-            
-            # Fase 2: Comprar adaptadores USB-C (50% do orçamento)
-            if preco_medio_adaptadores > 0:
-                quantidade_adaptadores = int(budget_adaptadores / preco_medio_adaptadores)
-                if quantidade_adaptadores > 0:
-                    necessidade_compra['Adaptador USB-C'] = {
-                        'quantidade': quantidade_adaptadores,
-                        'valor_unit': preco_medio_adaptadores,
-                        'valor_total': quantidade_adaptadores * preco_medio_adaptadores,
-                        'categoria': 'Adaptador USB-C',
-                        'preco_medio': preco_medio_adaptadores
-                    }
-                    budget_restante -= quantidade_adaptadores * preco_medio_adaptadores
-                    st.success(f"🔌 **Adaptadores USB-C:** {quantidade_adaptadores} unidades x R$ {preco_medio_adaptadores:.2f} = R$ {quantidade_adaptadores * preco_medio_adaptadores:.2f}")
-                else:
-                    st.warning(f"⚠️ Quantidade de adaptadores = 0 (budget: R$ {budget_adaptadores:.2f}, preço: R$ {preco_medio_adaptadores:.2f})")
-            else:
-                st.warning("⚠️ Preço médio adaptadores = 0")
-            
-            # Fase 3: Otimização para usar 100% do orçamento restante
-            if budget_restante > 0 and necessidade_compra:
-                st.info(f"🔄 **Otimizando orçamento restante:** R$ {budget_restante:.2f}")
-                
-                # Distribuir o restante proporcionalmente entre os itens
-                for item, dados in necessidade_compra.items():
-                    if budget_restante > 0:
-                        preco_unit = dados['valor_unit']
-                        unidades_adicionais = int(budget_restante / preco_unit)
-                        if unidades_adicionais > 0:
-                            necessidade_compra[item]['quantidade'] += unidades_adicionais
-                            necessidade_compra[item]['valor_total'] += unidades_adicionais * preco_unit
-                            budget_restante -= unidades_adicionais * preco_unit
-                            st.success(f"➕ **{item}:** +{unidades_adicionais} unidades adicionais")
-            
-            # Calcular totais finais
-            total_compra = sum(dados['valor_total'] for dados in necessidade_compra.values())
-            total_items = sum(dados['quantidade'] for dados in necessidade_compra.values())
-            
-
-            
-            # Mostrar resumo final
-            st.success(f"📊 **RESUMO FINAL:**")
-            st.success(f"💰 **Orçamento total:** R$ {budget:.2f}")
-            st.success(f"🛒 **Total gasto:** R$ {total_compra:.2f}")
-            st.success(f"📦 **Total de itens:** {total_items} unidades")
-            st.success(f"💵 **Restante:** R$ {budget_restante:.2f}")
-            
-            return {
-                'success': True,
-                'message': f'✅ Orçamento 100% otimizado criado com sucesso!',
-                'orcamento': {
-                    'necessidade_compra': necessidade_compra,
-                    'total_compra': total_compra,
-                    'total_items': total_items,
-                    'budget_restante': budget_restante,
-                    'budget_original': budget
-                }
-            }
-        
-        # PRIORIDADE 2: Fallback para valores de referência das configurações
-        elif 'gadgets_valores_referencia' in st.session_state:
-            valores_ref = st.session_state.gadgets_valores_referencia
-            headsets = {k: v for k, v in valores_ref.items() if 'headset' in k.lower()}
-            adaptadores = {k: v for k, v in valores_ref.items() if any(word in k.lower() for word in ['adaptador', 'hub', 'cabo', 'usb-c', 'thunderbolt'])}
-            
-            if headsets or adaptadores:
-                st.info("📊 **Usando valores de referência das configurações:**")
-                st.info(f"🎧 {len(headsets)} headsets + 🔌 {len(adaptadores)} adaptadores USB-C")
-                
-                # Continuar com o cálculo usando valores de referência
-                return calcular_orcamento_com_valores_referencia(budget, headsets, adaptadores)
-            else:
-                st.error("❌ **Nenhum headset ou adaptador USB-C configurado nas configurações!**")
-                st.info("💡 Configure valores de referência nas configurações do Matt 2.0")
-                return {
-                    'success': False,
-                    'message': '❌ Configure valores de referência para headsets e adaptadores USB-C',
-                    'orcamento': {}
-                }
-        
-        # PRIORIDADE 3: Mensagem de erro se não houver dados
-        else:
-            st.error("❌ **Nenhum dado de gadgets encontrado!**")
-            st.info("💡 O sistema precisa do arquivo `gadgets_valores.csv` com preços reais de mercado")
-            st.info("🔧 Execute a inicialização dos dados para criar o arquivo padrão")
-            return {
-                'success': False,
-                'message': '❌ Dados de gadgets não encontrados. Execute a inicialização primeiro.',
-                'orcamento': {}
-            }
-    except Exception as e:
-        return {
-            'success': False,
-            'message': f'❌ Erro ao criar orçamento: {str(e)}',
-            'orcamento': {}
-        }
 
 def render_agente_matt():
     """Renderiza interface do Agente Matt para recomendações de compra"""
@@ -9739,46 +8157,8 @@ def render_agente_matt():
     
     # Sistema de IA conversacional
     if 'matt_chat_history' not in st.session_state:
-        # Verificar status dos agentes Huginn
-        huginn_status = "❌ Desconectado"
-        huginn_agents_info = ""
-        try:
-            huginn_data = connect_to_huginn()
-            if huginn_data:
-                if huginn_data.get('connection_status') == 'connected':
-                    agents_count = huginn_data.get('agents_found', 0)
-                    huginn_status = f"✅ {agents_count} agentes ativos"
-                    huginn_agents_info = f"\n• 🤖 **Agentes Huginn:** Market Intelligence, Budget Optimizer, Smart Recommendations"
-                elif huginn_data.get('connection_status') == 'fallback':
-                    huginn_status = "⚡ Conectado (fallback)"
-        except:
-            pass
-        
-        welcome_message = f"""👋 **MATT 2.0 - ASSISTENTE INTELIGENTE COMPLETO**
-
-🤖 **SISTEMA INTEGRADO:** Inteligência Artificial + Automação Huginn!
-
-⚡ **COMANDOS RÁPIDOS:**
-• **"Como está o mercado?"** - Análise em tempo real
-• **"Recomende compras"** - IA baseada em dados
-• **"Status do orçamento"** - Otimização automática
-• **"ajustar orçamento R$ 50000"** - Alterar budget
-
-📊 **FONTES DE DADOS:**
-• Google Sheets: 🔗 Integrado
-• Huginn Agents: {huginn_status}{huginn_agents_info}
-• Backup Local: 📁 CSV disponível
-
-🧠 **CAPACIDADES AVANÇADAS:**
-• Análise de mercado em tempo real
-• Otimização inteligente de orçamento  
-• Recomendações personalizadas de compra
-• Detecção de padrões de perda
-
-💡 **Faça perguntas inteligentes e receba respostas baseadas em dados reais!** 🚀"""
-        
         st.session_state.matt_chat_history = [
-            {"role": "assistant", "message": welcome_message}
+            {"role": "assistant", "message": "👋 **MATT 2.0 - COMANDOS DIRETOS ATIVOS**\n\n🤖 **NOVA VERSÃO:** Agora dou **ORDENS DIRETAS DE COMPRA**!\n\n⚡ **COMANDOS RÁPIDOS:**\n• **\"COMPRE\"** - Ordens diretas baseadas nos seus dados\n• **\"ajustar orçamento R$ 75000\"** - Alterar budget\n• **\"confirmar compras\"** - Processar pedidos\n\n🔑 **APIS CONFIGURADAS AUTOMATICAMENTE:**\n• Huginn: ✅ Integrado\n• OpenAI: ✅ Demo ativa\n• HuggingFace: ✅ Conectado\n\n🎯 **GADGETS PRIORITÁRIOS:** Mouse, Teclado, Headset\n💰 **ORÇAMENTO:** R$ 50.000,00\n\n📊 **Registre perdas** e peça: **\"COMPRE 40 MOUSES, 30 TECLADOS\"** 🚀"}
         ]
     
     # Configurações avançadas do Matt 2.0
@@ -9805,175 +8185,13 @@ def render_agente_matt():
                 'Cabo USB', 'Adaptador USB-C', 'Mousepad', 'Fone de Ouvido',
                 'Carregador', 'Hub USB', 'Impressora', 'Scanner'
             ]
-            
-            # Inicializar gadgets preferidos se não existir
-            if 'gadgets_preferidos' not in st.session_state:
-                st.session_state.gadgets_preferidos = ['Mouse', 'Teclado', 'Headset']
-            
-            # Inicializar limites individuais se não existir
-            if 'gadgets_limites_individuais' not in st.session_state:
-                st.session_state.gadgets_limites_individuais = {}
-            
-            # Inicializar gadgets excluídos se não existir
-            if 'gadgets_excluidos' not in st.session_state:
-                st.session_state.gadgets_excluidos = []
-            
             st.session_state.gadgets_preferidos = st.multiselect(
                 "🎯 Gadgets Prioritários",
                 gadgets_disponiveis,
-                default=st.session_state.gadgets_preferidos,
+                default=st.session_state.get('gadgets_preferidos', ['Mouse', 'Teclado', 'Headset']),
                 help="Selecione quais gadgets devem ter prioridade nas recomendações de compra",
                 key='gadgets_preferidos_input'
             )
-            
-            # Sistema de limites individuais por gadget
-            st.markdown("### 🔢 **Limites Individuais por Gadget**")
-            st.markdown("💡 **Configure limites específicos ou exclua gadgets do orçamento:**")
-            
-            # Criar colunas para organizar os controles
-            col_limites1, col_limites2 = st.columns(2)
-            
-            with col_limites1:
-                # Selecionar gadget para configurar limite
-                gadget_para_limite = st.selectbox(
-                    "🎯 Selecione o Gadget:",
-                    [''] + gadgets_disponiveis,
-                    key='gadget_limite_select'
-                )
-                
-                if gadget_para_limite:
-                    # Configurar limite individual
-                    limite_atual = st.session_state.gadgets_limites_individuais.get(gadget_para_limite, 0)
-                    novo_limite = st.number_input(
-                        f"📦 Limite para {gadget_para_limite}:",
-                        min_value=0,
-                        max_value=1000,
-                        value=limite_atual,
-                        help="0 = Excluir do orçamento, >0 = Limite máximo"
-                    )
-                    
-                    if st.button(f"💾 Salvar Limite para {gadget_para_limite}", key=f'save_{gadget_para_limite}'):
-                        if novo_limite == 0:
-                            # Excluir gadget
-                            if gadget_para_limite not in st.session_state.gadgets_excluidos:
-                                st.session_state.gadgets_excluidos.append(gadget_para_limite)
-                            if gadget_para_limite in st.session_state.gadgets_limites_individuais:
-                                del st.session_state.gadgets_limites_individuais[gadget_para_limite]
-                            st.success(f"❌ **{gadget_para_limite} EXCLUÍDO** do orçamento!")
-                        else:
-                            # Salvar limite
-                            st.session_state.gadgets_limites_individuais[gadget_para_limite] = novo_limite
-                            if gadget_para_limite in st.session_state.gadgets_excluidos:
-                                st.session_state.gadgets_excluidos.remove(gadget_para_limite)
-                            st.success(f"✅ **Limite salvo:** {gadget_para_limite} = {novo_limite} unidades")
-                        st.rerun()
-            
-            with col_limites2:
-                # Mostrar status atual dos limites
-                st.markdown("**📊 Status dos Limites:**")
-                
-                if st.session_state.gadgets_limites_individuais:
-                    for gadget, limite in st.session_state.gadgets_limites_individuais.items():
-                        st.info(f"🔢 **{gadget}:** Máximo {limite} unidades")
-                
-                if st.session_state.gadgets_excluidos:
-                    st.markdown("**❌ Gadgets Excluídos:**")
-                    for gadget in st.session_state.gadgets_excluidos:
-                        st.warning(f"🚫 **{gadget}** (excluído do orçamento)")
-                
-                # Botão para resetar todos os limites
-                if st.button("🔄 Resetar Todos os Limites", key='reset_limites'):
-                    st.session_state.gadgets_limites_individuais = {}
-                    st.session_state.gadgets_excluidos = []
-                    st.success("✅ **Todos os limites foram resetados!**")
-                    st.rerun()
-            
-            # Sistema de valores de referência para perdas
-            st.markdown("### 💰 **Valores de Referência para Perdas**")
-            st.markdown("💡 **Configure valores padrão que serão usados como referência para perdas:**")
-            
-            # Criar colunas para organizar os controles de valores
-            col_valores1, col_valores2 = st.columns(2)
-            
-            with col_valores1:
-                # Selecionar gadget para configurar valor
-                gadget_para_valor = st.selectbox(
-                    "🎯 Selecione o Gadget para Valor:",
-                    [''] + gadgets_disponiveis,
-                    key='gadget_valor_select'
-                )
-                
-                if gadget_para_valor:
-                    # Configurar valor de referência usando função auxiliar segura
-                    valores_ref = get_gadgets_valores_referencia()
-                    valor_atual = valores_ref.get(gadget_para_valor, 0)
-                    
-                    # Garantir que o valor seja sempre válido (>= 0.01)
-                    if valor_atual < 0.01:
-                        valor_atual = 0.01
-                    
-                    novo_valor = st.number_input(
-                        f"💰 Valor de referência para {gadget_para_valor}:",
-                        min_value=0.01,
-                        max_value=10000.00,
-                        value=float(valor_atual),
-                        step=0.01,
-                        format="%.2f",
-                        help="Valor que será usado como referência para perdas"
-                    )
-                    
-                    if st.button(f"💾 Salvar Valor para {gadget_para_valor}", key=f'save_valor_{gadget_para_valor}'):
-                        # Usar função auxiliar segura
-                        valores_ref = get_gadgets_valores_referencia()
-                        
-                        st.session_state.gadgets_valores_referencia[gadget_para_valor] = novo_valor
-                        # Salvar automaticamente no arquivo
-                        save_gadgets_valores_referencia()
-                        st.success(f"✅ **Valor salvo:** {gadget_para_valor} = R$ {novo_valor:.2f}")
-                        st.rerun()
-            
-            with col_valores2:
-                # Mostrar valores atuais configurados
-                st.markdown("**📊 Valores de Referência Atuais:**")
-                
-                # Usar função auxiliar segura para obter valores
-                valores_ref = get_gadgets_valores_referencia()
-                if valores_ref:
-                    for gadget, valor in valores_ref.items():
-                        if valor > 0:
-                            st.info(f"💰 **{gadget}:** R$ {valor:.2f}")
-                
-                # Botão para resetar todos os valores
-                if st.button("🔄 Resetar Todos os Valores", key='reset_valores'):
-                    # Usar função auxiliar segura
-                    valores_ref = get_gadgets_valores_referencia()
-                    
-                    valores_reset = {
-                        'Mouse': 31.90,
-                        'Teclado': 90.00,
-                        'Headset': 149.90,
-                        'Adaptador USB-C': 45.90,
-                        'Monitor': 299.90,
-                        'Webcam': 89.90,
-                        'Cabo USB': 19.90,
-                        'Mousepad': 29.90,
-                        'Fone de Ouvido': 79.90,
-                        'Carregador': 39.90,
-                        'Hub USB': 89.90,
-                        'Impressora': 399.90,
-                        'Scanner': 199.90
-                    }
-                    
-                    # Garantir que todos os valores sejam >= 0.01
-                    for key, value in valores_reset.items():
-                        if value < 0.01:
-                            valores_reset[key] = 0.01
-                    
-                    st.session_state.gadgets_valores_referencia = valores_reset
-                    # Salvar automaticamente no arquivo
-                    save_gadgets_valores_referencia()
-                    st.success("✅ **Todos os valores foram resetados para padrão!**")
-                    st.rerun()
             
         with col2:
             # Limite de quantidade por item
@@ -9994,152 +8212,6 @@ def render_agente_matt():
                 key='margem_seguranca_input'
             )
     
-    # 📊 Configuração Google Sheets - Banco de Dados Remoto
-    st.subheader("📊 Integração Google Sheets")
-    
-    with st.expander("🌐 Configuração de Banco de Dados Remoto", expanded=False):
-        st.markdown("**📋 COMO CONFIGURAR A PLANILHA:**")
-        
-        col_sheets1, col_sheets2 = st.columns(2)
-        
-        with col_sheets1:
-            st.markdown("""
-            **🔗 Sua Planilha:**
-            - **ID:** `1IMcXLIyOJOANhfxKfzYlwtBqtsXJfRMhCPmoKQdCtdY`
-            - **Aba:** `Inventory (GID: 1546013624)`
-            
-            **⚙️ Configurações Necessárias:**
-            1. Abra sua planilha
-            2. Vá em **Arquivo → Compartilhar → Compartilhar com outras pessoas**
-            3. Altere para **"Qualquer pessoa com o link pode visualizar"**
-            4. Copie o link e confirme que contém os IDs acima
-            """)
-            
-        with col_sheets2:
-            # Status da conexão
-            st.markdown("**📊 Status da Integração:**")
-            
-            data_source = st.session_state.get('data_source', 'unknown')
-            if data_source == 'google_sheets':
-                st.success("✅ **CONECTADO** - Dados do Google Sheets")
-            elif data_source == 'local_csv':
-                st.info("📁 **LOCAL** - Usando arquivos CSV")
-            else:
-                st.warning("⚠️ **DESCONECTADO** - Sem dados disponíveis")
-            
-            # Botão para testar conexão
-            if st.button("🧪 Testar Conexão Google Sheets", use_container_width=True):
-                with st.spinner("Testando conexão..."):
-                    st.info("🔍 **TESTANDO ACESSO À PLANILHA...**")
-                    
-                    # Teste detalhado da conexão
-                    test_data = load_google_sheets_data('inventory')
-                    if test_data is not None:
-                        st.success(f"🎉 **CONEXÃO ESTABELECIDA!**")
-                        st.success(f"📊 {len(test_data)} registros encontrados")
-                        st.success(f"📋 {len(test_data.columns)} colunas detectadas")
-                        
-                        # Mostrar preview dos dados
-                        with st.expander("👀 Preview dos dados carregados"):
-                            st.write("**Colunas encontradas:**")
-                            st.write(list(test_data.columns))
-                            st.write("**Primeiras 3 linhas:**")
-                            st.dataframe(test_data.head(3))
-                        
-                        st.session_state.data_source = 'google_sheets'
-                        # Recarregar dados
-                        load_gadgets_data()
-                    else:
-                        st.error("❌ **FALHA NA CONEXÃO**")
-                        
-            # Guia rápido de configuração
-            with st.expander("📖 Guia Rápido: Como Tornar Planilha Pública", expanded=False):
-                st.markdown("""
-                ### 🔓 **PASSO A PASSO DETALHADO:**
-                
-                1. **Abra sua planilha** no Google Sheets
-                2. **Clique no botão "Compartilhar"** (canto superior direito) 🔗
-                3. **Clique em "Alterar para qualquer pessoa com o link"** 
-                4. **Selecione "Qualquer pessoa na internet"** 🌍
-                5. **Defina permissão como "Visualizador"** 👀
-                6. **Clique "Concluído"** ✅
-                
-                ### ⚠️ **SE NÃO CONSEGUIR TORNAR PÚBLICA:**
-                - **Conta corporativa:** Pode ter restrições de admin
-                - **Dados sensíveis:** Use compartilhamento por link
-                - **Organização:** Peça para admin liberar
-                
-                ### 🧪 **COMO TESTAR:**
-                1. Cole a URL da planilha no campo acima
-                2. Clique "Testar Conexão Google Sheets"  
-                3. Veja se aparece "✅ CONEXÃO ESTABELECIDA!"
-                
-                ### 📝 **FORMATO DA URL CORRETA:**
-                ```
-                https://docs.google.com/spreadsheets/d/[ID]/edit#gid=0
-                ```
-                """)
-                
-            # Script de teste independente
-            st.markdown("---")
-            st.markdown("**🛠️ Script de Teste Independente:**")
-            
-            if st.button("📥 Baixar Script de Teste", use_container_width=True):
-                st.code('''
-# Salve este código como test_sheets.py e execute: python3 test_sheets.py
-
-import requests
-import pandas as pd
-
-# Cole aqui sua URL
-sheet_url = "SUA_URL_AQUI"
-
-# Converter para CSV
-if '/edit' in sheet_url:
-    sheet_id = sheet_url.split('/d/')[1].split('/')[0]
-    csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=0"
-else:
-    csv_url = sheet_url
-
-# Testar
-response = requests.get(csv_url)
-if response.status_code == 200:
-    print("✅ SUCESSO! Planilha está pública")
-    df = pd.read_csv(csv_url)
-    print(f"📊 {len(df)} linhas encontradas")
-else:
-    print(f"❌ ERRO {response.status_code}: Planilha não está pública")
-                ''', language='python')
-                st.success("💾 Script copiado! Cole em um arquivo .py e execute")
-        
-        # Seção de sincronização
-        st.markdown("---")
-        st.markdown("**🔄 Sincronização de Dados:**")
-        
-        sync_col1, sync_col2, sync_col3 = st.columns(3)
-        
-        with sync_col1:
-            if st.button("📥 Importar do Sheets", use_container_width=True):
-                if load_gadgets_data():
-                    st.success("Dados importados com sucesso!")
-                    st.rerun()
-        
-        with sync_col2:
-            if st.button("📤 Exportar para Sheets", use_container_width=True):
-                if 'gadgets_data' in st.session_state:
-                    sync_to_google_sheets(st.session_state.gadgets_data, 'perdas')
-                else:
-                    st.warning("Nenhum dado disponível para exportar")
-        
-        with sync_col3:
-            # Botão para forçar refresh dos dados
-            if st.button("🔄 Atualizar Dados", use_container_width=True):
-                if 'gadgets_data' in st.session_state:
-                    del st.session_state.gadgets_data
-                load_gadgets_data()
-                st.success("Dados atualizados!")
-                st.rerun()
-
     # Configuração de Automação Huginn
     st.subheader("🤖 Configuração de Automação Huginn")
     
@@ -10176,7 +8248,7 @@ else:
                 st.success("✅ Conexão com Huginn estabelecida com sucesso!")
                 if huginn_test.get('events'):
                     st.info(f"📊 {len(huginn_test['events'])} eventos encontrados")
-            else:
+        else:
                 st.error("❌ Não foi possível conectar ao Huginn. Verifique a URL e token.")
     
     # Botões de sugestão rápida
@@ -10203,59 +8275,6 @@ else:
     # Botão adicional para configurações
     if st.button("🎯 Minhas configurações", use_container_width=True):
         st.session_state.quick_message = "minhas configurações"
-    
-    # Botão principal para orçamento 100% otimizado
-    st.markdown("---")
-    st.markdown("#### 🎯 **ORÇAMENTO 100% OTIMIZADO - ADAPTADORES USB-C + HEADSETS**")
-    
-    if st.button("🚀 Criar Orçamento 100% Otimizado", use_container_width=True, type="primary", key="orcamento_100_otimizado"):
-        # Garantir que os dados estão inicializados
-        init_gadgets_data()
-        
-        budget = st.session_state.get('matt_budget', 50000)
-        resultado = calcular_orcamento_100_porcentagem(budget)
-        
-        if resultado['success']:
-            st.success(resultado['message'])
-            
-            # Mostrar distribuição por categoria
-            st.markdown("#### 📊 **Distribuição por Categoria:**")
-            col_cat1, col_cat2 = st.columns(2)
-            
-            # Calcular valores por categoria
-            total_headsets = 0
-            total_adaptadores = 0
-            
-            for item, dados in resultado['orcamento']['necessidade_compra'].items():
-                if dados['categoria'] == 'Headset':
-                    total_headsets += dados['valor_total']
-                elif dados['categoria'] == 'Adaptador USB-C':
-                    total_adaptadores += dados['valor_total']
-            
-            with col_cat1:
-                st.metric("🎧 Headsets", f"R$ {total_headsets:,.2f}")
-            
-            with col_cat2:
-                st.metric("🔌 Adaptadores USB-C", f"R$ {total_adaptadores:,.2f}")
-            
-            # Mostrar detalhes do orçamento
-            st.markdown("#### 📋 **Detalhes do Orçamento:**")
-            for item, dados in resultado['orcamento']['necessidade_compra'].items():
-                st.info(f"**{item}** ({dados['categoria']}): {dados['quantidade']}x - R$ {dados['valor_total']:,.2f}")
-            
-            st.markdown(f"#### 💰 **Total do Orçamento:** R$ {resultado['orcamento']['total_compra']:,.2f}")
-            st.markdown(f"#### 📦 **Total de Itens:** {resultado['orcamento']['total_items']} unidades")
-            
-            if resultado['orcamento']['budget_restante'] > 0:
-                st.warning(f"⚠️ **Budget restante:** R$ {resultado['orcamento']['budget_restante']:,.2f}")
-            
-            # Botão para exportar orçamento
-            if st.button("📤 Exportar Orçamento", use_container_width=True):
-                st.success("✅ Orçamento exportado! (Funcionalidade em desenvolvimento)")
-        else:
-            st.error(resultado['message'])
-    
-    st.markdown("---")
     
     # Sistema de chat com IA
     st.subheader("💬 Converse com Matt 2.0")
@@ -10318,7 +8337,7 @@ def render_dashboard_inteligente():
     """, unsafe_allow_html=True)
     
     # Métricas principais
-    df = st.session_state.gadgets_data
+            df = st.session_state.gadgets_data
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -10326,7 +8345,7 @@ def render_dashboard_inteligente():
         st.metric("📦 Total de Itens", total_items)
     
     with col2:
-        total_valor = df['cost'].sum() if 'cost' in df.columns else 0
+        total_valor = df['valor_unit'].sum() if 'valor_unit' in df.columns else 0
         st.metric("💰 Valor Total", f"R$ {total_valor:,.2f}")
     
     with col3:
@@ -10350,10 +8369,6 @@ def render_controle_gadgets():
     if 'gadgets_data_loaded' not in st.session_state:
         st.session_state.gadgets_data_loaded = True
         init_gadgets_data()
-    
-    # Garantir que os valores de referência estejam inicializados
-    if 'gadgets_valores_referencia' not in st.session_state:
-        load_gadgets_valores_referencia()
     
     # Navegação por abas
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎯 Agente Matt", "📋 Registro Perdas", "📊 Análises", "📦 Estoque", "⚙️ Config"])
@@ -10390,18 +8405,6 @@ def save_estoque_data():
         st.error(f"Erro ao salvar dados do estoque: {str(e)}")
         return False
 
-
-def save_estoque_data_local(estoque_df):
-    """Salva dados de estoque em arquivo local com timestamp"""
-    try:
-        from datetime import datetime
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"estoque_gadgets_backup_{timestamp}.csv"
-        estoque_df.to_csv(filename, index=False)
-        return True
-    except Exception as e:
-        st.error(f"Erro ao salvar dados de estoque local: {str(e)}")
-        return False
 def load_estoque_data():
     """Carrega os dados de estoque salvos"""
     try:
@@ -10418,60 +8421,969 @@ def load_estoque_data():
 
 def atualizar_estoque_por_perdas(perdas_df):
     """Atualiza o estoque baseado nas perdas registradas"""
-    try:
-        # Carregar estoque atual do Google Sheets
-        estoque_atual = load_google_sheets_data('inventory')
-        
-        if estoque_atual is None or estoque_atual.empty:
-            st.warning("⚠️ Não foi possível carregar o estoque atual do Google Sheets")
-            return []
-        
-        # Agrupar perdas por item e local
-        perdas_agrupadas = perdas_df.groupby(['name', 'local_selecionado'])['quantidade_perdida'].sum().reset_index()
-        
-        # Atualizar estoque
-        items_atualizados = []
-        
-        for _, perda in perdas_agrupadas.iterrows():
-            item_name = perda['name']
-            local = perda['local_selecionado']
-            quantidade_perdida = perda['quantidade_perdida']
-            
-            if quantidade_perdida <= 0:
-                continue
-            
-            # Encontrar o item no estoque por nome e local
-            mask = (estoque_atual['name'] == item_name) & (estoque_atual['building'] == local)
-            
-            if mask.any():
-                # Diminuir do estoque
-                idx = estoque_atual[mask].index[0]
-                quantidade_atual = estoque_atual.loc[idx, 'quantidade_reposicao']
-                nova_quantidade = max(0, quantidade_atual - quantidade_perdida)
-                
-                # Atualizar o DataFrame do Google Sheets
-                estoque_atual.loc[idx, 'quantidade_reposicao'] = nova_quantidade
-                
-                items_atualizados.append(f"{item_name} ({local}): {quantidade_atual} → {nova_quantidade}")
-        
-        # Salvar alterações no Google Sheets
-        if items_atualizados:
-            # Aqui você pode implementar a lógica para salvar de volta no Google Sheets
-            # Por enquanto, vamos apenas mostrar as alterações
-            st.success(f"✅ Estoque atualizado para {len(items_atualizados)} itens!")
-            
-            # Salvar localmente também
-            save_estoque_data_local(estoque_atual)
-            
-            return items_atualizados
-        else:
-            st.info("ℹ️ Nenhuma alteração no estoque foi necessária")
-            return []
-            
-    except Exception as e:
-        st.error(f"❌ Erro ao atualizar estoque: {e}")
-        return []
+    if 'estoque_data' not in st.session_state or st.session_state.estoque_data.empty:
+        init_estoque_data()
+    
+    # Agrupar perdas por item
+    perdas_agrupadas = perdas_df.groupby('name')['quantidade'].sum()
+    
+    # Atualizar estoque
+    items_atualizados = []
+    for item_name, quantidade_perdida in perdas_agrupadas.items():
+        # Procurar item no estoque
+        mask = st.session_state.estoque_data['item_name'] == item_name
+        if mask.any():
+            # Reduzir quantidade atual
+            st.session_state.estoque_data.loc[mask, 'quantidade_atual'] -= quantidade_perdida
+            # Garantir que não fique negativo
+            st.session_state.estoque_data.loc[mask, 'quantidade_atual'] = st.session_state.estoque_data.loc[mask, 'quantidade_atual'].clip(lower=0)
+            items_atualizados.append(item_name)
+    
+    # Salvar automaticamente as alterações
+    save_estoque_data()
+    
+    return items_atualizados
 
+def render_controle_estoque():
+    """Renderiza interface de controle de estoque"""
+    st.markdown("""
+    <div style="text-align: center; margin: 2rem 0;">
+        <h3 style="color: #0EA5E9;">📦 Controle de Estoque</h3>
+        <p style="color: #6B7280;">Gestão inteligente do estoque de gadgets</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    init_estoque_data()
+    
+    if 'estoque_data' not in st.session_state or st.session_state.estoque_data.empty:
+        st.warning("⚠️ Dados de estoque não encontrados!")
+        return
+    
+    df_estoque = st.session_state.estoque_data
+    
+    # Métricas de estoque
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        total_items = len(df_estoque)
+        st.metric("📋 Total Itens", total_items)
+    
+    with col2:
+        valor_total = (df_estoque['quantidade_atual'] * df_estoque['preco_unitario']).sum()
+        st.metric("💰 Valor Total", f"R$ {valor_total:,.2f}")
+    
+    with col3:
+        items_baixos = len(df_estoque[df_estoque['quantidade_atual'] <= df_estoque['quantidade_minima']])
+        st.metric("⚠️ Estoque Baixo", items_baixos)
+    
+    with col4:
+        disponivel = df_estoque['quantidade_atual'].sum()
+        st.metric("📦 Disponível", disponivel)
+    
+    # Tabela de estoque
+    st.subheader("📊 Status do Estoque")
+    
+    # Adicionar coluna de status
+    df_display = df_estoque.copy()
+    df_display['status'] = df_display.apply(
+        lambda x: "🔴 Crítico" if x['quantidade_atual'] <= x['quantidade_minima'] 
+        else "🟡 Baixo" if x['quantidade_atual'] <= x['quantidade_minima'] * 1.5
+        else "🟢 OK", axis=1
+    )
+    
+    # Exibir tabela
+    display_table_with_filters(df_display, key="estoque_table")
+    
+    # Botões de ação
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("💾 Salvar Estoque", use_container_width=True):
+            if save_estoque_data():
+                st.success("✅ Estoque salvo com sucesso!")
+            else:
+                st.error("❌ Erro ao salvar estoque")
+    
+    with col2:
+        if st.button("🔄 Recarregar Dados", use_container_width=True):
+            if load_estoque_data():
+                st.success("✅ Dados recarregados!")
+                st.rerun()
+            else:
+                st.error("❌ Erro ao carregar dados")
+
+def render_registro_perdas():
+    """Renderiza interface para registrar perdas de gadgets em formato de planilha"""
+    
+    # CSS para interface moderna de registro de perdas
+    st.markdown("""
+    <style>
+    .perda-header { 
+        background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); 
+        color: white; 
+        padding: 1.5rem; 
+        border-radius: 12px; 
+        text-align: center; 
+        margin-bottom: 1rem; 
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('<div class="perda-header"><h3>🔻 Registro de Perdas</h3><p>Interface rápida para registrar perdas de gadgets</p></div>', unsafe_allow_html=True)
+    
+    # Inicializar dados se necessário
+    init_gadgets_data()
+    
+    # Formulário de registro
+    with st.form("registro_perdas_form", clear_on_submit=True):
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            nome_item = st.selectbox(
+                "🎯 Gadget/Item *",
+                ["Mouse", "Teclado", "Headset", "Adaptador USB-C", "Outros"],
+                help="Selecione o tipo de gadget perdido"
+            )
+            
+            if nome_item == "Outros":
+                nome_item = st.text_input("Especificar item:", placeholder="Ex: Monitor, Hub USB...")
+        
+        with col2:
+            quantidade = st.number_input(
+                "📦 Quantidade *",
+                min_value=1,
+                max_value=50,
+                value=1,
+                help="Número de itens perdidos"
+            )
+        
+        with col3:
+            valor_unit = st.number_input(
+                "💰 Valor Unitário (R$) *",
+                min_value=0.01,
+                max_value=5000.0,
+                value=50.0,
+                step=0.01,
+                help="Valor aproximado de cada item"
+            )
+        
+        # Segunda linha do formulário
+        col4, col5, col6 = st.columns(3)
+        
+        with col4:
+            local = st.selectbox(
+                "🏢 Local/Andar",
+                ["HQ1 - 8º andar", "HQ1 - 9º andar", "HQ1 - 10º andar", "HQ1 - 11º andar", "HQ1 - 12º andar", "Outros"],
+                help="Onde ocorreu a perda"
+            )
+            
+            if local == "Outros":
+                local = st.text_input("Especificar local:", placeholder="Ex: Casa, Cliente...")
+        
+        with col5:
+            responsavel = st.text_input(
+                "👤 Responsável",
+                placeholder="Nome do funcionário",
+                help="Quem estava usando o item (opcional)"
+            )
+        
+        with col6:
+            motivo = st.selectbox(
+                "📋 Motivo",
+                ["Perda", "Quebra", "Furto", "Fim da vida útil", "Outros"],
+                help="Razão da perda do item"
+            )
+        
+        # Observações
+        observacoes = st.text_area(
+            "📝 Observações",
+            placeholder="Descreva detalhes sobre a perda, circunstâncias, etc. (opcional)",
+            help="Informações adicionais sobre o incidente"
+        )
+        
+        # Botão de submit
+        submitted = st.form_submit_button(
+            "✅ Registrar Perda",
+            use_container_width=True,
+            type="primary"
+        )
+        
+        if submitted and nome_item:
+            # Validar dados obrigatórios
+            if not nome_item:
+                st.error("⚠️ Nome do item é obrigatório!")
+                return
+            
+            # Criar entrada de perda
+            nova_perda = {
+                'timestamp': datetime.now(),
+                'name': nome_item,
+                'quantidade': quantidade,
+                'valor_unit': valor_unit,
+                'valor_total': quantidade * valor_unit,
+                'local': local,
+                'responsavel': responsavel if responsavel else "Não informado",
+                'motivo': motivo,
+                'observacoes': observacoes if observacoes else "Nenhuma",
+                'status': 'perdido',
+                'mes': datetime.now().strftime('%Y-%m'),
+                'ano': datetime.now().year,
+                'id': f"perda_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            }
+            
+            # Adicionar aos dados
+            if 'gadgets_data' not in st.session_state:
+                st.session_state.gadgets_data = pd.DataFrame()
+            
+            st.session_state.gadgets_data = pd.concat([
+                st.session_state.gadgets_data, 
+                pd.DataFrame([nova_perda])
+            ], ignore_index=True)
+            
+            # Salvar dados
+            save_gadgets_data()
+            
+            # Atualizar estoque se disponível
+            if 'estoque_data' in st.session_state:
+                atualizar_estoque_por_perdas(pd.DataFrame([nova_perda]))
+            
+            st.success(f"✅ Perda de {quantidade}x {nome_item} registrada com sucesso!")
+            st.balloons()
+            
+            # Exibir resumo da perda registrada
+            st.info(f"""
+            📋 **Resumo da Perda Registrada:**
+            • **Item:** {nome_item}
+            • **Quantidade:** {quantidade}
+            • **Valor Total:** R$ {quantidade * valor_unit:,.2f}
+            • **Local:** {local}
+            • **Motivo:** {motivo}
+            """)
+            
+            # Rerun para limpar o formulário
+            time.sleep(1)
+            st.rerun()
+    
+    # Exibir histórico recente
+    st.markdown("### 📊 Últimas Perdas Registradas")
+    
+    if 'gadgets_data' in st.session_state and not st.session_state.gadgets_data.empty:
+        df_perdas = st.session_state.gadgets_data.copy()
+        
+        # Últimas 10 perdas
+        df_recentes = df_perdas.tail(10).sort_values('timestamp', ascending=False)
+        
+        # Preparar dados para exibição
+        df_display = df_recentes[['timestamp', 'name', 'quantidade', 'valor_total', 'local', 'motivo']].copy()
+        df_display['timestamp'] = df_display['timestamp'].dt.strftime('%d/%m/%Y %H:%M')
+        df_display['valor_total'] = df_display['valor_total'].apply(lambda x: f"R$ {x:,.2f}")
+        df_display = df_display.rename(columns={
+            'timestamp': 'Data/Hora',
+            'name': 'Item',
+            'quantidade': 'Qtd',
+            'valor_total': 'Valor Total',
+            'local': 'Local',
+            'motivo': 'Motivo'
+        })
+        
+        # Exibir tabela
+        st.dataframe(df_display, use_container_width=True)
+        
+        # Estatísticas rápidas
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            total_perdas = len(df_perdas)
+            st.metric("📊 Total de Perdas", total_perdas)
+        
+        with col2:
+            valor_total = df_perdas['valor_total'].sum()
+            st.metric("💰 Valor Total", f"R$ {valor_total:,.2f}")
+        
+        with col3:
+            perdas_hoje = len(df_perdas[df_perdas['timestamp'].dt.date == datetime.now().date()])
+            st.metric("🗓️ Perdas Hoje", perdas_hoje)
+        else:
+            st.info("◎ Nenhuma perda registrada ainda")
+
+def render_analises_gadgets():
+    """Renderiza análises e gráficos dos dados de gadgets"""
+    init_gadgets_data()
+    
+    if 'gadgets_data' not in st.session_state or st.session_state.gadgets_data.empty:
+        st.warning("⚠️ Nenhum dado de perda encontrado. Registre algumas perdas primeiro!")
+        return
+    
+    # Cabeçalho da análise
+    st.markdown("""
+    <div style="text-align: center; margin: 2rem 0;">
+        <h3 style="color: #7C3AED;">📊 Análises Inteligentes</h3>
+        <p style="color: #6B7280;">Dashboard avançado com insights de IA</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    df = st.session_state.gadgets_data
+            
+    # Configurações de gráficos
+    graph_colors = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444']
+    chart_height = 400
+    
+    # Navegação por tipo de análise
+    tab1, tab2, tab3, tab4 = st.tabs(["📈 Mensal", "📅 Trimestral", "📊 Anual", "🔍 Detalhado"])
+    
+    with tab1:
+        render_analise_mensal(df, graph_colors, chart_height)
+    
+    with tab2:
+        render_analise_trimestral(df, graph_colors, chart_height)
+    
+    with tab3:
+        render_analise_anual(df, graph_colors, chart_height)
+    
+    with tab4:
+        render_detalhamento_gadgets(df)
+
+def render_config_gadgets():
+    """Renderiza configurações dos gadgets"""
+    st.subheader("⚙️ Configurações do Sistema")
+    
+    # Configurações de dados
+    st.markdown("### 💾 Gestão de Dados")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("💾 Salvar Dados", use_container_width=True):
+            if save_gadgets_data():
+                st.success("✅ Dados salvos com sucesso!")
+            else:
+                st.error("❌ Erro ao salvar dados")
+    
+    with col2:
+        if st.button("🔄 Recarregar", use_container_width=True):
+            if load_gadgets_data():
+                st.success("✅ Dados recarregados!")
+                st.rerun()
+        else:
+                st.info("ℹ️ Nenhum arquivo de dados encontrado")
+    
+    # Upload de dados
+    st.markdown("### 📁 Import/Export")
+    
+    uploaded_file = st.file_uploader(
+        "Upload CSV de Perdas",
+        type=['csv'],
+        help="Faça upload de um arquivo CSV com dados de perdas"
+    )
+    
+    if uploaded_file:
+        try:
+            df_upload = pd.read_csv(uploaded_file)
+            st.success(f"✅ Arquivo carregado: {len(df_upload)} registros")
+            
+            if st.button("📥 Importar Dados"):
+                st.session_state.gadgets_data = pd.concat([
+                    st.session_state.gadgets_data,
+                    df_upload
+                ], ignore_index=True)
+                st.success("✅ Dados importados com sucesso!")
+                st.rerun()
+        except Exception as e:
+            st.error(f"❌ Erro ao processar arquivo: {str(e)}")
+    
+    # Configurações gerais
+    st.markdown("### ⚙️ Configurações Gerais")
+    
+    # Limpar dados
+    st.markdown("#### 🗑️ Limpeza de Dados")
+    
+    if st.button("🗑️ Limpar Todos os Dados", type="secondary"):
+        if st.session_state.get('confirm_delete', False):
+            st.session_state.gadgets_data = pd.DataFrame()
+            st.session_state.confirm_delete = False
+            st.success("✅ Todos os dados foram limpos!")
+            st.rerun()
+        else:
+            st.session_state.confirm_delete = True
+            st.warning("⚠️ Clique novamente para confirmar a exclusão de TODOS os dados!")
+    
+    # Reset configurações
+    if st.button("🔄 Reset Configurações", type="secondary"):
+        keys_to_reset = [k for k in st.session_state.keys() if k.startswith('matt_')]
+        for key in keys_to_reset:
+            del st.session_state[key]
+        st.success("✅ Configurações resetadas!")
+        st.rerun()
+    
+    # Informações do sistema
+    st.markdown("### ℹ️ Informações do Sistema")
+    
+    if 'gadgets_data' in st.session_state:
+        total_registros = len(st.session_state.gadgets_data)
+        st.info(f"📊 Total de registros: {total_registros}")
+        
+        if total_registros > 0:
+            valor_total = st.session_state.gadgets_data['valor_total'].sum()
+            st.info(f"💰 Valor total das perdas: R$ {valor_total:,.2f}")
+    
+    # Status do sistema
+    st.markdown("#### 🟢 Status do Sistema")
+    st.success("✅ Sistema funcionando normalmente")
+    st.info("🤖 Matt 2.0 com IA integrada ativo")
+    st.info("📊 Dashboard de análises disponível")
+    
+    st.markdown("---")
+    st.caption("💡 Configure o sistema conforme suas necessidades de gestão de gadgets")
+
+def apply_table_styling(df, tipo="quantidade"):
+    """Aplica estilos melhorados às tabelas de análise"""
+    if df.empty:
+        return df
+    
+    df_styled = df.copy()
+    
+    if tipo == "quantidade":
+        # Adicionar emojis baseados na quantidade
+        if 'quantidade' in df_styled.columns:
+            df_styled['indicador'] = df_styled['quantidade'].apply(
+                lambda x: "🔴 Alto" if x >= 10 else "🟡 Médio" if x >= 5 else "🟢 Baixo"
+            )
+    elif tipo == "valor":
+        # Adicionar indicadores visuais para valor
+        # Para valores já formatados, vamos adicionar uma coluna de impacto
+        impactos = ["💸 Alto", "💰 Médio", "💵 Baixo"]
+        # Criar lista com tamanho exato do DataFrame
+        impacto_list = (impactos * (len(df_styled) // len(impactos) + 1))[:len(df_styled)]
+        df_styled['Impacto'] = impacto_list
+    
+    return df_styled
+
+def render_analise_mensal(df, colors, height):
+    """Renderiza análise mensal dos dados"""
+    st.subheader("◎ Perdas por Mês")
+    
+    # Verificar se há dados para análise
+    if df.empty:
+        st.info("ℹ️ Nenhum dado disponível para análise mensal")
+        return
+    
+    # Preparar dados mensais
+    df['mes_ano'] = pd.to_datetime(df['timestamp']).dt.to_period('M')
+    df_mensal = df.groupby(['mes_ano', 'name']).agg({
+        'quantidade': 'sum',
+        'valor_total': 'sum'
+    }).reset_index()
+    
+    if df_mensal.empty:
+        st.info("ℹ️ Nenhum dado mensal disponível")
+        return
+    
+    # Gráfico de quantidade por mês
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("📊 **Quantidade por Mês**")
+        
+        # Pivot para visualização
+        df_pivot_qty = df_mensal.pivot(index='mes_ano', columns='name', values='quantidade').fillna(0)
+        
+        if not df_pivot_qty.empty:
+            # Criar gráfico
+            fig_qty = go.Figure()
+            
+            for i, col in enumerate(df_pivot_qty.columns):
+                fig_qty.add_trace(go.Scatter(
+                    x=df_pivot_qty.index.astype(str),
+                    y=df_pivot_qty[col],
+                    mode='lines+markers',
+                    name=col,
+                    line=dict(color=colors[i % len(colors)])
+                ))
+            
+            fig_qty.update_layout(
+                height=height,
+                title="Evolução Mensal - Quantidade",
+                xaxis_title="Mês",
+                yaxis_title="Quantidade",
+                hovermode='x'
+            )
+            
+            st.plotly_chart(fig_qty, use_container_width=True)
+    
+    with col2:
+        st.write("💰 **Valor por Mês**")
+        
+        # Pivot para valores
+        df_pivot_val = df_mensal.pivot(index='mes_ano', columns='name', values='valor_total').fillna(0)
+        
+        if not df_pivot_val.empty:
+            # Criar gráfico
+            fig_val = go.Figure()
+            
+            for i, col in enumerate(df_pivot_val.columns):
+                fig_val.add_trace(go.Scatter(
+                    x=df_pivot_val.index.astype(str),
+                    y=df_pivot_val[col],
+                    mode='lines+markers',
+                    name=col,
+                    line=dict(color=colors[i % len(colors)])
+                ))
+            
+            fig_val.update_layout(
+                height=height,
+                title="Evolução Mensal - Valor",
+                xaxis_title="Mês",
+                yaxis_title="Valor (R$)",
+                hovermode='x'
+            )
+            
+            st.plotly_chart(fig_val, use_container_width=True)
+    
+    # Tabelas resumo
+    st.write("📋 **Resumo Mensal**")
+    
+    col3, col4 = st.columns(2)
+    
+    with col3:
+        # Formatar dados para exibição
+        df_pivot_qty_formatted = df_pivot_qty.copy()
+        df_pivot_qty_styled = apply_table_styling(df_pivot_qty_formatted, "quantidade")
+        
+        st.write("**Quantidade**")
+        st.dataframe(df_pivot_qty_styled, use_container_width=True)
+    
+    with col4:
+        # Formatar valores para exibição
+        df_pivot_val_formatted = df_pivot_val.copy()
+        for col in df_pivot_val_formatted.columns:
+            df_pivot_val_formatted[col] = df_pivot_val_formatted[col].apply(lambda x: f"R$ {x:,.2f}")
+        
+        df_pivot_val_styled = apply_table_styling(df_pivot_val_formatted, "valor")
+        
+        st.write("**Valor Total**")
+        st.dataframe(df_pivot_val_styled, use_container_width=True)
+
+def init_estoque_data():
+    """Inicializa os dados de controle de estoque"""
+    if 'estoque_data' not in st.session_state:
+        # Tentar carregar dados salvos primeiro
+        if not load_estoque_data():
+            # Se não houver dados salvos, criar DataFrame com dados padrão
+            st.session_state.estoque_data = pd.DataFrame({
+                'item_name': ['Headset', 'Adaptadores usb c', 'Teclado k120', 'Mouse'],
+                'quantidade_atual': [50, 30, 40, 60],
+                'quantidade_minima': [10, 5, 8, 12],
+                'preco_unitario': [260.0, 360.0, 90.0, 31.90],
+                'fornecedor': ['Plantronics', 'Geonav', 'Logitech', 'Microsoft'],
+                'categoria': ['Audio', 'Conectividade', 'Periféricos', 'Periféricos']
+            })
+
+def save_estoque_data():
+    """Salva os dados de estoque em arquivo CSV"""
+    try:
+        if 'estoque_data' in st.session_state and not st.session_state.estoque_data.empty:
+            filename = f"estoque_gadgets_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.estoque_data.to_csv(filename, index=False)
+            st.session_state.estoque_last_saved = datetime.now()
+            return True
+        else:
+            # Salvar arquivo vazio
+            filename = f"estoque_gadgets_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame().to_csv(filename, index=False)
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados do estoque: {str(e)}")
+        return False
+
+def load_estoque_data():
+    """Carrega os dados de estoque salvos"""
+    try:
+        import glob
+        files = glob.glob("estoque_gadgets_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            st.session_state.estoque_data = df
+            return True
+    except Exception:
+        pass
+    return False
+
+def atualizar_estoque_por_perdas(perdas_df):
+    """Atualiza o estoque baseado nas perdas registradas"""
+    if 'estoque_data' not in st.session_state or st.session_state.estoque_data.empty:
+        init_estoque_data()
+    
+    # Agrupar perdas por item
+    perdas_agrupadas = perdas_df.groupby('name')['quantidade'].sum()
+    
+    # Atualizar estoque
+    items_atualizados = []
+    for item_name, quantidade_perdida in perdas_agrupadas.items():
+        # Procurar item no estoque
+        mask = st.session_state.estoque_data['item_name'] == item_name
+        if mask.any():
+            # Reduzir quantidade atual
+            st.session_state.estoque_data.loc[mask, 'quantidade_atual'] -= quantidade_perdida
+            # Garantir que não fique negativo
+            st.session_state.estoque_data.loc[mask, 'quantidade_atual'] = st.session_state.estoque_data.loc[mask, 'quantidade_atual'].clip(lower=0)
+            items_atualizados.append(item_name)
+    
+    # Salvar automaticamente as alterações
+    save_estoque_data()
+    
+    return items_atualizados
+
+def render_controle_estoque():
+    """Renderiza interface de controle de estoque"""
+    st.markdown("""
+    <div style="text-align: center; margin: 2rem 0;">
+        <h3 style="color: #0EA5E9;">📦 Controle de Estoque</h3>
+        <p style="color: #6B7280;">Gestão inteligente do estoque de gadgets</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    init_estoque_data()
+    
+    if 'estoque_data' not in st.session_state or st.session_state.estoque_data.empty:
+        st.warning("⚠️ Dados de estoque não encontrados!")
+        return
+    
+    df_estoque = st.session_state.estoque_data
+    
+    # Métricas de estoque
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        total_items = len(df_estoque)
+        st.metric("📋 Total Itens", total_items)
+    
+    with col2:
+        valor_total = (df_estoque['quantidade_atual'] * df_estoque['preco_unitario']).sum()
+        st.metric("💰 Valor Total", f"R$ {valor_total:,.2f}")
+    
+    with col3:
+        items_baixos = len(df_estoque[df_estoque['quantidade_atual'] <= df_estoque['quantidade_minima']])
+        st.metric("⚠️ Estoque Baixo", items_baixos)
+    
+    with col4:
+        disponivel = df_estoque['quantidade_atual'].sum()
+        st.metric("📦 Disponível", disponivel)
+    
+    # Tabela de estoque
+    st.subheader("📊 Status do Estoque")
+    
+    # Adicionar coluna de status
+    df_display = df_estoque.copy()
+    df_display['status'] = df_display.apply(
+        lambda x: "🔴 Crítico" if x['quantidade_atual'] <= x['quantidade_minima'] 
+        else "🟡 Baixo" if x['quantidade_atual'] <= x['quantidade_minima'] * 1.5
+        else "🟢 OK", axis=1
+    )
+    
+    # Exibir tabela
+    display_table_with_filters(df_display, key="estoque_table")
+    
+    # Botões de ação
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("💾 Salvar Estoque", use_container_width=True):
+            if save_estoque_data():
+                st.success("✅ Estoque salvo com sucesso!")
+            else:
+                st.error("❌ Erro ao salvar estoque")
+    
+    with col2:
+        if st.button("🔄 Recarregar Dados", use_container_width=True):
+            if load_estoque_data():
+                st.success("✅ Dados recarregados!")
+                st.rerun()
+            else:
+                st.error("❌ Erro ao carregar dados")
+
+    
+    # Inicializar dados
+    if 'matt_execution_history' not in st.session_state:
+        st.session_state.matt_execution_history = []
+    
+    # Limpar referências antigas se existirem
+    if hasattr(st.session_state, 'gadget_preferido'):
+        delattr(st.session_state, 'gadget_preferido')
+    
+    # Sistema de IA conversacional
+    if 'matt_chat_history' not in st.session_state:
+        st.session_state.matt_chat_history = [
+            {"role": "assistant", "message": "👋 **Olá! Sou o Matt 2.0** - Assistente de IA especializado em gestão inteligente de gadgets!\n\n🧠 **NOVA FUNCIONALIDADE:** Agora analiso suas **perdas reais**, **orçamento** e **valores** para recomendar exatamente quanto comprar de cada item!\n\n💡 **Para receber análises baseadas em dados reais:**\n• Use os botões acima ⚡\n• Pergunte: \"Quanto devo comprar de cada item?\"\n• Configure seu orçamento: \"definir budget R$ 50000\"\n• Defina prioridades: \"prefiro Mouse e Teclado\"\n\n📊 **Registre algumas perdas** na aba \"Registro de Perdas\" e volte aqui para **recomendações personalizadas**! 🚀"}
+        ]
+
+    # 🤖 CONFIGURAÇÕES DE AUTOMAÇÃO HUGINN
+    st.divider()
+    st.subheader("🤖 Configuração de Automação Huginn")
+    
+    with st.expander("⚙️ Conectar ao Huginn para Dados Automatizados", expanded=False):
+        st.markdown("""
+        **🎯 O que é o Huginn?**
+        
+        O [Huginn](https://github.com/huginn/huginn) é uma ferramenta de automação que permite criar agentes que monitoram e agem em seu nome online. 
+        Conecte o Matt 2.0 ao seu Huginn para:
+        
+        • 📊 **Coletar dados automaticamente** de diversas fontes
+        • 🔍 **Monitorar preços** de gadgets e equipamentos  
+        • 📧 **Integrar emails** e notificações
+        • 🌐 **Scraping de websites** para informações relevantes
+        • 🔄 **Automatizar workflows** de gestão
+        """)
+        
+        col_huginn1, col_huginn2 = st.columns(2)
+        
+        with col_huginn1:
+            huginn_url = st.text_input(
+                "URL do seu Huginn:",
+                value=st.session_state.get('huginn_url', 'http://localhost:3000'),
+                placeholder="http://localhost:3000 ou https://seu-huginn.com",
+                key="huginn_url_input",
+                help="URL da sua instância do Huginn"
+            )
+            st.session_state.huginn_url = huginn_url
+            
+        with col_huginn2:
+            huginn_token = st.text_input(
+                "Token de API do Huginn:",
+                value=st.session_state.get('huginn_token', ''),
+                type="password",
+                placeholder="Seu token de API",
+                key="huginn_token_input",
+                help="Token gerado no seu Huginn em Settings > API"
+            )
+            st.session_state.huginn_token = huginn_token
+        
+        # Teste de conexão
+        if st.button("🧪 Testar Conexão Huginn", use_container_width=True):
+            if huginn_token:
+                test_connection = connect_to_huginn()
+                if test_connection:
+                    st.success("✅ Conexão com Huginn estabelecida com sucesso!")
+                    if test_connection.get('events'):
+                        st.info(f"📊 {len(test_connection['events'])} eventos encontrados")
+                    if test_connection.get('agents'):
+                        st.info(f"🤖 {len(test_connection['agents'])} agentes ativos")
+                else:
+                    st.error("❌ Falha na conexão com Huginn. Verifique URL e token.")
+            else:
+                st.warning("⚠️ Insira o token de API para testar a conexão")
+
+    # 🎯 CONFIGURAÇÕES DE ORÇAMENTO E PREFERÊNCIAS
+    st.divider()
+    st.subheader("🎯 Configurações de Orçamento Matt 2.0")
+    
+    # Configurações de orçamento em colunas
+    col_config1, col_config2 = st.columns(2)
+    
+    with col_config1:
+        st.markdown("**💰 Budget Total:**")
+        matt_budget = st.number_input(
+            "Definir budget total para compras:",
+            min_value=1000,
+            max_value=500000,
+            value=int(st.session_state.get('matt_budget', 50000)),
+            step=1000,
+            key="matt_budget_controle"
+        )
+        st.session_state.matt_budget = matt_budget
+        
+        st.markdown("**🎯 Gadgets Prioritários:**")
+        gadgets_disponiveis = ['Mouse', 'Teclado', 'Adaptador USB-C', 'Headset']
+        gadgets_preferidos = st.multiselect(
+            "Escolha os gadgets prioritários:",
+            options=gadgets_disponiveis,
+            default=st.session_state.get('gadgets_preferidos', []),
+            key="gadgets_preferidos"
+        )
+        
+    with col_config2:
+        st.markdown("**📊 Limite de Quantidades:**")
+        limite_por_item = st.number_input(
+            "Quantidade máxima por item:",
+            min_value=1,
+            max_value=100,
+            value=int(st.session_state.get('matt_limite_qty', 20)),
+            step=1,
+            key="matt_limite_qty"
+        )
+        
+        st.markdown("**🔥 % Extra para Prioritário:**")
+        percentual_extra = st.slider(
+            "% extra de orçamento para item prioritário:",
+            min_value=0,
+            max_value=50,
+            value=st.session_state.get('matt_percentual_extra', 20),
+            step=5,
+            key="matt_percentual_extra"
+        )
+    
+    # Resumo das configurações
+    if gadgets_preferidos:
+        gadgets_texto = ", ".join(gadgets_preferidos)
+        st.info(f"""
+        **🎯 Configurações Ativas:**
+        • Budget Total: R$ {matt_budget:,.2f}
+        • Gadgets Prioritários: {gadgets_texto} (+{percentual_extra}% do orçamento cada)
+        • Limite por Item: {limite_por_item} unidades
+        """)
+    
+    # Chat IA avançado
+    st.divider()
+    st.subheader("💬 Chat IA com Matt 2.0")
+    
+    # Container do chat
+    chat_container = st.container()
+    
+    with chat_container:
+        # Mostrar histórico do chat
+        for i, chat in enumerate(st.session_state.matt_chat_history):
+            if chat["role"] == "user":
+                st.markdown(f"""
+                <div class="chat-user-message" style="background-color: #e3f2fd !important; padding: 10px !important; border-radius: 10px !important; margin: 5px 0 !important; margin-left: 20% !important; color: #FFFFFF !important; text-shadow: none !important;">
+                    <strong style="color: #FFFFFF !important; text-shadow: none !important; font-weight: bold !important;">
+                        <i class="fas fa-user icon icon-info" style="margin-right: 0.5rem;"></i>Você:
+                    </strong> 
+                    <span style="color: #FFFFFF !important; text-shadow: none !important;">{chat["message"]}</span>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="chat-matt-message" style="background-color: #f3e5f5 !important; padding: 10px !important; border-radius: 10px !important; margin: 5px 0 !important; margin-right: 20% !important; color: #FFFFFF !important; text-shadow: none !important;">
+                    <strong style="color: #FFFFFF !important; text-shadow: none !important; font-weight: bold !important;">
+                        <i class="fas fa-robot icon icon-chat" style="margin-right: 0.5rem;"></i>Matt 2.0:
+                    </strong> 
+                    <span style="color: #FFFFFF !important; text-shadow: none !important;">{chat["message"]}</span>
+                </div>
+                """, unsafe_allow_html=True)
+    
+    # Interface de input do chat
+    st.markdown('#### <i class="fas fa-comments icon icon-chat"></i> Converse com a IA', unsafe_allow_html=True)
+    
+    # Sugestões rápidas inteligentes
+    col_sugest1, col_sugest2, col_sugest3, col_sugest4, col_sugest5 = st.columns(5)
+    
+    with col_sugest1:
+        if st.button("▬ Analise meus dados", use_container_width=True):
+            st.session_state.quick_message = "Analise meus dados de perda e me dê insights"
+    
+    with col_sugest2:
+        if st.button("$ Otimizar orçamento", use_container_width=True):
+            budget = st.session_state.get('matt_budget', 50000)
+            gadgets_pref = st.session_state.get('gadgets_preferidos', [])
+            limite_qty = st.session_state.get('matt_limite_qty', 20)
+            extra_pct = st.session_state.get('matt_percentual_extra', 20)
+            
+            if gadgets_pref:
+                gadgets_texto = ", ".join(gadgets_pref)
+                st.session_state.quick_message = f"Otimize meu orçamento de R$ {budget:,.2f} priorizando {gadgets_texto} (+{extra_pct}% cada) limitado a {limite_qty} unidades por item"
+            else:
+                st.session_state.quick_message = f"Otimize meu orçamento de R$ {budget:,.2f} limitado a {limite_qty} unidades por item"
+    
+    with col_sugest3:
+        if st.button("■ Status do estoque", use_container_width=True):
+            st.session_state.quick_message = "Qual o status do meu estoque atual?"
+    
+    with col_sugest4:
+        if st.button("🛒 Sugerir compras", use_container_width=True):
+            budget = st.session_state.get('matt_budget', 50000)
+            gadgets_pref = st.session_state.get('gadgets_preferidos', [])
+            if gadgets_pref:
+                gadgets_texto = ", ".join(gadgets_pref)
+                st.session_state.quick_message = f"Sugira compras priorizando {gadgets_texto} com budget de R$ {budget:,.2f}"
+            else:
+                st.session_state.quick_message = f"Sugira estratégias de compras com budget de R$ {budget:,.2f}"
+    
+    with col_sugest5:
+        if st.button("🎯 Minhas config", use_container_width=True):
+            budget = st.session_state.get('matt_budget', 50000)
+            gadgets_pref = st.session_state.get('gadgets_preferidos', [])
+            limite_qty = st.session_state.get('matt_limite_qty', 20)
+            st.session_state.quick_message = f"Mostre minhas configurações atuais de budget, preferências e limites"
+    
+    user_message = st.text_input(
+        "Digite sua mensagem para Matt 2.0:",
+        value=st.session_state.get('quick_message', ''),
+        placeholder="Ex: Otimize R$ 100k priorizando mouse e headset",
+        key="matt_ai_input"
+    )
+    
+    if st.session_state.get('quick_message'):
+        st.session_state.quick_message = ''
+    
+    col_send, col_clear = st.columns([3, 1])
+    
+    with col_send:
+        if st.button("▲ Enviar para IA", type="primary", use_container_width=True) and user_message:
+            st.session_state.matt_chat_history.append({"role": "user", "message": user_message})
+            matt_response = process_matt_response(user_message)
+            st.session_state.matt_chat_history.append({"role": "assistant", "message": matt_response})
+            st.rerun()
+    
+    with col_clear:
+        if st.button("🗑️ Limpar Chat", use_container_width=True):
+            st.session_state.matt_chat_history = [{"role": "assistant", "message": "👋 Chat limpo! Sou o Matt 2.0 especializado em Mouse, Teclado, Adaptador USB-C e Headset. Configure múltiplos gadgets prioritários acima e vamos conversar sobre otimizações inteligentes!"}]
+            st.rerun()
+
+
+def render_controle_gadgets():
+    """Renderiza a página de controle de gadgets"""
+    # Título com fundo roxo
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); padding: 2rem; border-radius: 15px; margin: 1.5rem 0; box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3);">
+        <h2 style="color: white; margin: 0; font-weight: 700; font-size: 2.2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">▤ Gadgets</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Carregar dados apenas na primeira vez ou quando solicitado
+    if 'gadgets_data_loaded' not in st.session_state:
+        if load_gadgets_data():
+            st.session_state.gadgets_data_loaded = True
+        else:
+            init_gadgets_data()
+            st.session_state.gadgets_data_loaded = True
+    elif 'gadgets_data' not in st.session_state:
+        # Se por algum motivo os dados foram perdidos, recarregar
+        init_gadgets_data()
+    
+    st.markdown("""
+    <div style="text-align: center; margin: 2rem 0;">
+        <h1 style="color: #9333EA; margin-bottom: 0.5rem;">▦ Controle de Gadgets</h1>
+        <p style="color: #A855F7; font-size: 1.1rem;">Registro e Análise de Perdas - Mensal, Trimestral e Anual</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Upload especializado para gadgets com integração automática
+    render_inventory_upload_section('gadgets_valores_csv', 'gadgets', "Upload de Gadgets - Integração Automática")
+    
+    # Tabs principais
+    tab_registro, tab_analises, tab_estoque, tab_matt, tab_config = st.tabs([
+        "▼ Registrar Perdas", 
+        "◆ Análises & Gráficos", 
+        "■ Controle de Estoque",
+        "◉ Agente Matt",
+        "◦ Configurações"
+    ])
+    
+    with tab_registro:
+        render_registro_perdas()
+    
+    with tab_analises:
+        render_analises_gadgets()
+    
+    with tab_estoque:
+        render_controle_estoque()
+    
+    with tab_matt:
+        render_agente_matt()
+    
+    with tab_config:
+        render_config_gadgets()
 
 def init_estoque_data():
     """Inicializa os dados de controle de estoque"""
@@ -10488,7 +9400,70 @@ def init_estoque_data():
                 'ultima_atualizacao': [datetime.now().strftime('%d/%m/%Y %H:%M')] * 4
             })
 
+def save_estoque_data():
+    """Salva os dados de estoque em arquivo CSV"""
+    try:
+        if not st.session_state.estoque_data.empty:
+            filename = f"estoque_gadgets_{datetime.now().strftime('%Y%m%d')}.csv"
+            st.session_state.estoque_data.to_csv(filename, index=False)
+            st.session_state.estoque_last_saved = datetime.now()
+            return True
+        else:
+            # Salvar arquivo vazio
+            filename = f"estoque_gadgets_{datetime.now().strftime('%Y%m%d')}.csv"
+            pd.DataFrame(columns=[
+                'item_name', 'quantidade_atual', 'quantidade_minima', 
+                'preco_unitario', 'fornecedor', 'ultima_atualizacao'
+            ]).to_csv(filename, index=False)
+            st.session_state.estoque_last_saved = datetime.now()
+            return True
+    except Exception as e:
+        st.error(f"Erro ao salvar dados de estoque: {e}")
+        return False
 
+def load_estoque_data():
+    """Carrega os dados de estoque salvos"""
+    try:
+        import glob
+        files = glob.glob("estoque_gadgets_*.csv")
+        if files:
+            latest_file = max(files, key=lambda x: x.split('_')[-1])
+            df = pd.read_csv(latest_file)
+            st.session_state.estoque_data = df
+            return True
+    except Exception:
+        pass
+    return False
+
+def atualizar_estoque_por_perdas(perdas_df):
+    """Atualiza o estoque baseado nas perdas registradas"""
+    if 'estoque_data' not in st.session_state or st.session_state.estoque_data.empty:
+        init_estoque_data()
+    
+    # Agrupar perdas por item
+    perdas_agrupadas = perdas_df.groupby('name')['quantidade'].sum()
+    
+    # Atualizar estoque
+    items_atualizados = []
+    for item_name, quantidade_perdida in perdas_agrupadas.items():
+        # Encontrar o item no estoque
+        mask = st.session_state.estoque_data['item_name'] == item_name
+        if mask.any():
+            # Diminuir do estoque
+            idx = st.session_state.estoque_data[mask].index[0]
+            quantidade_atual = st.session_state.estoque_data.loc[idx, 'quantidade_atual']
+            nova_quantidade = max(0, quantidade_atual - quantidade_perdida)
+            
+            st.session_state.estoque_data.loc[idx, 'quantidade_atual'] = nova_quantidade
+            st.session_state.estoque_data.loc[idx, 'ultima_atualizacao'] = datetime.now().strftime('%d/%m/%Y %H:%M')
+            
+            items_atualizados.append(f"{item_name}: {quantidade_atual} → {nova_quantidade}")
+    
+    # Salvar alterações no estoque
+    if items_atualizados:
+        save_estoque_data()
+        return items_atualizados
+    return []
 
 def render_controle_estoque():
     """Renderiza interface de controle de estoque"""
@@ -10628,7 +9603,7 @@ def render_controle_estoque():
         # Calcular perdas por item nos últimos 30 dias
         data_limite = datetime.now() - timedelta(days=30)
         perdas_recentes = st.session_state.gadgets_data[
-            st.session_state.gadgets_data['timestamp'] >= data_limite
+            st.session_state.gadgets_data['data'] >= data_limite
         ]
         
         if not perdas_recentes.empty:
@@ -10870,7 +9845,7 @@ def render_registro_perdas():
                 nova_linha = item_row.copy()
                 nova_linha['local_selecionado'] = local
                 nova_linha['andar_selecionado'] = andar
-# Comentado - coluna andar não existe mais
+                nova_linha['item_andar_id'] = f"{item_row['item_id']}_{local}_{andar.replace(' ', '_').replace('°', '')}"
                 df_expandido.append(nova_linha)
     
     df_perdas = pd.DataFrame(df_expandido)
@@ -11228,7 +10203,7 @@ def render_registro_perdas():
                 andar = row.get('andar_selecionado', row.get('andar', 'N/A'))
                 
                 nova_perda = pd.DataFrame({
-                    'timestamp': [pd.to_datetime(data_perda)],
+                    'data': [pd.to_datetime(data_perda)],
                     'item_id': [row.get('item_id', f"{row['name']}-{local}")],
                     'name': [row['name']],
                     'description': [row['description']],
@@ -11286,17 +10261,17 @@ def render_analises_gadgets():
     df = st.session_state.gadgets_data.copy()
     
     # Verificar se as colunas necessárias existem e têm dados válidos
-    if df.empty or df['timestamp'].isna().all():
+    if df.empty or df['data'].isna().all():
         st.warning("▬ Dados inválidos encontrados. Verifique os registros de perdas.")
         return
     
     # Preparar dados para análise
-    df['mes'] = df['timestamp'].dt.month
-    df['ano'] = df['timestamp'].dt.year
-    df['trimestre'] = df['timestamp'].dt.quarter
+    df['mes'] = df['data'].dt.month
+    df['ano'] = df['data'].dt.year
+    df['trimestre'] = df['data'].dt.quarter
     
     # Limpar dados inválidos
-    df = df.dropna(subset=['timestamp', 'quantidade', 'valor_total'])
+    df = df.dropna(subset=['data', 'quantidade', 'valor_total'])
     df = df[df['quantidade'] > 0]  # Remover quantidades zero ou negativas
     
     # Garantir que colunas de texto não tenham valores NaN
@@ -11327,16 +10302,8 @@ def render_analises_gadgets():
                                      index=len(anos_disponiveis)-1 if anos_disponiveis else 0)
     
     with col_filtro2:
-        # Usar 'building' em vez de 'local' se existir, senão usar 'andar'
-        if 'building' in df.columns:
-            locais_disponiveis = ['Todos'] + list(df['building'].unique())
-            local_selecionado = st.selectbox("▬ Prédio", locais_disponiveis)
-        elif 'andar' in df.columns:
-            locais_disponiveis = ['Todos'] + list(df['andar'].unique())
-            local_selecionado = st.selectbox("▬ Andar", locais_disponiveis)
-        else:
-            locais_disponiveis = ['Todos']
-            local_selecionado = 'Todos'
+        locais_disponiveis = ['Todos'] + list(df['building'].unique())
+        local_selecionado = st.selectbox("▬ Local", locais_disponiveis)
     
     with col_filtro3:
         categorias_disponiveis = ['Todas'] + list(df['name'].unique())
@@ -11358,17 +10325,17 @@ def render_analises_gadgets():
     if periodo_selecionado == "Personalizado":
         col_data1, col_data2 = st.columns(2)
         with col_data1:
-            data_inicio = st.date_input("📅 Data Início", value=df['timestamp'].min().date())
+            data_inicio = st.date_input("📅 Data Início", value=df['data'].min().date())
         with col_data2:
-            data_fim = st.date_input("📅 Data Fim", value=df['timestamp'].max().date())
+            data_fim = st.date_input("📅 Data Fim", value=df['data'].max().date())
         
         # Filtrar dados por período personalizado
-        df = df[(df['timestamp'].dt.date >= data_inicio) & (df['timestamp'].dt.date <= data_fim)]
+        df = df[(df['data'].dt.date >= data_inicio) & (df['data'].dt.date <= data_fim)]
         st.info(f"📊 Análise personalizada: {data_inicio} até {data_fim} ({len(df)} registros)")
     
     elif periodo_selecionado != "Período Atual":
         # Aplicar filtros de período pré-definidos
-        data_atual = df['timestamp'].max()
+        data_atual = df['data'].max()
         
         if periodo_selecionado == "Último Mês":
             data_limite = data_atual - pd.DateOffset(months=1)
@@ -11379,17 +10346,14 @@ def render_analises_gadgets():
         elif periodo_selecionado == "Último Ano":
             data_limite = data_atual - pd.DateOffset(years=1)
         
-        df = df[df['timestamp'] >= data_limite]
+        df = df[df['data'] >= data_limite]
         st.info(f"📊 {periodo_selecionado}: {len(df)} registros encontrados")
     
     # Aplicar filtros
     df_filtrado = df[df['ano'] == ano_selecionado].copy()
     
     if local_selecionado != 'Todos':
-        if 'building' in df_filtrado.columns:
-            df_filtrado = df_filtrado[df_filtrado["building"] == local_selecionado]
-        elif 'andar' in df_filtrado.columns:
-            df_filtrado = df_filtrado[df_filtrado["andar"] == local_selecionado]
+        df_filtrado = df_filtrado[df_filtrado['building'] == local_selecionado]
     
     if categoria_selecionada != 'Todas':
         df_filtrado = df_filtrado[df_filtrado['name'] == categoria_selecionada]
@@ -11430,7 +10394,7 @@ def render_analises_gadgets():
         # Exportar dados brutos filtrados
         if not df_filtrado.empty:
             df_export = df_filtrado.copy()
-            df_export["timestamp"] = df_export["timestamp"].dt.strftime('%d/%m/%Y')
+            df_export['data'] = df_export['data'].dt.strftime('%d/%m/%Y')
             csv_geral = df_export.to_csv(index=False)
             
             st.download_button(
@@ -11461,7 +10425,7 @@ def render_analises_gadgets():
                     f"{total_registros:,}",
                     f"R$ {valor_medio:,.2f}",
                     periodo_selecionado,
-                    df_filtrado.get("building", df_filtrado.get("andar", "N/A")).value_counts().index[0] if not df_filtrado.get("building", df_filtrado.get("andar", pd.Series())).value_counts().empty else 'N/A',
+                    df_filtrado['building'].value_counts().index[0] if not df_filtrado['building'].value_counts().empty else 'N/A',
                     df_filtrado['name'].value_counts().index[0] if not df_filtrado['name'].value_counts().empty else 'N/A'
                 ]
             })
@@ -11574,7 +10538,7 @@ def render_analise_mensal(df, colors, height):
     # Garantir que a coluna 'mes' existe
     if 'mes' not in df.columns:
         df = df.copy()
-        df['mes'] = df['timestamp'].dt.month
+        df['mes'] = df['data'].dt.month
     
     # Agrupar por mês
     df_mensal = df.groupby('mes').agg({
@@ -11707,7 +10671,7 @@ def render_analise_mensal(df, colors, height):
     df_detalhado = df.groupby(['mes', 'name']).agg({
         'quantidade': 'sum',
         'valor_total': 'sum',
-        'cost': 'mean'  # Usar 'cost' em vez de 'valor_unit'
+        'cost': 'mean'
     }).reset_index()
     
     if not df_detalhado.empty:
@@ -11822,7 +10786,7 @@ def render_analise_trimestral(df, colors, height):
     # Garantir que a coluna 'trimestre' existe
     if 'trimestre' not in df.columns:
         df = df.copy()
-        df['trimestre'] = ((df['timestamp'].dt.month - 1) // 3) + 1
+        df['trimestre'] = ((df['data'].dt.month - 1) // 3) + 1
     
     # Agrupar por trimestre
     df_trim = df.groupby('trimestre').agg({
@@ -11895,7 +10859,7 @@ def render_analise_trimestral(df, colors, height):
     df_trim_detalhado = df.groupby(['trimestre', 'name']).agg({
         'quantidade': 'sum',
         'valor_total': 'sum',
-        'cost': 'mean'  # Usar 'cost' em vez de 'valor_unit'
+        'cost': 'mean'
     }).reset_index()
     
     if not df_trim_detalhado.empty:
@@ -12035,7 +10999,7 @@ def render_analise_anual(df, colors, height):
     # Garantir que a coluna 'ano' existe
     if 'ano' not in df.columns:
         df = df.copy()
-        df['ano'] = df['timestamp'].dt.year
+        df['ano'] = df['data'].dt.year
     
     # Agrupar por ano
     df_anual = df.groupby('ano').agg({
@@ -12128,7 +11092,7 @@ def render_analise_anual(df, colors, height):
     df_anual_detalhado = df.groupby(['ano', 'name']).agg({
         'quantidade': 'sum',
         'valor_total': 'sum',
-        'cost': 'mean'  # Usar 'cost' em vez de 'valor_unit'
+        'cost': 'mean'
     }).reset_index()
     
     if not df_anual_detalhado.empty:
@@ -12289,27 +11253,27 @@ def render_analise_anual(df, colors, height):
             'quantidade': 'sum',
             'valor_total': 'sum'
         }).reset_index().sort_values('valor_total', ascending=False)
-
+        
         # Preparar dados de display dos rankings para exportações
         ranking_qty_display = ranking_qty.copy()
         ranking_qty_display['valor_total'] = ranking_qty_display['valor_total'].apply(
             lambda x: f"R$ {x:,.2f}"
-        )
-        ranking_qty_display = ranking_qty_display.rename(columns={
-            'name': 'Item',
-            'quantidade': 'Total Qtd',
-            'valor_total': 'Total Valor'
-        })
-
-        ranking_val_display = ranking_val.copy()
-        ranking_val_display['valor_total'] = ranking_val_display['valor_total'].apply(
-            lambda x: f"R$ {x:,.2f}"
-        )
-        ranking_val_display = ranking_val_display.rename(columns={
-            'name': 'Item',
-            'quantidade': 'Total Qtd',
-            'valor_total': 'Total Valor'
-        })
+            )
+            ranking_qty_display = ranking_qty_display.rename(columns={
+                'name': 'Item',
+                'quantidade': 'Total Qtd',
+                'valor_total': 'Total Valor'
+            })
+        
+            ranking_val_display = ranking_val.copy()
+            ranking_val_display['valor_total'] = ranking_val_display['valor_total'].apply(
+                lambda x: f"R$ {x:,.2f}"
+            )
+            ranking_val_display = ranking_val_display.rename(columns={
+                'name': 'Item',
+                'quantidade': 'Total Qtd',
+                'valor_total': 'Total Valor'
+            })
         
         col_rank_qty, col_rank_val = st.columns(2)
         
@@ -12335,15 +11299,7 @@ def render_detalhamento_gadgets(df):
     # Análise por local
     st.markdown("#### ▬ Análise por Local")
     
-    # Usar 'building' em vez de 'local' se existir, senão usar 'andar'
-    if 'building' in df.columns:
-        coluna_local = 'building'
-    elif 'andar' in df.columns:
-        coluna_local = 'andar'
-    else:
-        coluna_local = 'building'  # Valor padrão
-    
-    df_local = df.groupby(coluna_local).agg({
+    df_local = df.groupby('building').agg({
         'quantidade': 'sum',
         'valor_total': 'sum'
     }).reset_index()
@@ -12369,7 +11325,7 @@ def render_detalhamento_gadgets(df):
         )
         
         df_local_display = df_local_display.rename(columns={
-            coluna_local: 'Local',
+            'building': 'Local',
             'quantidade': 'Quantidade',
             'valor_total': 'Valor Total',
             'percentual_qty': 'Percentual Qtd (%)',
@@ -12384,7 +11340,7 @@ def render_detalhamento_gadgets(df):
     df_categoria = df.groupby('name').agg({
         'quantidade': 'sum',
         'valor_total': 'sum',
-        'cost': 'mean'  # Usar 'cost' em vez de 'valor_unit'
+        'cost': 'mean'
     }).reset_index()
     
     df_categoria_display = df_categoria.copy()
@@ -12397,7 +11353,7 @@ def render_detalhamento_gadgets(df):
         df_categoria_display['valor_total'] = df_categoria_display['valor_total'].apply(
             lambda x: f"R$ {float(x):,.2f}" if pd.notnull(x) and x != 0 else "R$ 0,00"
         )
-        df_categoria_display["cost"] = df_categoria_display["cost"].apply(
+        df_categoria_display['cost'] = df_categoria_display['cost'].apply(
             lambda x: f"R$ {float(x):,.2f}" if pd.notnull(x) and x != 0 else "R$ 0,00"
         )
         
@@ -12417,8 +11373,13 @@ def render_detalhamento_gadgets(df):
     
     # Verificar se a coluna 'data' existe antes de formatar
     if 'data' in df_completo.columns:
-        df_completo['timestamp'] = df_completo['timestamp'].dt.strftime('%d/%m/%Y')
+        df_completo['data'] = df_completo['data'].dt.strftime('%d/%m/%Y')
     
+    # Garantir que a coluna 'andar' seja string para evitar conflito de tipos
+    if 'andar' in df_completo.columns:
+        df_completo['andar'] = df_completo['andar'].astype(str)
+        df_completo['andar'] = df_completo['andar'].replace('nan', '')
+        df_completo['andar'] = df_completo['andar'].replace('None', '')
     
     # Obter listas únicas para as opções
     if 'gadgets_valores_csv' in st.session_state and not st.session_state.gadgets_valores_csv.empty:
@@ -12471,7 +11432,7 @@ def render_detalhamento_gadgets(df):
     with col_save:
         if st.button("💾 Salvar Alterações", type="primary", use_container_width=True):
             try:
-                df_editado['timestamp'] = pd.to_datetime(df_editado['timestamp'], format='%d/%m/%Y')
+                df_editado['data'] = pd.to_datetime(df_editado['data'], format='%d/%m/%Y')
                 st.session_state.gadgets_data = df_editado
                 
                 # Forçar salvamento e resetar flags
@@ -12494,10 +11455,8 @@ def render_detalhamento_gadgets(df):
                 # Mostrar lista de registros para seleção
                 registros_opcoes = []
                 for idx, row in df_completo.iterrows():
-                    data_str = row['timestamp']
-                    # Usar 'building' em vez de 'local' se existir, senão usar 'andar'
-                    local_info = row.get('building', row.get('andar', 'N/A'))
-                    registro_info = f"{data_str} | {row['name']} | {local_info} | {""} | Qtd: {row['quantidade']} | R$ {row['valor_total']:.2f}"
+                    data_str = row['data']
+                    registro_info = f"{data_str} | {row['name']} | {row['building']} | {row['andar']} | Qtd: {row['quantidade']} | R$ {row['valor_total']:.2f}"
                     registros_opcoes.append(f"{idx}: {registro_info}")
                 
                 if registros_opcoes:
@@ -12637,13 +11596,6 @@ def render_config_gadgets():
     st.markdown("#### $ Valores Atuais")
     
     if 'gadgets_valores_csv' in st.session_state and not st.session_state.gadgets_valores_csv.empty:
-        # Verificar se houve mudanças na edição
-        if 'valores_editor_previous' not in st.session_state:
-            st.session_state.valores_editor_previous = st.session_state.gadgets_valores_csv.copy()
-        
-        # Criar uma chave única para o editor
-        editor_key = f"valores_editor_{hash(str(st.session_state.gadgets_valores_csv))}"
-        
         df_valores_editavel = st.data_editor(
             st.session_state.gadgets_valores_csv,
             use_container_width=True,
@@ -12663,36 +11615,12 @@ def render_config_gadgets():
                                                                    max_value=100,
                                                                    step=1)
             },
-            key=editor_key
+            key="valores_editor"
         )
         
-        # Verificar se houve mudanças e salvar automaticamente
-        if not df_valores_editavel.equals(st.session_state.valores_editor_previous):
+        if st.button("◉ Salvar Valores", type="primary"):
             st.session_state.gadgets_valores_csv = df_valores_editavel
-            st.session_state.valores_editor_previous = df_valores_editavel.copy()
-            
-            # Salvar automaticamente
-            if save_gadgets_valores_csv_auto():
-                st.success("💾 **Valores salvos automaticamente!**")
-        
-        # Status de salvamento
-        if 'last_save_timestamp' in st.session_state:
-            st.info(f"💾 **Último salvamento:** {st.session_state.last_save_timestamp.strftime('%d/%m/%Y %H:%M:%S')}")
-        
-        # Botão de salvamento manual (sempre visível)
-        col_save1, col_save2 = st.columns(2)
-        
-        with col_save1:
-            if st.button("💾 Salvar Agora", type="primary", help="Salva as mudanças no CSV"):
-                st.session_state.gadgets_valores_csv = df_valores_editavel
-                if save_gadgets_valores_csv_auto():
-                    st.success("✅ **Valores salvos com sucesso!**")
-                    st.rerun()
-        
-        with col_save2:
-            if st.button("🔄 Recarregar do CSV", type="secondary", help="Recarrega os dados do arquivo CSV"):
-                load_gadgets_valores_csv()
-                st.rerun()
+            st.success("● Valores atualizados!")
     
     # Exportar dados
     st.markdown("#### 📤 Exportar Dados")
@@ -12753,7 +11681,7 @@ def render_config_gadgets():
         
         with col_stat2:
             st.metric("📅 Período dos Dados", 
-                     f"{df['timestamp'].min().strftime('%m/%Y')} - {df['timestamp'].max().strftime('%m/%Y')}")
+                     f"{df['data'].min().strftime('%m/%Y')} - {df['data'].max().strftime('%m/%Y')}")
         
         with col_stat3:
             st.metric("$ Valor Total Acumulado", f"R$ {df['valor_total'].sum():,.2f}")
@@ -12767,7 +11695,7 @@ def render_config_gadgets():
         if st.button("⊗ Limpar Todos os Registros", type="secondary", use_container_width=True):
             if st.button("◊ Confirmar Limpeza", type="primary"):
                 st.session_state.gadgets_data = pd.DataFrame({
-                    'timestamp': [], 'item_id': [], 'name': [], 'description': [], 'building': [],
+                    'data': [], 'item_id': [], 'name': [], 'description': [], 'building': [],
                     'andar': [], 'quantidade': [], 'cost': [], 'valor_total': [],
                     'periodo': [], 'observacoes': []
                 })
@@ -13031,7 +11959,7 @@ def import_to_target(df, target_type):
                 col_lower = col.lower()
                 if 'nome' in col_lower or 'name' in col_lower:
                     mapped_df['item'] = df_clean[col]
-                elif 'local' in col_lower or 'building' in col_lower or 'andar' in col_lower:
+                elif 'local' in col_lower:
                     mapped_df['local'] = df_clean[col]
                 elif 'prateleira' in col_lower:
                     mapped_df['prateleira'] = df_clean[col]
@@ -14763,9 +13691,6 @@ def render_edit_form(df_categoria, categoria_nome):
 
 def render_delete_form(df_categoria, categoria_nome):
     """Renderiza formulário de exclusão de item"""
-    # Obter dados unificados do session_state
-    unified_data = st.session_state.inventory_data['unified']
-    
     st.markdown("---")
     st.markdown("### ⊗ Deletar Item do Inventário")
     
@@ -21216,24 +20141,6 @@ def render_historico_consultas_sefaz():
         st.rerun()
 
 def main():
-    """Função principal do dashboard"""
-    
-    # 🚀 CARREGAMENTO AUTOMÁTICO DE DADOS AO INICIAR
-    print("🚀 Iniciando dashboard...")
-    
-    # Inicializar dados de gadgets ANTES de qualquer renderização
-    if 'gadgets_data' not in st.session_state:
-        print("📁 Carregando dados de gadgets...")
-        load_gadgets_data()
-    else:
-        print(f"📁 Dados já carregados: {len(st.session_state.gadgets_data)} registros")
-    
-    # Garantir que os valores de referência sejam inicializados
-    if 'gadgets_valores_referencia' not in st.session_state:
-        print("💰 Inicializando valores de referência...")
-        load_gadgets_valores_referencia()
-    
-    # Configurar página
     """Função principal do app"""
     apply_nubank_theme()
     apply_responsive_styles()  # Aplicar estilos responsivos melhorados

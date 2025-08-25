@@ -1,19 +1,19 @@
-item_id,name,description,building,cost,fornecedor
-Headset-spk,Headset,Plantronics blackwire,Spark,260.00,Plantronics
-Adaptadores usb c-spk,Adaptadores usb c,Geonav,Spark,360.00,Geonav
-Mouse-spk,Mouse,M90,Spark,31.90,Microsoft
-Teclado k120-spk,Teclado k120,Logitech kq120,Spark,90.00,Logitech
-Headset-hq1,Headset,Plantronics blackwire,HQ1,260.00,Plantronics
-Adaptadores usb c-hq1,Adaptadores usb c,Geonav,HQ1,360.00,Geonav
-Mouse-hq1,Mouse,M90,HQ1,31.90,Microsoft
-Teclado k120-hq1,Teclado k120,Logitech kq120,HQ1,90.00,Logitech
-Headset-hq2,Headset,Plantronics blackwire,HQ2,260.00,Plantronics
-Adaptadores usb c-hq2,Adaptadores usb c,Geonav,HQ2,360.00,Geonav
-Mouse-hq2,Mouse,M90,HQ2,31.90,Microsoft
-Teclado k120-hq2,Teclado k120,Logitech kq120,HQ2,90.00,Logitech
-Usb Gorila 5m1 lan hq1,Usb Gorila 5 em 1 c/ lan,Adaptadores usb c,HQ1,244.00,Genérico
-Usb Gorila 5m1 lan hq2,Usb Gorila 5 em 1 c/ lan,Adaptadores usb c,HQ2,244.00,Genérico
-Usb Gorila 5m1 lanspk,Usb Gorila 5 em 1 c/ lan,Adaptadores usb c,Spark,244.00,Genérico
-Usb Gorila 6m1 hq1,Usb Gorila 6 em1,Adaptadores usb c,HQ1,112.00,Genérico
-Usb Gorila 6m1 hq2,Usb Gorila 6 em1,Adaptadores usb c,HQ2,112.00,Genérico
-Usb Gorila 6m1 spk,Usb Gorila 6 em1,Adaptadores usb c,Spark,112.00,Genérico
+item_id,name,description,building,cost,fornecedor,quantidade_reposicao
+Headset-spk,Headset,Plantronics blackwire,Spark,260.0,Plantronics,10
+Adaptadores usb c-spk,Adaptadores usb c,Geonav,Spark,112.0,Geonav,10
+Mouse-spk,Mouse,M90,Spark,31.9,Microsoft,10
+Teclado k120-spk,Teclado k120,Logitech kq120,Spark,90.0,Logitech,10
+Headset-hq1,Headset,Plantronics blackwire,HQ1,260.0,Plantronics,5
+Adaptadores usb c-hq1,Adaptadores usb c,Geonav,HQ1,112.0,Geonav,5
+Mouse-hq1,Mouse,M90,HQ1,31.9,Microsoft,5
+Teclado k120-hq1,Teclado k120,Logitech kq120,HQ1,90.0,Logitech,5
+Headset-hq2,Headset,Plantronics blackwire,HQ2,260.0,Plantronics,5
+Adaptadores usb c-hq2,Adaptadores usb c,Geonav,HQ2,112.0,Geonav,5
+Mouse-hq2,Mouse,M90,HQ2,31.9,Microsoft,5
+Teclado k120-hq2,Teclado k120,Logitech kq120,HQ2,90.0,Logitech,5
+Usb Gorila 5m1 lan hq1,Usb Gorila 5 em 1 c/ lan,Adaptadores usb c,HQ1,244.0,Genérico,5
+Usb Gorila 5m1 lan hq2,Usb Gorila 5 em 1 c/ lan,Adaptadores usb c,HQ2,244.0,Genérico,5
+Usb Gorila 5m1 lanspk,Usb Gorila 5 em 1 c/ lan,Adaptadores usb c,Spark,244.0,Genérico,10
+Usb Gorila 6m1 hq1,Usb Gorila 6 em1,Adaptadores usb c,HQ1,112.0,Genérico,5
+Usb Gorila 6m1 hq2,Usb Gorila 6 em1,Adaptadores usb c,HQ2,112.0,Genérico,5
+Usb Gorila 6m1 spk,Usb Gorila 6 em1,Adaptadores usb c,Spark,112.0,Genérico,10

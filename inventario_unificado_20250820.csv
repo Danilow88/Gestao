@@ -1,0 +1,28 @@
+tag,itens,categoria,modelo,serial,marca,valor,data_compra,fornecedor,po,nota_fiscal,uso,qtd,prateleira,rua,setor,box,conferido,local
+TEC001,2,techstop,teste,DLL5520001,Dell,3500.0,2024-01-15,Dell Brasil,PO-TEC-001,NF-001234,Desenvolvimento,12,Prateleira A,Rua A1,TechStop Alpha,Caixa A1,True,hq1
+TEC002,Desktop HP Elite,techstop,Elite Desk 800 G8,HPE800001,HP,2800.0,2024-01-20,HP Brasil,PO-TEC-002,NF-001235,Escritório,8,Prateleira A,Rua A2,TechStop Alpha,Caixa A2,True,hq2
+TEC003,MacBook Pro M2,techstop,"MacBook Pro 14""",MBPM2001,Apple,8500.0,2024-02-10,Apple Brasil,PO-TEC-003,NF-001236,Design Gráfico,3,Prateleira B,Rua B1,TechStop Beta,Caixa B1,True,Spark
+TEC004,Workstation Lenovo,techstop,ThinkStation P520,LEN520001,Lenovo,12000.0,2024-02-25,Lenovo Brasil,PO-TEC-004,NF-001237,Engenharia 3D,2,Prateleira B,Rua B2,TechStop Beta,Caixa B2,False,
+TEC005,Tablet iPad Pro,techstop,"iPad Pro 12.9""",IPADPRO001,Apple,4200.0,2024-03-01,Apple Brasil,PO-TEC-005,NF-001238,Design Mobile,5,Prateleira A,Rua A1,TechStop Alpha,Caixa A3,True,
+TEC006,Mouse Logitech MX,techstop,MX Master 3S,LGT3S001,Logitech,450.0,2024-02-20,Logitech,PO-TEC-006,NF-001239,Produtividade,25,Prateleira C,Rua C1,TechStop Gamma,Caixa C1,True,
+TEC007,Teclado Mecânico,techstop,K70 RGB MK.2,COR70001,Corsair,850.0,2024-03-10,Corsair Gaming,PO-TEC-007,NF-001240,Gaming/Dev,6,Prateleira C,Rua C1,TechStop Gamma,Caixa C2,False,
+TEC008,SSD Externo Samsung,techstop,T7 Shield 2TB,SAMT7001,Samsung,800.0,2024-01-30,Samsung Brasil,PO-TEC-008,NF-001241,Backup/Armazenamento,10,Prateleira A,Rua A2,TechStop Alpha,Caixa A4,True,
+MON001,"Monitor LG 27""",tv e monitor,27GL850-B,LG27GL001,LG,2200.0,2024-01-25,LG Electronics,PO-MON-001,NF-002001,Design/Video,15,Prateleira D,Rua D1,Monitor Zone Delta,Caixa D1,True,
+MON002,"TV Samsung 55""",tv e monitor,UN55AU7000,SAM55AU001,Samsung,3500.0,2024-02-15,Samsung Brasil,PO-MON-002,NF-002002,Sala de Reunião,4,Prateleira E,Rua E1,AV Zone Echo,Caixa E1,False,
+MON003,"Monitor Dell 24""",tv e monitor,P2422H,DELLP24001,Dell,1800.0,2024-03-05,Dell Brasil,PO-MON-003,NF-002003,Escritório Geral,20,Prateleira D,Rua D1,Monitor Zone Delta,Caixa D2,True,
+MON004,Projetor BenQ,tv e monitor,MW632ST,BENQMW001,BenQ,4500.0,2024-02-28,BenQ Brasil,PO-MON-004,NF-002004,Apresentações,3,Prateleira E,Rua E2,AV Zone Echo,Caixa E2,True,
+MON005,Apple TV 4K,tv e monitor,MXGY2LL/A,APPLETV001,Apple,800.0,2024-03-15,Apple Brasil,PO-MON-005,NF-002005,Streaming/AirPlay,6,Prateleira D,Rua D1,Monitor Zone Delta,Caixa D3,False,
+AUD001,Headset Plantronics,audio e video,Voyager 4220,PLT4220001,Plantronics,1200.0,2024-01-18,Plantronics,PO-AUD-001,NF-003001,Call Center,30,Prateleira F,Rua F1,Audio Zone Foxtrot,Caixa F1,True,
+AUD002,Caixa de Som JBL,audio e video,Charge 5,JBLCH5001,JBL,600.0,2024-02-22,JBL Brasil,PO-AUD-002,NF-003002,Eventos/Reuniões,8,Prateleira F,Rua F2,Audio Zone Foxtrot,Caixa F2,True,
+AUD003,Microfone Blue Yeti,audio e video,Blue Yeti Nano,BLUYETI001,Blue Microphones,400.0,2024-03-08,Blue Microphones,PO-AUD-003,NF-003003,Podcast/Gravação,4,Prateleira G,Rua G1,Studio Zone Golf,Caixa G1,False,
+AUD004,Webcam Logitech C920,audio e video,C920 HD Pro,LGTC920001,Logitech,350.0,2024-02-12,Logitech,PO-AUD-004,NF-003004,Videoconferência,18,Prateleira F,Rua F1,Audio Zone Foxtrot,Caixa F3,True,
+AUD005,Adaptador USB-C Hub,audio e video,PowerExpand 11-in-1,ANKPOW001,Anker,300.0,2024-01-28,Anker Brasil,PO-AUD-005,NF-003005,Conectividade Hub,15,Prateleira C,Rua C2,TechStop Gamma,Caixa C3,True,
+LIX001,Impressora HP Antiga,lixo eletrônico,LaserJet 1320,HPLJ1320001,HP,50.0,2023-01-10,HP Brasil,PO-LIX-001,NF-LIX001,Descarte Programado,5,Prateleira H,Rua H1,Lixo Zone Hotel,Caixa H1,False,
+LIX002,Monitor CRT Dell,lixo eletrônico,UltraSharp 1901FP,DELL1901001,Dell,100.0,2022-05-15,Dell Brasil,PO-LIX-002,NF-LIX002,Descarte Programado,3,Prateleira H,Rua H1,Lixo Zone Hotel,Caixa H2,False,
+LIX003,CPU Pentium 4,lixo eletrônico,OptiPlex GX280,DELLGX001,Dell,80.0,2021-03-20,Dell Brasil,PO-LIX-003,NF-LIX003,Descarte Programado,8,Prateleira I,Rua I1,Lixo Zone India,Caixa I1,True,
+LIX004,Teclado PS/2 Antigo,lixo eletrônico,QuietKey KB212-B,DELLKB001,Dell,30.0,2020-08-10,Dell Brasil,PO-LIX-004,NF-LIX004,Descarte Programado,12,Prateleira I,Rua I2,Lixo Zone India,Caixa I2,False,
+OUT001,Cabo HDMI Premium,outros,HDMI 2.1 Ultra High Speed,HDMI21001,Cabo Premium,80.0,2024-02-05,Cabo Premium Ltda,PO-OUT-001,NF-OUT001,Conectividade,50,Prateleira J,Rua J1,Outros Zone Juliet,Caixa J1,True,
+OUT002,Hub USB 3.0,outros,Anker 10-Port USB 3.0,ANK10USB001,Anker,150.0,2024-01-12,Anker Brasil,PO-OUT-002,NF-OUT002,Expansão USB,20,Prateleira J,Rua J1,Outros Zone Juliet,Caixa J2,False,
+OUT003,Suporte Monitor Ajustável,outros,Herman Miller Ollin,HMOLLIN001,Herman Miller,900.0,2024-03-12,Herman Miller,PO-OUT-003,NF-OUT003,Ergonomia,15,Prateleira K,Rua K1,Ergonomia Zone Kilo,Caixa K1,True,
+OUT004,Mousepad Gamer RGB,outros,Corsair MM800 RGB,CORMM800001,Corsair,120.0,2024-02-18,Corsair Gaming,PO-OUT-004,NF-OUT004,Gaming/Produtividade,25,Prateleira C,Rua C2,TechStop Gamma,Caixa C4,True,
+OUT005,Filtro de Linha,outros,Fortrek 8 Tomadas,FORT8TOM001,Fortrek,200.0,2024-01-22,Fortrek,PO-OUT-005,NF-OUT005,Proteção Elétrica,30,Prateleira J,Rua J2,Outros Zone Juliet,Caixa J3,False,

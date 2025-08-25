@@ -1,0 +1,4 @@
+timestamp,item_id,name,description,building,andar,quantidade,cost,valor_total,periodo,observacoes,mes,ano,trimestre
+2025-08-24,Mouse-HQ1,Mouse,M90,HQ1,6° ANDAR L MENOR,1,31.9,31.9,AUGUST,Não informado,8.0,2025.0,3.0
+2025-08-25,Headset-HQ1,Headset,Plantronics blackwire,HQ1,2° ANDAR L MAIOR,1,260.0,260.0,AUGUST,Não informado,8.0,2025.0,3.0
+2025-08-25,Adaptadores usb c-HQ1,Adaptadores usb c,Gorila,HQ1,2° ANDAR L MENOR,1,122.0,122.0,AUGUST,,,,

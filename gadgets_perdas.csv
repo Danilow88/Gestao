@@ -1,0 +1,12 @@
+timestamp,name,quantidade,valor_unit,valor_total,local,responsavel,motivo,observacoes,status,mes,ano,id,item_id,description,building,andar,cost,periodo
+2025-08-20,Mouse,1,31.9,31.9,Spark,Não informado,Migração de dados,Não informado,perdido,2025-08,2025.0,migrado_20250820_000000_Mouse-Spark,,,,,,
+2025-08-20,Adaptadores usb c,1,360.0,360.0,HQ1,Não informado,Migração de dados,Não informado,perdido,2025-08,2025.0,migrado_20250820_000000_Adaptadores usb c-HQ1,,,,,,
+2025-08-20,Adaptadores usb c,1,360.0,360.0,HQ1,Não informado,Migração de dados,Não informado,perdido,2025-08,2025.0,migrado_20250820_000000_Adaptadores usb c-HQ1,,,,,,
+2025-08-24,Usb Gorila 6 em1,1,112.0,112.0,HQ1,Não informado,Migração de dados,,perdido,2025-08,2025.0,migrado_20250824_000000_Usb Gorila 6 em1-HQ1,,,,,,
+2025-08-24,Headset,1,260.0,260.0,HQ1,Não informado,Migração de dados,,perdido,2025-08,2025.0,migrado_20250824_000000_Headset-HQ1,,,,,,
+2025-08-24,Headset,1,260.0,260.0,HQ1,Não informado,Migração de dados,,perdido,2025-08,2025.0,migrado_20250824_000000_Headset-HQ1,,,,,,
+2025-08-24,Adaptadores usb c,1,360.0,360.0,HQ1,Não informado,Migração de dados,,perdido,2025-08,2025.0,migrado_20250824_000000_Adaptadores usb c-HQ1,,,,,,
+2025-08-24,Mouse,1,,31.9,,,,,,,,,Mouse-HQ1,M90,HQ1,2° ANDAR L MENOR,31.9,AUGUST
+2025-08-24,Mouse,1,,31.9,,,,,,,,,Mouse-HQ1,M90,HQ1,2° ANDAR L MENOR,31.9,AUGUST
+2025-08-24,Teclado k120,1,,90.0,,,,,,,,,Teclado k120-HQ1,Logitech kq120,HQ1,2° ANDAR L MENOR,90.0,AUGUST
+2025-08-24,Headset,1,,260.0,,,,,,,,,Headset-Desconhecido,Plantronics blackwire,Desconhecido,4° ANDAR L MENOR,260.0,AUGUST

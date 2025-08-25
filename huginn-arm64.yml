@@ -1,0 +1,39 @@
+version: '3'
+services:
+  huginn:
+    image: ghcr.io/huginn/huginn:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_NAME=huginn
+      - DATABASE_USERNAME=huginn
+      - DATABASE_PASSWORD=huginn123
+      - DATABASE_HOST=mysql
+      - HUGINN_ADMIN_NAME=Admin
+      - HUGINN_ADMIN_EMAIL=admin@example.com
+      - HUGINN_ADMIN_PASSWORD=admin123
+      - SECRET_KEY_BASE=d229e4d60e135dc5a6e6a2b0f0ef57890c91827364fb746c4567f7832a8b0e7b1
+      - INVITATION_CODE=
+      - REQUIRE_CONFIRMED_EMAIL=false
+      - SKIP_INVITATION_CODE=true
+      - SEND_EMAIL_IN_DEVELOPMENT=false
+      - EMAIL_FROM_ADDRESS=huginn@localhost
+    depends_on:
+      - mysql
+    platform: linux/amd64
+
+  mysql:
+    image: mysql:8.0
+    platform: linux/amd64
+    environment:
+      - MYSQL_DATABASE=huginn
+      - MYSQL_USER=huginn
+      - MYSQL_PASSWORD=huginn123
+      - MYSQL_ROOT_PASSWORD=root123
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+volumes:
+  mysql_data:

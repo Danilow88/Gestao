@@ -31,3 +31,4 @@ PyNFe>=0.6.0
 # Dependências para serviço local de ping
 flask>=3.0.0
 flask-cors>=4.0.0
+streamlit-aggrid>=0.3.4

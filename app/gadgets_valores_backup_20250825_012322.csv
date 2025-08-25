@@ -1,0 +1,13 @@
+item_id,name,description,building,cost,fornecedor,quantidade_reposicao
+Headset-spk,Headset,Plantronics blackwire,Spark,260.0,Plantronics,10
+Mouse-spk,Mouse,M90,Spark,31.9,Microsoft,15
+Teclado k120-spk,Teclado k120,Logitech kq120,Spark,90.0,Logitech,15
+Adaptadores usb c-spk,Adaptadores usb c,Gorila,Spark,122.0,Geonav,10
+Headset-hq1,Headset,Plantronics blackwire,HQ1,260.0,Plantronics,5
+Mouse-hq1,Mouse,M90,HQ1,31.9,Microsoft,15
+Teclado k120-hq1,Teclado k120,Logitech kq120,HQ1,90.0,Logitech,20
+Adaptadores usb c-hq1,Adaptadores usb c,Gorila,HQ1,122.0,Geonav,5
+Headset-hq2,Headset,Plantronics blackwire,HQ2,260.0,Plantronics,5
+Mouse-hq2,Mouse,M90,HQ2,31.9,Microsoft,10
+Teclado k120-hq2,Teclado k120,Logitech kq120,HQ2,90.0,Logitech,15
+Adaptadores usb c-hq2,Adaptadores usb c,Gorila,HQ2,122.0,Geonav,5
