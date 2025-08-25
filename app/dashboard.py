@@ -2668,220 +2668,337 @@ def render_visual_editor():
 # ========================================================================================
 
 def render_horizontal_navigation():
-    """Renderiza a navegação principal horizontal responsiva"""
+    """Renderiza a navegação principal horizontal responsiva com design moderno"""
     
-    # CSS para navegação horizontal responsiva
+    # CSS para navegação horizontal responsiva com design premium
     st.markdown("""
     <style>
-    .horizontal-nav {
-        /* background: #8B5CF6; - Removido fundo roxo */
-        padding: 0;
-        border-radius: 0;
-        margin-bottom: 0;
-        box-shadow: none;
+    /* Reset e configurações base */
+    .nav-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        margin: 1rem 0;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .nav-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+        pointer-events: none;
     }
     
     .nav-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1rem;
+        margin-bottom: 2rem;
         flex-wrap: wrap;
         gap: 1rem;
+        position: relative;
+        z-index: 2;
     }
     
     .nav-title {
         color: white;
-        font-size: 1.5rem;
-        font-weight: 700;
+        font-size: 2.5rem;
+        font-weight: 800;
         margin: 0;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        background: linear-gradient(45deg, #ffffff, #f0f0f0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
     
     .user-info {
         color: white;
-        font-size: 0.9rem;
+        font-size: 1rem;
         display: flex;
         align-items: center;
         gap: 1rem;
         flex-wrap: wrap;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
     }
     
-    .nav-buttons {
+    /* Sistema de navegação em grid responsivo */
+    .nav-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 0.8rem;
-        margin-top: 1rem;
-        align-items: stretch;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+        position: relative;
+        z-index: 2;
     }
     
+    /* Botões de navegação principais */
     .nav-button {
-        background: rgba(255, 255, 255, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+        border: 2px solid rgba(255, 255, 255, 0.3);
         color: white !important;
-        padding: 1.2rem 0.8rem;
-        border-radius: 12px;
+        padding: 1.5rem 1rem;
+        border-radius: 16px;
         text-align: center;
         cursor: pointer;
-        transition: all 0.3s ease;
-        font-weight: 600;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        font-weight: 700;
         text-decoration: none;
-        backdrop-filter: blur(10px);
-        font-size: 0.95rem;
+        backdrop-filter: blur(20px);
+        font-size: 1rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         min-width: 0;
-        height: 64px;
+        height: 80px;
         display: flex;
         align-items: center;
         justify-content: center;
         box-sizing: border-box;
+        position: relative;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+    
+    .nav-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        border-radius: 16px;
     }
     
     .nav-button:hover {
-        background: rgba(255, 255, 255, 0.25);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.2) 100%);
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+        border-color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .nav-button:hover::before {
+        opacity: 1;
     }
     
     .nav-button-active {
-        background: rgba(255, 255, 255, 0.3) !important;
-        border: 1px solid rgba(255, 255, 255, 0.4) !important;
-        box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15);
-        font-weight: 700;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.3) 100%) !important;
+        border: 2px solid rgba(255, 255, 255, 0.6) !important;
+        box-shadow: 0 12px 40px rgba(255, 255, 255, 0.2);
+        font-weight: 800;
+        transform: translateY(-2px);
     }
     
     /* Estilos para botões do Streamlit dentro da navegação */
-    .horizontal-nav .stButton > button {
-        background: rgba(255, 255, 255, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+    .nav-container .stButton > button {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
+        border: 2px solid rgba(255, 255, 255, 0.3);
         color: white;
-        padding: 1rem;
-        border-radius: 10px;
-        font-weight: 600;
-        font-size: 0.95rem;
-        height: 60px;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
+        padding: 1.2rem 1.5rem;
+        border-radius: 14px;
+        font-weight: 700;
+        font-size: 1rem;
+        height: 70px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     }
     
-    .horizontal-nav .stButton > button:hover {
-        background: rgba(255, 255, 255, 0.25);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+    .nav-container .stButton > button:hover {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.25) 100%);
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+        border-color: rgba(255, 255, 255, 0.5);
     }
     
     /* Botão ativo (primary) */
-    .horizontal-nav .stButton > button[data-baseweb="button"][kind="primary"] {
-        background: rgba(255, 255, 255, 0.9);
-        color: #8B5CF6;
-        font-weight: 700;
-        box-shadow: 0 2px 8px rgba(255, 255, 255, 0.3);
+    .nav-container .stButton > button[data-baseweb="button"][kind="primary"] {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        color: #667eea;
+        font-weight: 800;
+        box-shadow: 0 12px 40px rgba(255, 255, 255, 0.3);
+        border: 2px solid rgba(255, 255, 255, 0.8);
     }
     
-    .horizontal-nav .stButton > button[data-baseweb="button"][kind="primary"]:hover {
-        background: white;
-        transform: translateY(-1px);
+    .nav-container .stButton > button[data-baseweb="button"][kind="primary"]:hover {
+        background: linear-gradient(135deg, #ffffff 0%, #e9ecef 100%);
+        transform: translateY(-2px) scale(1.01);
+        box-shadow: 0 16px 50px rgba(255, 255, 255, 0.4);
     }
     
+    /* Seção administrativa */
     .admin-section {
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 2px solid rgba(255, 255, 255, 0.2);
+        position: relative;
+        z-index: 2;
     }
     
-    @media (max-width: 768px) {
-        .nav-buttons {
+    .admin-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+    }
+    
+    /* Responsividade */
+    @media (max-width: 1200px) {
+        .nav-grid {
             grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: 0.6rem;
+            gap: 0.8rem;
         }
         
         .nav-button {
-            font-size: 0.85rem;
-            padding: 0.9rem 0.6rem;
-            min-height: 42px;
+            height: 70px;
+            padding: 1.2rem 0.8rem;
+            font-size: 0.95rem;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .nav-container {
+            padding: 1.5rem;
+            border-radius: 16px;
+        }
+        
+        .nav-grid {
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.7rem;
+        }
+        
+        .nav-button {
+            height: 65px;
+            padding: 1rem 0.7rem;
+            font-size: 0.9rem;
+            border-radius: 14px;
+        }
+        
+        .nav-title {
+            font-size: 2rem;
         }
         
         .nav-header {
             flex-direction: column;
             text-align: center;
-        }
-        
-        .nav-title {
-            font-size: 1.2rem;
-        }
-        
-        .user-info {
-            font-size: 0.8rem;
-            justify-content: center;
+            margin-bottom: 1.5rem;
         }
     }
     
     @media (max-width: 480px) {
-        .nav-buttons {
-            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-            gap: 0.5rem;
+        .nav-container {
+            padding: 1rem;
+            border-radius: 12px;
+        }
+        
+        .nav-grid {
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 0.6rem;
         }
         
         .nav-button {
-            font-size: 0.8rem;
-            padding: 0.8rem 0.5rem;
-            min-height: 38px;
+            height: 60px;
+            padding: 0.8rem 0.6rem;
+            font-size: 0.85rem;
+            border-radius: 12px;
         }
         
-        .horizontal-nav {
-            padding: 0.8rem;
-            margin-bottom: 1rem;
+        .nav-title {
+            font-size: 1.8rem;
         }
     }
+    
+    /* Animações especiais */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .nav-button {
+        animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .nav-button:nth-child(1) { animation-delay: 0.1s; }
+    .nav-button:nth-child(2) { animation-delay: 0.2s; }
+    .nav-button:nth-child(3) { animation-delay: 0.3s; }
+    .nav-button:nth-child(4) { animation-delay: 0.4s; }
+    .nav-button:nth-child(5) { animation-delay: 0.5s; }
+    .nav-button:nth-child(6) { animation-delay: 0.6s; }
+    .nav-button:nth-child(7) { animation-delay: 0.7s; }
+    .nav-button:nth-child(8) { animation-delay: 0.8s; }
+    .nav-button:nth-child(9) { animation-delay: 0.9s; }
+    .nav-button:nth-child(10) { animation-delay: 1.0s; }
+    .nav-button:nth-child(11) { animation-delay: 1.1s; }
+    .nav-button:nth-child(12) { animation-delay: 1.2s; }
+    .nav-button:nth-child(13) { animation-delay: 1.3s; }
+    .nav-button:nth-child(14) { animation-delay: 1.4s; }
+    .nav-button:nth-child(15) { animation-delay: 1.5s; }
     </style>
-        """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     # Obter configurações avançadas
     advanced_config = getattr(st.session_state, 'advanced_visual_config', {})
     dashboard_title = advanced_config.get('dashboard_title', 'Gestão de Estoque')
     
-    # Header com título FORA da área roxa
+    # Header com título e informações do usuário
     user_name = st.session_state.users_db[st.session_state.current_user]['nome'].split()[0]
     user_email = st.session_state.current_user
     is_admin_user = is_admin(st.session_state.current_user)
     
-    # Título principal fora da navegação
+    # Container principal da navegação com design moderno
+    st.markdown('<div class="nav-container">', unsafe_allow_html=True)
+    
+    # Header da navegação
     col_title_main, col_user_main = st.columns([3, 1])
     
     with col_title_main:
         st.markdown(f"""
-        <h1 style="color: #9333EA; margin: 1rem 0 0.5rem 0; font-size: 2.2rem; font-weight: 700; display: flex; align-items: center;">
-            ■ {dashboard_title}
-        </h1>
+        <div class="nav-header">
+            <h1 class="nav-title">🚀 {dashboard_title}</h1>
+        </div>
         """, unsafe_allow_html=True)
     
     with col_user_main:
         admin_badge = "★ Admin" if is_admin_user else ""
-        if st.button("← Logout", key="logout_horizontal", help=f"{user_name} ({user_email})"):
+        if st.button("🔓 Logout", key="logout_horizontal", help=f"{user_name} ({user_email})"):
             st.session_state.authenticated = False
             st.session_state.current_user = None
             st.session_state.current_page = 'dashboard'
             st.rerun()
         st.markdown(f"""
-        <div style="text-align: right; color: #64748b; font-size: 0.9rem; margin-top: 1.5rem;">
-            ○ {user_name} {admin_badge}
+        <div class="user-info">
+            👤 {user_name} {admin_badge}
         </div>
         """, unsafe_allow_html=True)
     
-    # Navegação simples sem área roxa
-    st.markdown("---")  # Separador simples
-        
-    # Páginas principais
+    # Páginas principais organizadas em grupos lógicos
     pages = {
-        'dashboard': '■ Dash',
-        'inventario_unificado': '▬ Estoque',
-        'impressoras': '■ Print',
-        'controle_gadgets': '▤ Gadgets',
-        'entrada_estoque': '☰ Entrada',
-        'saida_estoque': '↗ Saída',
-        'movimentacoes': '⟷',
-        'relatorios': '▬ Reports',
+        'dashboard': '📊 Dash',
+        'inventario_unificado': '📦 Estoque',
+        'impressoras': '🖨️ Print',
+        'controle_gadgets': '📱 Gadgets',
+        'entrada_estoque': '⬇️ Entrada',
+        'saida_estoque': '⬆️ Saída',
+        'movimentacoes': '🔄 Movimentações',
+        'relatorios': '📈 Reports',
         'cadastro_usuarios': '👥 Users',
         'cadastro_produtos': '📦 Produtos',
         'cadastro_fornecedores': '🏢 Fornecedores',
@@ -2893,38 +3010,48 @@ def render_horizontal_navigation():
     
     # Se tem entrada automática, adicionar
     if NFELIB_DISPONIVEL or PYNFE_DISPONIVEL:
-        pages['entrada_automatica'] = '◉ SEFAZ'
+        pages['entrada_automatica'] = '⚡ SEFAZ'
     
-    # Criar colunas para os botões principais
-    num_pages = len(pages)
-    cols = st.columns(num_pages)
+    # Criar grid responsivo para os botões
+    st.markdown('<div class="nav-grid">', unsafe_allow_html=True)
     
-    for i, (page_key, page_name) in enumerate(pages.items()):
-        with cols[i]:
-            is_active = st.session_state.current_page == page_key
-            button_style = "primary" if is_active else "secondary"
-            if st.button(page_name, key=f"nav_{page_key}", use_container_width=True, type=button_style):
-                st.session_state.current_page = page_key
-                st.rerun()
+    for page_key, page_name in pages.items():
+        is_active = st.session_state.current_page == page_key
+        button_style = "primary" if is_active else "secondary"
+        
+        if st.button(page_name, key=f"nav_{page_key}", use_container_width=True, type=button_style):
+            st.session_state.current_page = page_key
+            st.rerun()
+    
+    st.markdown('</div>', unsafe_allow_html=True)
     
     # Seção administrativa (se for admin)
     if is_admin_user:
-        st.markdown("---")
+        st.markdown('<div class="admin-section">', unsafe_allow_html=True)
         
         admin_col1, admin_col2, admin_col3 = st.columns([1, 1, 2])
         
         with admin_col1:
-            if st.button("● Users", key="admin_users_nav", use_container_width=True):
+            if st.button("👑 Admin Users", key="admin_users_nav", use_container_width=True):
                 st.session_state.current_page = 'admin_users'
                 st.rerun()
         
         with admin_col2:
-            if st.button("■ Visual", key="visual_editor_nav", use_container_width=True):
+            if st.button("🎨 Visual Editor", key="visual_editor_nav", use_container_width=True):
                 st.session_state.current_page = 'visual_editor'
                 st.rerun()
         
         with admin_col3:
-            st.write("")  # Espaço vazio
+            st.markdown("""
+            <div style="text-align: center; color: rgba(255,255,255,0.7); font-size: 0.9rem; padding: 1rem;">
+                🔧 Painel Administrativo
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Fechar container da navegação
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ========================================================================================
 # PÁGINAS DO SISTEMA
