@@ -2739,6 +2739,9 @@ def render_horizontal_navigation():
         justify-content: center;
         align-items: center;
         flex-wrap: nowrap;
+        overflow-x: auto;
+        padding: 0.5rem;
+        width: 100%;
     }
     
     /* Botões de navegação estilo foto */
@@ -2909,8 +2912,9 @@ def render_horizontal_navigation():
         
         .nav-grid {
             gap: 0.6rem;
-            justify-content: center;
-            flex-wrap: wrap;
+            justify-content: flex-start;
+            flex-wrap: nowrap;
+            overflow-x: auto;
         }
         
         .nav-button {
@@ -2918,6 +2922,7 @@ def render_horizontal_navigation():
             height: 40px;
             padding: 0.6rem 1.2rem;
             border-radius: 6px;
+            flex-shrink: 0;
         }
         
         .nav-button-icon {
@@ -2947,7 +2952,10 @@ def render_horizontal_navigation():
         
         .nav-grid {
             gap: 0.5rem;
-            flex-direction: column;
+            flex-direction: row;
+            justify-content: flex-start;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
         }
         
         .nav-button {
@@ -2955,6 +2963,7 @@ def render_horizontal_navigation():
             height: 38px;
             padding: 0.5rem 1rem;
             border-radius: 6px;
+            flex-shrink: 0;
         }
         
         .nav-button-icon {
