@@ -1,0 +1,9 @@
+prateleira_id,nome,corredor,setor,capacidade_maxima,capacidade_atual,responsavel_id,ativo,data_cadastro
+PRAT001,Corredor A - Prateleira 1,A,Informática,100,75,USR003,True,2025-08-25
+PRAT002,Corredor A - Prateleira 2,A,Informática,100,60,USR003,True,2025-08-25
+PRAT003,Corredor B - Prateleira 1,B,Periféricos,80,45,USR003,True,2025-08-25
+PRAT004,Corredor B - Prateleira 2,B,Periféricos,80,30,USR003,True,2025-08-25
+PRAT005,Corredor C - Prateleira 1,C,Monitores,50,12,USR003,True,2025-08-25
+PRAT006,Corredor C - Prateleira 2,C,Monitores,50,8,USR003,True,2025-08-25
+PRAT007,Corredor D - Prateleira 1,D,Audio e Video,60,25,USR003,True,2025-08-25
+PRAT008,Corredor D - Prateleira 2,D,Audio e Video,60,40,USR003,True,2025-08-25

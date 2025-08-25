@@ -1,0 +1,6 @@
+usuario_id,nome,email,telefone,departamento,cargo,nivel_acesso,ativo,data_cadastro,ultimo_acesso
+USR001,João Silva,joao.silva@empresa.com,(11) 9999-1111,TI,Analista de Sistemas,Administrador,True,2025-08-25,2025-08-25
+USR002,Maria Santos,maria.santos@empresa.com,(11) 9999-2222,Compras,Comprador,Operador,True,2025-08-25,2025-08-25
+USR003,Pedro Costa,pedro.costa@empresa.com,(11) 9999-3333,Almoxarifado,Almoxarife,Operador,True,2025-08-25,2025-08-25
+USR004,Ana Oliveira,ana.oliveira@empresa.com,(11) 9999-4444,Financeiro,Analista Financeiro,Visualizador,True,2025-08-25,2025-08-25
+USR005,Carlos Lima,carlos.lima@empresa.com,(11) 9999-5555,TI,Técnico de Suporte,Operador,True,2025-08-25,2025-08-25

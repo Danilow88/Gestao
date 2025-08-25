@@ -1,0 +1,9 @@
+numero_serie,sku,status,localizacao,usuario_responsavel,data_aquisicao,valor_aquisicao,fornecedor_id,garantia_ate,observacoes,ativo
+NS001,SKU001,Em uso,Setor TI - Mesa 5,USR001,2025-01-15,2500.00,FORN001,2026-01-15,Notebook principal do analista,True
+NS002,SKU002,Em uso,Setor TI - Mesa 3,USR005,2025-02-20,45.00,FORN002,2026-02-20,Mouse do técnico de suporte,True
+NS003,SKU003,Em uso,Setor TI - Mesa 1,USR001,2025-03-10,120.00,FORN001,2026-03-10,Teclado do analista,True
+NS004,SKU004,Em uso,Setor Financeiro - Mesa 2,USR004,2025-04-05,350.00,FORN003,2026-04-05,Monitor da analista financeira,True
+NS005,SKU005,Em uso,Setor Marketing - Mesa 1,USR002,2025-05-12,89.00,FORN002,2026-05-12,Headset para reuniões,True
+NS006,SKU001,Em estoque,PRAT001,,2025-06-18,2500.00,FORN001,2026-06-18,Notebook em estoque,True
+NS007,SKU002,Em estoque,PRAT003,,2025-07-22,45.00,FORN002,2026-07-22,Mouse em estoque,True
+NS008,SKU003,Em estoque,PRAT001,,2025-08-01,120.00,FORN001,2026-08-01,Teclado em estoque,True

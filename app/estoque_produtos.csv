@@ -1,0 +1,6 @@
+sku,nome,categoria,descricao,unidade_medida,preco_unitario,estoque_minimo,estoque_atual,fornecedor_id,ativo,data_cadastro
+SKU001,Notebook Dell Inspiron,Informática,Notebook Dell Inspiron 15 polegadas,unidade,2500.00,5,15,FORN001,True,2025-08-25
+SKU002,Mouse Wireless Logitech,Informática,Mouse sem fio Logitech M185,unidade,45.00,20,50,FORN002,True,2025-08-25
+SKU003,Teclado Mecânico RGB,Informática,Teclado mecânico com RGB,unidade,120.00,10,25,FORN001,True,2025-08-25
+SKU004,Monitor LG 24",Informática,Monitor LG 24 polegadas Full HD,unidade,350.00,8,12,FORN003,True,2025-08-25
+SKU005,Headset Gamer,Informática,Headset para jogos com microfone,unidade,89.00,15,30,FORN002,True,2025-08-25

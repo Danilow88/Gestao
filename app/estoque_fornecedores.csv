@@ -1,0 +1,6 @@
+fornecedor_id,nome,cnpj,telefone,email,endereco,cidade,estado,cep,ativo,data_cadastro
+FORN001,Tech Solutions Ltda,12.345.678/0001-90,(11) 9999-8888,contato@techsolutions.com.br,Rua das Tecnologias 123,São Paulo,SP,01234-567,True,2025-08-25
+FORN002,Digital Components,98.765.432/0001-10,(21) 8888-7777,vendas@digitalcomponents.com.br,Av. Digital 456,Rio de Janeiro,RJ,20000-123,True,2025-08-25
+FORN003,Inovatech Comércio,55.444.333/0001-22,(31) 7777-6666,pedidos@inovatech.com.br,Rua da Inovação 789,Belo Horizonte,MG,30000-456,True,2025-08-25
+FORN004,Electro Supply,11.222.333/0001-44,(41) 6666-5555,contato@electrosupply.com.br,Av. Eletrônica 321,Curitiba,PR,80000-789,True,2025-08-25
+FORN005,Smart Gadgets,99.888.777/0001-66,(51) 5555-4444,vendas@smartgadgets.com.br,Rua Smart 654,Porto Alegre,RS,90000-012,True,2025-08-25

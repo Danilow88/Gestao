@@ -1,0 +1,33 @@
+# Diretório Huginn (repositório separado)
+huginn/
+
+# Arquivos de backup
+*_backup_*.py
+*_backup_*.csv
+dashboard_backup_*.py
+
+# Cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Arquivos temporários
+*.tmp
+*.temp
+
+# Logs
+*.log
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos de ambiente
+.env
+.env.local
+
+# Arquivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo

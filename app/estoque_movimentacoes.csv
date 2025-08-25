@@ -1,0 +1,7 @@
+movimentacao_id,sku,numero_serie,tipo_movimentacao,quantidade,motivo,usuario_id,data_movimentacao,prateleira_origem,prateleira_destino,observacoes
+MOV001,SKU001,NS001,Entrada,10,Compra de fornecedor,USR002,2025-08-25 10:00:00,,PRAT001,Entrada de 10 notebooks Dell
+MOV002,SKU002,NS002,Saída,5,Requisição TI,USR001,2025-08-25 11:30:00,PRAT003,,Saída de 5 mouses para setor TI
+MOV003,SKU003,NS003,Transferência,8,Reorganização estoque,USR003,2025-08-25 14:15:00,PRAT001,PRAT002,Transferência entre prateleiras
+MOV004,SKU004,NS004,Entrada,6,Devolução cliente,USR005,2025-08-25 16:45:00,,PRAT005,Devolução de 6 monitores
+MOV005,SKU005,NS005,Saída,12,Evento corporativo,USR002,2025-08-25 17:30:00,PRAT007,,Saída para evento da empresa
+MOV006,SKU001,NS006,Inventário,0,Ajuste inventário,USR003,2025-08-25 18:00:00,PRAT001,PRAT001,Ajuste de estoque - diferença encontrada
