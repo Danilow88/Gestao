@@ -2881,7 +2881,14 @@ def render_horizontal_navigation():
         'entrada_estoque': '☰ Entrada',
         'saida_estoque': '↗ Saída',
         'movimentacoes': '⟷',
-        'relatorios': '▬ Reports'
+        'relatorios': '▬ Reports',
+        'cadastro_usuarios': '👥 Users',
+        'cadastro_produtos': '📦 Produtos',
+        'cadastro_fornecedores': '🏢 Fornecedores',
+        'controle_serial': '🔢 N/S',
+        'controle_sku': '🏷️ SKU',
+        'mapeamento_prateleiras': '📋 Prateleiras',
+        'estoque_prateleiras': '🗂️ Estoque/Prateleira'
     }
     
     # Se tem entrada automática, adicionar
@@ -10491,438 +10498,8 @@ def init_estoque_data():
 
 
 def render_controle_estoque():
-    """Renderiza interface de controle de estoque unificado"""
-    st.subheader("📦 Sistema de Controle de Estoque Unificado")
-    
-    # Importar o controlador de estoque
-    try:
-        from estoque_controller import EstoqueController
-        estoque = EstoqueController()
-        
-        # Navegação por abas do estoque
-        tab_estoque1, tab_estoque2, tab_estoque3, tab_estoque4, tab_estoque5, tab_estoque6, tab_estoque7, tab_estoque8 = st.tabs([
-            "🏠 Dashboard", "📦 Produtos", "🏢 Fornecedores", "👥 Usuários", "🗂️ Prateleiras", "🔄 Movimentações", "🔢 Ativos", "📈 Relatórios"
-        ])
-        
-        with tab_estoque1:
-            render_dashboard_estoque(estoque)
-        
-        with tab_estoque2:
-            render_produtos_estoque(estoque)
-        
-        with tab_estoque3:
-            render_fornecedores_estoque(estoque)
-        
-        with tab_estoque4:
-            render_usuarios_estoque(estoque)
-        
-        with tab_estoque5:
-            render_prateleiras_estoque(estoque)
-        
-        with tab_estoque6:
-            render_movimentacoes_estoque(estoque)
-        
-        with tab_estoque7:
-            render_ativos_estoque(estoque)
-        
-        with tab_estoque8:
-            render_relatorios_estoque(estoque)
-            
-    except ImportError as e:
-        st.error(f"❌ Erro ao importar módulo de estoque: {e}")
-        st.info("💡 Certifique-se de que o arquivo 'estoque_controller.py' está no diretório correto")
-        
-        # Fallback para o sistema antigo
-        st.warning("⚠️ Usando sistema de estoque legado...")
-        render_estoque_legado()
-
-def render_dashboard_estoque(estoque):
-    """Renderiza o dashboard principal do estoque"""
-    st.header("🏠 Dashboard Principal do Estoque")
-    
-    # Métricas principais
-    col1, col2, col3, col4 = st.columns(4)
-    
-    stats = estoque.get_estatisticas_gerais()
-    
-    with col1:
-        st.metric("Total de Produtos", stats.get('total_produtos', 0))
-    
-    with col2:
-        st.metric("Total de Ativos", stats.get('total_ativos', 0))
-    
-    with col3:
-        st.metric("Movimentações", stats.get('total_movimentacoes', 0))
-    
-    with col4:
-        st.metric("Valor Total", f"R$ {stats.get('valor_total_estoque', 0):,.2f}")
-    
-    # Alertas de estoque baixo
-    st.subheader("⚠️ Alertas de Estoque Baixo")
-    estoque_baixo = estoque.get_estoque_baixo()
-    
-    if not estoque_baixo.empty:
-        st.dataframe(estoque_baixo[['sku', 'nome', 'estoque_atual', 'estoque_minimo']], 
-                    use_container_width=True)
-    else:
-        st.success("✅ Nenhum produto com estoque baixo!")
-    
-    # Gráfico de produtos por categoria
-    st.subheader("📊 Produtos por Categoria")
-    if 'produtos' in estoque.data and not estoque.data['produtos'].empty:
-        produtos_categoria = estoque.data['produtos'].groupby('categoria').size().reset_index(name='quantidade')
-        fig = px.pie(produtos_categoria, values='quantidade', names='categoria', 
-                    title="Distribuição de Produtos por Categoria")
-        st.plotly_chart(fig, use_container_width=True)
-
-def render_produtos_estoque(estoque):
-    """Renderiza a gestão de produtos"""
-    st.header("📦 Gestão de Produtos")
-    
-    with st.expander("➕ Adicionar Novo Produto", expanded=True):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            sku = st.text_input("SKU*", placeholder="Ex: SKU001", key="produto_sku")
-            nome = st.text_input("Nome do Produto*", placeholder="Ex: Notebook Dell", key="produto_nome")
-            categoria = st.selectbox("Categoria*", ["Informática", "Periféricos", "Monitores", "Audio e Video", "Outros"], key="produto_categoria")
-            descricao = st.text_area("Descrição", placeholder="Descrição detalhada do produto", key="produto_descricao")
-        
-        with col2:
-            unidade_medida = st.selectbox("Unidade de Medida*", ["unidade", "kg", "m", "l", "par"], key="produto_unidade")
-            preco_unitario = st.number_input("Preço Unitário (R$)*", min_value=0.0, value=0.0, step=0.01, key="produto_preco")
-            estoque_minimo = st.number_input("Estoque Mínimo*", min_value=0, value=0, step=1, key="produto_minimo")
-            fornecedor_id = st.selectbox("Fornecedor*", 
-                                       estoque.data.get('fornecedores', pd.DataFrame())['fornecedor_id'].tolist() 
-                                       if 'fornecedores' in estoque.data else [], key="produto_fornecedor")
-        
-        if st.button("✅ Adicionar Produto", key="btn_add_produto"):
-            if sku and nome and categoria and unidade_medida and preco_unitario >= 0 and estoque_minimo >= 0 and fornecedor_id:
-                success, message = estoque.add_produto(sku, nome, categoria, descricao, unidade_medida, 
-                                                     preco_unitario, estoque_minimo, fornecedor_id)
-                if success:
-                    st.success(message)
-                    st.rerun()
-                else:
-                    st.error(message)
-            else:
-                st.error("Por favor, preencha todos os campos obrigatórios!")
-    
-    # Lista de produtos
-    st.subheader("📋 Lista de Produtos")
-    if 'produtos' in estoque.data and not estoque.data['produtos'].empty:
-        st.dataframe(estoque.data['produtos'], use_container_width=True)
-    else:
-        st.info("Nenhum produto cadastrado ainda.")
-
-def render_fornecedores_estoque(estoque):
-    """Renderiza a gestão de fornecedores"""
-    st.header("🏢 Gestão de Fornecedores")
-    
-    with st.expander("➕ Adicionar Novo Fornecedor", expanded=True):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            fornecedor_id = st.text_input("ID do Fornecedor*", placeholder="Ex: FORN001", key="fornecedor_id")
-            nome = st.text_input("Nome da Empresa*", placeholder="Ex: Tech Solutions Ltda", key="fornecedor_nome")
-            cnpj = st.text_input("CNPJ*", placeholder="Ex: 12.345.678/0001-90", key="fornecedor_cnpj")
-            telefone = st.text_input("Telefone*", placeholder="Ex: (11) 9999-8888", key="fornecedor_telefone")
-            email = st.text_input("Email*", placeholder="Ex: contato@empresa.com", key="fornecedor_email")
-        
-        with col2:
-            endereco = st.text_input("Endereço*", placeholder="Ex: Rua das Tecnologias 123", key="fornecedor_endereco")
-            cidade = st.text_input("Cidade*", placeholder="Ex: São Paulo", key="fornecedor_cidade")
-            estado = st.selectbox("Estado*", ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"], key="fornecedor_estado")
-            cep = st.text_input("CEP*", placeholder="Ex: 01234-567", key="fornecedor_cep")
-        
-        if st.button("✅ Adicionar Fornecedor", key="btn_add_fornecedor"):
-            if fornecedor_id and nome and cnpj and telefone and email and endereco and cidade and estado and cep:
-                success, message = estoque.add_fornecedor(fornecedor_id, nome, cnpj, telefone, email, 
-                                                        endereco, cidade, estado, cep)
-                if success:
-                    st.success(message)
-                    st.rerun()
-                else:
-                    st.error(message)
-            else:
-                st.error("Por favor, preencha todos os campos obrigatórios!")
-    
-    # Lista de fornecedores
-    st.subheader("📋 Lista de Fornecedores")
-    if 'fornecedores' in estoque.data and not estoque.data['fornecedores'].empty:
-        st.dataframe(estoque.data['fornecedores'], use_container_width=True)
-    else:
-        st.info("Nenhum fornecedor cadastrado ainda.")
-
-def render_usuarios_estoque(estoque):
-    """Renderiza a gestão de usuários"""
-    st.header("👥 Gestão de Usuários")
-    
-    with st.expander("➕ Adicionar Novo Usuário", expanded=True):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            usuario_id = st.text_input("ID do Usuário*", placeholder="Ex: USR001", key="usuario_id")
-            nome = st.text_input("Nome Completo*", placeholder="Ex: João Silva", key="usuario_nome")
-            email = st.text_input("Email*", placeholder="Ex: joao.silva@empresa.com", key="usuario_email")
-            telefone = st.text_input("Telefone*", placeholder="Ex: (11) 9999-1111", key="usuario_telefone")
-        
-        with col2:
-            departamento = st.selectbox("Departamento*", ["TI", "Compras", "Almoxarifado", "Financeiro", "Marketing", "RH", "Outros"], key="usuario_departamento")
-            cargo = st.text_input("Cargo*", placeholder="Ex: Analista de Sistemas", key="usuario_cargo")
-            nivel_acesso = st.selectbox("Nível de Acesso*", ["Administrador", "Operador", "Visualizador"], key="usuario_nivel")
-        
-        if st.button("✅ Adicionar Usuário", key="btn_add_usuario"):
-            if usuario_id and nome and email and telefone and departamento and cargo and nivel_acesso:
-                success, message = estoque.add_usuario(usuario_id, nome, email, telefone, 
-                                                     departamento, cargo, nivel_acesso)
-                if success:
-                    st.success(message)
-                    st.rerun()
-                else:
-                    st.error(message)
-            else:
-                st.error("Por favor, preencha todos os campos obrigatórios!")
-    
-    # Lista de usuários
-    st.subheader("📋 Lista de Usuários")
-    if 'usuarios' in estoque.data and not estoque.data['usuarios'].empty:
-        st.dataframe(estoque.data['usuarios'], use_container_width=True)
-    else:
-        st.info("Nenhum usuário cadastrado ainda.")
-
-def render_prateleiras_estoque(estoque):
-    """Renderiza a gestão de prateleiras"""
-    st.header("🗂️ Gestão de Prateleiras")
-    
-    with st.expander("➕ Adicionar Nova Prateleira", expanded=True):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            prateleira_id = st.text_input("ID da Prateleira*", placeholder="Ex: PRAT001", key="prateleira_id")
-            nome = st.text_input("Nome da Prateleira*", placeholder="Ex: Corredor A - Prateleira 1", key="prateleira_nome")
-            corredor = st.selectbox("Corredor*", ["A", "B", "C", "D", "E", "F"], key="prateleira_corredor")
-            setor = st.selectbox("Setor*", ["Informática", "Periféricos", "Monitores", "Audio e Video", "Outros"], key="prateleira_setor")
-        
-        with col2:
-            capacidade_maxima = st.number_input("Capacidade Máxima*", min_value=1, value=100, step=1, key="prateleira_capacidade")
-            responsavel_id = st.selectbox("Responsável*", 
-                                        estoque.data.get('usuarios', pd.DataFrame())['usuario_id'].tolist() 
-                                        if 'usuarios' in estoque.data else [], key="prateleira_responsavel")
-        
-        if st.button("✅ Adicionar Prateleira", key="btn_add_prateleira"):
-            if prateleira_id and nome and corredor and setor and capacidade_maxima > 0 and responsavel_id:
-                success, message = estoque.add_prateleira(prateleira_id, nome, corredor, setor, 
-                                                        capacidade_maxima, responsavel_id)
-                if success:
-                    st.success(message)
-                    st.rerun()
-                else:
-                    st.error(message)
-            else:
-                st.error("Por favor, preencha todos os campos obrigatórios!")
-    
-    # Lista de prateleiras
-    st.subheader("📋 Lista de Prateleiras")
-    if 'prateleiras' in estoque.data and not estoque.data['prateleiras'].empty:
-        st.dataframe(estoque.data['prateleiras'], use_container_width=True)
-    else:
-        st.info("Nenhuma prateleira cadastrada ainda.")
-
-def render_movimentacoes_estoque(estoque):
-    """Renderiza o controle de movimentações"""
-    st.header("🔄 Controle de Movimentações")
-    
-    with st.expander("➕ Registrar Nova Movimentação", expanded=True):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            sku = st.selectbox("SKU do Produto*", 
-                              estoque.data.get('produtos', pd.DataFrame())['sku'].tolist() 
-                              if 'produtos' in estoque.data else [], key="mov_sku")
-            numero_serie = st.text_input("Número de Série", placeholder="Ex: NS001 (opcional)", key="mov_serie")
-            tipo_movimentacao = st.selectbox("Tipo de Movimentação*", ["Entrada", "Saída", "Transferência", "Inventário"], key="mov_tipo")
-            quantidade = st.number_input("Quantidade*", min_value=1, value=1, step=1, key="mov_quantidade")
-            motivo = st.selectbox("Motivo*", ["Compra de fornecedor", "Requisição", "Devolução", "Transferência", "Ajuste inventário", "Outros"], key="mov_motivo")
-        
-        with col2:
-            usuario_id = st.selectbox("Usuário Responsável*", 
-                                    estoque.data.get('usuarios', pd.DataFrame())['usuario_id'].tolist() 
-                                    if 'usuarios' in estoque.data else [], key="mov_usuario")
-            prateleira_origem = st.selectbox("Prateleira Origem", 
-                                           [""] + estoque.data.get('prateleiras', pd.DataFrame())['prateleira_id'].tolist() 
-                                           if 'prateleiras' in estoque.data else [], key="mov_origem")
-            prateleira_destino = st.selectbox("Prateleira Destino", 
-                                            [""] + estoque.data.get('prateleiras', pd.DataFrame())['prateleira_id'].tolist() 
-                                            if 'prateleiras' in estoque.data else [], key="mov_destino")
-            observacoes = st.text_area("Observações", placeholder="Observações adicionais", key="mov_obs")
-        
-        if st.button("✅ Registrar Movimentação", key="btn_mov"):
-            if sku and tipo_movimentacao and quantidade > 0 and motivo and usuario_id:
-                success, message = estoque.registrar_movimentacao(sku, numero_serie, tipo_movimentacao, 
-                                                               quantidade, motivo, usuario_id, 
-                                                               prateleira_origem, prateleira_destino, observacoes)
-                if success:
-                    st.success(message)
-                    st.rerun()
-                else:
-                    st.error(message)
-            else:
-                st.error("Por favor, preencha todos os campos obrigatórios!")
-    
-    # Histórico de movimentações
-    st.subheader("📋 Histórico de Movimentações")
-    if 'movimentacoes' in estoque.data and not estoque.data['movimentacoes'].empty:
-        st.dataframe(estoque.data['movimentacoes'], use_container_width=True)
-    else:
-        st.info("Nenhuma movimentação registrada ainda.")
-
-def render_ativos_estoque(estoque):
-    """Renderiza o controle de ativos por número de série"""
-    st.header("🔢 Controle por Número de Série e Ativo")
-    
-    with st.expander("➕ Adicionar Novo Ativo", expanded=True):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            numero_serie = st.text_input("Número de Série*", placeholder="Ex: NS001", key="ativo_serie")
-            sku = st.selectbox("SKU do Produto*", 
-                              estoque.data.get('produtos', pd.DataFrame())['sku'].tolist() 
-                              if 'produtos' in estoque.data else [], key="ativo_sku")
-            status = st.selectbox("Status*", ["Em uso", "Em estoque", "Em manutenção", "Descartado", "Emprestado"], key="ativo_status")
-            localizacao = st.text_input("Localização*", placeholder="Ex: Setor TI - Mesa 5", key="ativo_local")
-        
-        with col2:
-            usuario_responsavel = st.selectbox("Usuário Responsável*", 
-                                             estoque.data.get('usuarios', pd.DataFrame())['usuario_id'].tolist() 
-                                             if 'usuarios' in estoque.data else [], key="ativo_usuario")
-            valor_aquisicao = st.number_input("Valor de Aquisição (R$)*", min_value=0.0, value=0.0, step=0.01, key="ativo_valor")
-            fornecedor_id = st.selectbox("Fornecedor*", 
-                                       estoque.data.get('fornecedores', pd.DataFrame())['fornecedor_id'].tolist() 
-                                       if 'fornecedores' in estoque.data else [], key="ativo_fornecedor")
-            garantia_ate = st.date_input("Garantia Até*", value=datetime.now().date() + timedelta(days=365), key="ativo_garantia")
-            observacoes = st.text_area("Observações", placeholder="Observações sobre o ativo", key="ativo_obs")
-        
-        if st.button("✅ Adicionar Ativo", key="btn_add_ativo"):
-            if numero_serie and sku and status and localizacao and usuario_responsavel and valor_aquisicao >= 0 and fornecedor_id:
-                success, message = estoque.add_ativo(numero_serie, sku, status, localizacao, 
-                                                   usuario_responsavel, valor_aquisicao, fornecedor_id, 
-                                                   garantia_ate.strftime('%Y-%m-%d'), observacoes)
-                if success:
-                    st.success(message)
-                    st.rerun()
-                else:
-                    st.error(message)
-            else:
-                st.error("Por favor, preencha todos os campos obrigatórios!")
-    
-    # Lista de ativos
-    st.subheader("📋 Lista de Ativos")
-    if 'ativos' in estoque.data and not estoque.data['ativos'].empty:
-        st.dataframe(estoque.data['ativos'], use_container_width=True)
-    else:
-        st.info("Nenhum ativo cadastrado ainda.")
-
-def render_relatorios_estoque(estoque):
-    """Renderiza relatórios e análises do estoque"""
-    st.header("📈 Relatórios e Análises")
-    
-    # Filtros de período
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        data_inicio = st.date_input("Data Início", value=datetime.now().date() - timedelta(days=30), key="rel_data_inicio")
-    
-    with col2:
-        data_fim = st.date_input("Data Fim", value=datetime.now().date(), key="rel_data_fim")
-    
-    # Relatório de movimentações
-    st.subheader("📊 Relatório de Movimentações")
-    movimentacoes_periodo = estoque.get_movimentacoes_periodo(
-        data_inicio.strftime('%Y-%m-%d'), 
-        data_fim.strftime('%Y-%m-%d')
-    )
-    
-    if not movimentacoes_periodo.empty:
-        # Estatísticas do período
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.metric("Total de Movimentações", len(movimentacoes_periodo))
-        
-        with col2:
-            entradas = len(movimentacoes_periodo[movimentacoes_periodo['tipo_movimentacao'] == 'Entrada'])
-            st.metric("Entradas", entradas)
-        
-        with col3:
-            saidas = len(movimentacoes_periodo[movimentacoes_periodo['tipo_movimentacao'] == 'Saída'])
-            st.metric("Saídas", saidas)
-        
-        with col4:
-            transferencias = len(movimentacoes_periodo[movimentacoes_periodo['tipo_movimentacao'] == 'Transferência'])
-            st.metric("Transferências", transferencias)
-        
-        # Gráfico de movimentações por tipo
-        movimentacoes_tipo = movimentacoes_periodo['tipo_movimentacao'].value_counts()
-        fig = px.pie(values=movimentacoes_tipo.values, names=movimentacoes_tipo.index, 
-                    title="Movimentações por Tipo")
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Tabela detalhada
-        st.dataframe(movimentacoes_periodo, use_container_width=True)
-    else:
-        st.info("Nenhuma movimentação encontrada no período selecionado.")
-    
-    # Relatório de produtos por fornecedor
-    st.subheader("🏢 Produtos por Fornecedor")
-    produtos_fornecedor = estoque.get_produtos_por_fornecedor()
-    
-    if not produtos_fornecedor.empty:
-        fig = px.bar(produtos_fornecedor.groupby('nome_y').size().reset_index(name='quantidade'),
-                    x='nome_y', y='quantidade', title="Quantidade de Produtos por Fornecedor")
-        st.plotly_chart(fig, use_container_width=True)
-        
-        st.dataframe(produtos_fornecedor[['sku', 'nome_x', 'categoria', 'estoque_atual', 'nome_y']], 
-                    use_container_width=True)
-    else:
-        st.info("Nenhum produto ou fornecedor cadastrado ainda.")
-    
-    # Mapeamento de prateleiras
-    st.subheader("🗺️ Mapeamento de Prateleiras")
-    if 'prateleiras' in estoque.data and not estoque.data['prateleiras'].empty:
-        # Visualização por corredor
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("📊 Ocupação por Corredor")
-            ocupacao_corredor = estoque.data['prateleiras'].groupby('corredor').agg({
-                'capacidade_atual': 'sum',
-                'capacidade_maxima': 'sum'
-            }).reset_index()
-            ocupacao_corredor['Ocupação (%)'] = (ocupacao_corredor['capacidade_atual'] / 
-                                               ocupacao_corredor['capacidade_maxima'] * 100).round(2)
-            st.dataframe(ocupacao_corredor, use_container_width=True)
-        
-        with col2:
-            st.subheader("📊 Ocupação por Setor")
-            ocupacao_setor = estoque.data['prateleiras'].groupby('setor').agg({
-                'capacidade_atual': 'sum',
-                'capacidade_maxima': 'sum'
-            }).reset_index()
-            ocupacao_setor['Ocupação (%)'] = (ocupacao_setor['capacidade_atual'] / 
-                                            ocupacao_setor['capacidade_maxima'] * 100).round(2)
-            st.dataframe(ocupacao_setor, use_container_width=True)
-        
-        # Gráfico de ocupação
-        fig = px.bar(estoque.data['prateleiras'], x='nome', y=['capacidade_atual', 'capacidade_maxima'],
-                    title="Capacidade das Prateleiras", barmode='group')
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("Nenhuma prateleira cadastrada ainda.")
-
-def render_estoque_legado():
-    """Renderiza o sistema de estoque legado como fallback"""
-    st.subheader("■ Controle de Estoque de Gadgets (Legado)")
+    """Renderiza interface de controle de estoque"""
+    st.subheader("■ Controle de Estoque de Gadgets")
     
     # Inicializar dados de estoque
     init_estoque_data()
@@ -21645,6 +21222,694 @@ def render_historico_consultas_sefaz():
         st.success("✅ Histórico limpo!")
         st.rerun()
 
+# ========================================================================================
+# NOVOS MÓDULOS DO SISTEMA DE ESTOQUE
+# ========================================================================================
+
+def render_cadastro_usuarios():
+    """Renderiza a página de cadastro de usuários"""
+    st.header("👥 Cadastro de Utilizadores")
+    
+    # Inicializar dados de usuários se não existir
+    if 'usuarios_sistema' not in st.session_state:
+        st.session_state.usuarios_sistema = []
+    
+    # Formulário de cadastro
+    with st.form("cadastro_usuario"):
+        st.subheader("📝 Novo Usuário")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            nome = st.text_input("Nome Completo", key="nome_usuario")
+            email = st.text_input("Email", key="email_usuario")
+            cargo = st.selectbox("Cargo", ["Operador", "Supervisor", "Gerente", "Administrador"], key="cargo_usuario")
+        
+        with col2:
+            departamento = st.selectbox("Departamento", ["TI", "RH", "Financeiro", "Operacional", "Administrativo"], key="dept_usuario")
+            telefone = st.text_input("Telefone", key="tel_usuario")
+            ativo = st.checkbox("Usuário Ativo", value=True, key="ativo_usuario")
+        
+        senha = st.text_input("Senha", type="password", key="senha_usuario")
+        confirmar_senha = st.text_input("Confirmar Senha", type="password", key="conf_senha_usuario")
+        
+        submitted = st.form_submit_button("💾 Cadastrar Usuário")
+        
+        if submitted:
+            if senha != confirmar_senha:
+                st.error("❌ Senhas não coincidem!")
+            elif not nome or not email:
+                st.error("❌ Nome e email são obrigatórios!")
+            else:
+                novo_usuario = {
+                    'id': len(st.session_state.usuarios_sistema) + 1,
+                    'nome': nome,
+                    'email': email,
+                    'cargo': cargo,
+                    'departamento': departamento,
+                    'telefone': telefone,
+                    'ativo': ativo,
+                    'senha_hash': hash(senha),  # Em produção, usar bcrypt
+                    'data_cadastro': datetime.now().isoformat(),
+                    'ultimo_acesso': None
+                }
+                
+                st.session_state.usuarios_sistema.append(novo_usuario)
+                st.success(f"✅ Usuário {nome} cadastrado com sucesso!")
+                
+                # Limpar formulário
+                for key in ["nome_usuario", "email_usuario", "cargo_usuario", "dept_usuario", "tel_usuario", "senha_usuario", "conf_senha_usuario"]:
+                    if key in st.session_state:
+                        del st.session_state[key]
+                st.rerun()
+    
+    # Lista de usuários
+    st.subheader("📋 Usuários Cadastrados")
+    
+    if st.session_state.usuarios_sistema:
+        df_usuarios = pd.DataFrame(st.session_state.usuarios_sistema)
+        
+        # Filtros
+        col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
+        with col_filtro1:
+            filtro_dept = st.selectbox("Filtrar por Departamento", ["Todos"] + list(df_usuarios['departamento'].unique()))
+        with col_filtro2:
+            filtro_cargo = st.selectbox("Filtrar por Cargo", ["Todos"] + list(df_usuarios['cargo'].unique()))
+        with col_filtro3:
+            filtro_status = st.selectbox("Filtrar por Status", ["Todos", "Ativo", "Inativo"])
+        
+        # Aplicar filtros
+        df_filtrado = df_usuarios.copy()
+        if filtro_dept != "Todos":
+            df_filtrado = df_filtrado[df_filtrado['departamento'] == filtro_dept]
+        if filtro_cargo != "Todos":
+            df_filtrado = df_filtrado[df_filtrado['cargo'] == filtro_cargo]
+        if filtro_status != "Todos":
+            status_bool = filtro_status == "Ativo"
+            df_filtrado = df_filtrado[df_filtrado['ativo'] == status_bool]
+        
+        # Exibir tabela
+        st.dataframe(
+            df_filtrado[['nome', 'email', 'cargo', 'departamento', 'telefone', 'ativo']],
+            use_container_width=True
+        )
+        
+        # Ações em lote
+        st.subheader("⚡ Ações em Lote")
+        col_acao1, col_acao2, col_acao3 = st.columns(3)
+        
+        with col_acao1:
+            if st.button("📥 Exportar CSV", key="export_usuarios"):
+                csv = df_filtrado.to_csv(index=False)
+                st.download_button(
+                    label="📥 Download CSV",
+                    data=csv,
+                    file_name=f"usuarios_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                    mime="text/csv"
+                )
+        
+        with col_acao2:
+            if st.button("🔄 Atualizar Status", key="update_status"):
+                # Lógica para atualizar status em lote
+                st.info("🔄 Funcionalidade de atualização em lote será implementada")
+        
+        with col_acao3:
+            if st.button("🗑️ Limpar Inativos", key="clear_inativos"):
+                if st.checkbox("Confirmar exclusão de usuários inativos"):
+                    st.session_state.usuarios_sistema = [u for u in st.session_state.usuarios_sistema if u['ativo']]
+                    st.success("✅ Usuários inativos removidos!")
+                    st.rerun()
+    else:
+        st.info("📝 Nenhum usuário cadastrado ainda. Use o formulário acima para adicionar o primeiro usuário.")
+
+def render_cadastro_produtos():
+    """Renderiza a página de cadastro de produtos"""
+    st.header("📦 Cadastro de Produtos")
+    
+    # Inicializar dados de produtos se não existir
+    if 'produtos_sistema' not in st.session_state:
+        st.session_state.produtos_sistema = []
+    
+    # Formulário de cadastro
+    with st.form("cadastro_produto"):
+        st.subheader("📝 Novo Produto")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            nome_produto = st.text_input("Nome do Produto", key="nome_prod")
+            sku = st.text_input("SKU", key="sku_prod")
+            categoria = st.selectbox("Categoria", ["Eletrônicos", "Informática", "Móveis", "Papelaria", "Outros"], key="cat_prod")
+            marca = st.text_input("Marca", key="marca_prod")
+        
+        with col2:
+            modelo = st.text_input("Modelo", key="modelo_prod")
+            unidade_medida = st.selectbox("Unidade de Medida", ["Unidade", "Kg", "Litro", "Metro", "Caixa"], key="um_prod")
+            preco_unitario = st.number_input("Preço Unitário (R$)", min_value=0.0, step=0.01, key="preco_prod")
+            estoque_minimo = st.number_input("Estoque Mínimo", min_value=0, key="estoque_min_prod")
+        
+        descricao = st.text_area("Descrição", key="desc_prod")
+        fornecedores = st.multiselect("Fornecedores", ["Selecionar fornecedores..."], key="forn_prod")
+        
+        submitted = st.form_submit_button("💾 Cadastrar Produto")
+        
+        if submitted:
+            if not nome_produto or not sku:
+                st.error("❌ Nome e SKU são obrigatórios!")
+            else:
+                novo_produto = {
+                    'id': len(st.session_state.produtos_sistema) + 1,
+                    'nome': nome_produto,
+                    'sku': sku,
+                    'categoria': categoria,
+                    'marca': marca,
+                    'modelo': modelo,
+                    'unidade_medida': unidade_medida,
+                    'preco_unitario': preco_unitario,
+                    'estoque_minimo': estoque_minimo,
+                    'descricao': descricao,
+                    'fornecedores': fornecedores,
+                    'data_cadastro': datetime.now().isoformat(),
+                    'ativo': True
+                }
+                
+                st.session_state.produtos_sistema.append(novo_produto)
+                st.success(f"✅ Produto {nome_produto} cadastrado com sucesso!")
+                st.rerun()
+    
+    # Lista de produtos
+    st.subheader("📋 Produtos Cadastrados")
+    
+    if st.session_state.produtos_sistema:
+        df_produtos = pd.DataFrame(st.session_state.produtos_sistema)
+        
+        # Filtros
+        col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
+        with col_filtro1:
+            filtro_cat = st.selectbox("Filtrar por Categoria", ["Todas"] + list(df_produtos['categoria'].unique()))
+        with col_filtro2:
+            filtro_marca = st.selectbox("Filtrar por Marca", ["Todas"] + list(df_produtos['marca'].unique()))
+        with col_filtro3:
+            busca_sku = st.text_input("Buscar por SKU", key="busca_sku_prod")
+        
+        # Aplicar filtros
+        df_filtrado = df_produtos.copy()
+        if filtro_cat != "Todas":
+            df_filtrado = df_filtrado[df_filtrado['categoria'] == filtro_cat]
+        if filtro_marca != "Todas":
+            df_filtrado = df_filtrado[df_filtrado['marca'] == filtro_marca]
+        if busca_sku:
+            df_filtrado = df_filtrado[df_filtrado['sku'].str.contains(busca_sku, case=False, na=False)]
+        
+        # Exibir tabela
+        st.dataframe(
+            df_filtrado[['nome', 'sku', 'categoria', 'marca', 'modelo', 'preco_unitario', 'estoque_minimo']],
+            use_container_width=True
+        )
+        
+        # Estatísticas
+        col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
+        with col_stat1:
+            st.metric("Total de Produtos", len(df_filtrado))
+        with col_stat2:
+            st.metric("Categorias", df_filtrado['categoria'].nunique())
+        with col_stat3:
+            st.metric("Marcas", df_filtrado['marca'].nunique())
+        with col_stat4:
+            valor_total = df_filtrado['preco_unitario'].sum()
+            st.metric("Valor Total", f"R$ {valor_total:,.2f}")
+
+def render_cadastro_fornecedores():
+    """Renderiza a página de cadastro de fornecedores"""
+    st.header("🏢 Cadastro de Fornecedores")
+    
+    # Inicializar dados de fornecedores se não existir
+    if 'fornecedores_sistema' not in st.session_state:
+        st.session_state.fornecedores_sistema = []
+    
+    # Formulário de cadastro
+    with st.form("cadastro_fornecedor"):
+        st.subheader("📝 Novo Fornecedor")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            razao_social = st.text_input("Razão Social", key="razao_forn")
+            nome_fantasia = st.text_input("Nome Fantasia", key="fantasia_forn")
+            cnpj = st.text_input("CNPJ", key="cnpj_forn")
+            inscricao_estadual = st.text_input("Inscrição Estadual", key="ie_forn")
+        
+        with col2:
+            telefone = st.text_input("Telefone", key="tel_forn")
+            email = st.text_input("Email", key="email_forn")
+            site = st.text_input("Website", key="site_forn")
+            ativo = st.checkbox("Fornecedor Ativo", value=True, key="ativo_forn")
+        
+        endereco = st.text_area("Endereço Completo", key="end_forn")
+        produtos_fornecidos = st.multiselect("Produtos Fornecidos", ["Selecionar produtos..."], key="prod_forn")
+        observacoes = st.text_area("Observações", key="obs_forn")
+        
+        submitted = st.form_submit_button("💾 Cadastrar Fornecedor")
+        
+        if submitted:
+            if not razao_social or not cnpj:
+                st.error("❌ Razão Social e CNPJ são obrigatórios!")
+            else:
+                novo_fornecedor = {
+                    'id': len(st.session_state.fornecedores_sistema) + 1,
+                    'razao_social': razao_social,
+                    'nome_fantasia': nome_fantasia,
+                    'cnpj': cnpj,
+                    'inscricao_estadual': inscricao_estadual,
+                    'telefone': telefone,
+                    'email': email,
+                    'site': site,
+                    'endereco': endereco,
+                    'produtos_fornecidos': produtos_fornecidos,
+                    'observacoes': observacoes,
+                    'ativo': ativo,
+                    'data_cadastro': datetime.now().isoformat()
+                }
+                
+                st.session_state.fornecedores_sistema.append(novo_fornecedor)
+                st.success(f"✅ Fornecedor {razao_social} cadastrado com sucesso!")
+                st.rerun()
+    
+    # Lista de fornecedores
+    st.subheader("📋 Fornecedores Cadastrados")
+    
+    if st.session_state.fornecedores_sistema:
+        df_fornecedores = pd.DataFrame(st.session_state.fornecedores_sistema)
+        
+        # Filtros
+        col_filtro1, col_filtro2 = st.columns(2)
+        with col_filtro1:
+            filtro_status = st.selectbox("Filtrar por Status", ["Todos", "Ativo", "Inativo"])
+        with col_filtro2:
+            busca_nome = st.text_input("Buscar por Nome", key="busca_nome_forn")
+        
+        # Aplicar filtros
+        df_filtrado = df_fornecedores.copy()
+        if filtro_status != "Todos":
+            status_bool = filtro_status == "Ativo"
+            df_filtrado = df_filtrado[df_filtrado['ativo'] == status_bool]
+        if busca_nome:
+            df_filtrado = df_filtrado[
+                df_filtrado['razao_social'].str.contains(busca_nome, case=False, na=False) |
+                df_filtrado['nome_fantasia'].str.contains(busca_nome, case=False, na=False)
+            ]
+        
+        # Exibir tabela
+        st.dataframe(
+            df_filtrado[['razao_social', 'nome_fantasia', 'cnpj', 'telefone', 'email', 'ativo']],
+            use_container_width=True
+        )
+        
+        # Estatísticas
+        col_stat1, col_stat2, col_stat3 = st.columns(3)
+        with col_stat1:
+            st.metric("Total de Fornecedores", len(df_filtrado))
+        with col_stat2:
+            st.metric("Ativos", len(df_filtrado[df_filtrado['ativo'] == True]))
+        with col_stat3:
+            st.metric("Inativos", len(df_filtrado[df_filtrado['ativo'] == False]))
+
+def render_controle_serial():
+    """Renderiza a página de controle por número de série e ativo"""
+    st.header("🔢 Controle por N/S e Ativo")
+    
+    # Inicializar dados de ativos se não existir
+    if 'ativos_sistema' not in st.session_state:
+        st.session_state.ativos_sistema = []
+    
+    # Formulário de cadastro de ativo
+    with st.form("cadastro_ativo"):
+        st.subheader("📝 Novo Ativo")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            tipo_ativo = st.selectbox("Tipo de Ativo", ["Equipamento", "Móvel", "Imóvel", "Software", "Outro"], key="tipo_ativo")
+            numero_serie = st.text_input("Número de Série", key="ns_ativo")
+            patrimonio = st.text_input("Número do Patrimônio", key="pat_ativo")
+            marca = st.text_input("Marca", key="marca_ativo")
+        
+        with col2:
+            modelo = st.text_input("Modelo", key="modelo_ativo")
+            data_aquisicao = st.date_input("Data de Aquisição", key="data_aq_ativo")
+            valor_aquisicao = st.number_input("Valor de Aquisição (R$)", min_value=0.0, step=0.01, key="valor_ativo")
+            status = st.selectbox("Status", ["Ativo", "Inativo", "Manutenção", "Baixado"], key="status_ativo")
+        
+        localizacao = st.text_input("Localização", key="loc_ativo")
+        responsavel = st.text_input("Responsável", key="resp_ativo")
+        observacoes = st.text_area("Observações", key="obs_ativo")
+        
+        submitted = st.form_submit_button("💾 Cadastrar Ativo")
+        
+        if submitted:
+            if not numero_serie or not patrimonio:
+                st.error("❌ Número de Série e Patrimônio são obrigatórios!")
+            else:
+                novo_ativo = {
+                    'id': len(st.session_state.ativos_sistema) + 1,
+                    'tipo': tipo_ativo,
+                    'numero_serie': numero_serie,
+                    'patrimonio': patrimonio,
+                    'marca': marca,
+                    'modelo': modelo,
+                    'data_aquisicao': data_aquisicao.isoformat(),
+                    'valor_aquisicao': valor_aquisicao,
+                    'status': status,
+                    'localizacao': localizacao,
+                    'responsavel': responsavel,
+                    'observacoes': observacoes,
+                    'data_cadastro': datetime.now().isoformat()
+                }
+                
+                st.session_state.ativos_sistema.append(novo_ativo)
+                st.success(f"✅ Ativo {patrimonio} cadastrado com sucesso!")
+                st.rerun()
+    
+    # Lista de ativos
+    st.subheader("📋 Ativos Cadastrados")
+    
+    if st.session_state.ativos_sistema:
+        df_ativos = pd.DataFrame(st.session_state.ativos_sistema)
+        
+        # Filtros
+        col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
+        with col_filtro1:
+            filtro_tipo = st.selectbox("Filtrar por Tipo", ["Todos"] + list(df_ativos['tipo'].unique()))
+        with col_filtro2:
+            filtro_status = st.selectbox("Filtrar por Status", ["Todos"] + list(df_ativos['status'].unique()))
+        with col_filtro3:
+            busca_patrimonio = st.text_input("Buscar por Patrimônio", key="busca_pat_ativo")
+        
+        # Aplicar filtros
+        df_filtrado = df_ativos.copy()
+        if filtro_tipo != "Todos":
+            df_filtrado = df_filtrado[df_filtrado['tipo'] == filtro_tipo]
+        if filtro_status != "Todos":
+            df_filtrado = df_filtrado[df_filtrado['status'] == filtro_status]
+        if busca_patrimonio:
+            df_filtrado = df_filtrado[df_filtrado['patrimonio'].str.contains(busca_patrimonio, case=False, na=False)]
+        
+        # Exibir tabela
+        st.dataframe(
+            df_filtrado[['tipo', 'numero_serie', 'patrimonio', 'marca', 'modelo', 'status', 'localizacao', 'responsavel']],
+            use_container_width=True
+        )
+        
+        # Estatísticas
+        col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
+        with col_stat1:
+            st.metric("Total de Ativos", len(df_filtrado))
+        with col_stat2:
+            st.metric("Valor Total", f"R$ {df_filtrado['valor_aquisicao'].sum():,.2f}")
+        with col_stat3:
+            st.metric("Em Manutenção", len(df_filtrado[df_filtrado['status'] == 'Manutenção']))
+        with col_stat4:
+            st.metric("Baixados", len(df_filtrado[df_filtrado['status'] == 'Baixado']))
+
+def render_controle_sku():
+    """Renderiza a página de controle por SKU e quantidade"""
+    st.header("🏷️ Controle por SKU e Quantidade")
+    
+    # Inicializar dados de estoque se não existir
+    if 'estoque_sku' not in st.session_state:
+        st.session_state.estoque_sku = []
+    
+    # Formulário de entrada/saída
+    with st.form("movimentacao_estoque"):
+        st.subheader("📦 Movimentação de Estoque")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            tipo_movimento = st.selectbox("Tipo de Movimento", ["Entrada", "Saída", "Transferência"], key="tipo_mov")
+            sku = st.text_input("SKU do Produto", key="sku_mov")
+            quantidade = st.number_input("Quantidade", min_value=1, key="qtd_mov")
+            motivo = st.selectbox("Motivo", ["Compra", "Venda", "Transferência", "Ajuste", "Perda", "Outro"], key="motivo_mov")
+        
+        with col2:
+            fornecedor = st.text_input("Fornecedor", key="forn_mov")
+            documento = st.text_input("Número do Documento", key="doc_mov")
+            data_movimento = st.date_input("Data do Movimento", key="data_mov")
+            observacoes = st.text_area("Observações", key="obs_mov")
+        
+        submitted = st.form_submit_button("💾 Registrar Movimentação")
+        
+        if submitted:
+            if not sku or quantidade <= 0:
+                st.error("❌ SKU e quantidade são obrigatórios!")
+            else:
+                nova_movimentacao = {
+                    'id': len(st.session_state.estoque_sku) + 1,
+                    'tipo': tipo_movimento,
+                    'sku': sku,
+                    'quantidade': quantidade,
+                    'motivo': motivo,
+                    'fornecedor': fornecedor,
+                    'documento': documento,
+                    'data_movimento': data_movimento.isoformat(),
+                    'observacoes': observacoes,
+                    'data_registro': datetime.now().isoformat()
+                }
+                
+                st.session_state.estoque_sku.append(nova_movimentacao)
+                st.success(f"✅ Movimentação registrada com sucesso!")
+                st.rerun()
+    
+    # Lista de movimentações
+    st.subheader("📋 Histórico de Movimentações")
+    
+    if st.session_state.estoque_sku:
+        df_movimentacoes = pd.DataFrame(st.session_state.estoque_sku)
+        
+        # Filtros
+        col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
+        with col_filtro1:
+            filtro_tipo = st.selectbox("Filtrar por Tipo", ["Todos"] + list(df_movimentacoes['tipo'].unique()))
+        with col_filtro2:
+            filtro_motivo = st.selectbox("Filtrar por Motivo", ["Todos"] + list(df_movimentacoes['motivo'].unique()))
+        with col_filtro3:
+            busca_sku = st.text_input("Buscar por SKU", key="busca_sku_mov")
+        
+        # Aplicar filtros
+        df_filtrado = df_movimentacoes.copy()
+        if filtro_tipo != "Todos":
+            df_filtrado = df_filtrado[df_filtrado['tipo'] == filtro_tipo]
+        if filtro_motivo != "Todos":
+            df_filtrado = df_filtrado[df_filtrado['motivo'] == filtro_motivo]
+        if busca_sku:
+            df_filtrado = df_filtrado[df_filtrado['sku'].str.contains(busca_sku, case=False, na=False)]
+        
+        # Exibir tabela
+        st.dataframe(
+            df_filtrado[['tipo', 'sku', 'quantidade', 'motivo', 'fornecedor', 'documento', 'data_movimento']],
+            use_container_width=True
+        )
+        
+        # Resumo por SKU
+        st.subheader("📊 Resumo por SKU")
+        if not df_filtrado.empty:
+            resumo_sku = df_filtrado.groupby('sku').agg({
+                'quantidade': lambda x: x[df_filtrado.loc[x.index, 'tipo'] == 'Entrada'].sum() - 
+                                        x[df_filtrado.loc[x.index, 'tipo'] == 'Saída'].sum()
+            }).reset_index()
+            resumo_sku.columns = ['SKU', 'Estoque Atual']
+            
+            st.dataframe(resumo_sku, use_container_width=True)
+
+def render_mapeamento_prateleiras():
+    """Renderiza a página de mapeamento de prateleiras"""
+    st.header("📋 Mapeamento de Prateleiras no Estoque")
+    
+    # Inicializar dados de prateleiras se não existir
+    if 'prateleiras_sistema' not in st.session_state:
+        st.session_state.prateleiras_sistema = []
+    
+    # Formulário de cadastro de prateleira
+    with st.form("cadastro_prateleira"):
+        st.subheader("📝 Nova Prateleira")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            codigo_prateleira = st.text_input("Código da Prateleira", key="cod_prat")
+            setor = st.selectbox("Setor", ["A", "B", "C", "D", "E", "F"], key="setor_prat")
+            corredor = st.number_input("Corredor", min_value=1, key="corredor_prat")
+            nivel = st.number_input("Nível", min_value=1, key="nivel_prat")
+        
+        with col2:
+            posicao = st.number_input("Posição", min_value=1, key="pos_prat")
+            capacidade = st.number_input("Capacidade (itens)", min_value=1, key="cap_prat")
+            tipo_produto = st.selectbox("Tipo de Produto", ["Geral", "Eletrônicos", "Móveis", "Papelaria", "Outros"], key="tipo_prat")
+            ativa = st.checkbox("Prateleira Ativa", value=True, key="ativa_prat")
+        
+        descricao = st.text_area("Descrição", key="desc_prat")
+        observacoes = st.text_area("Observações", key="obs_prat")
+        
+        submitted = st.form_submit_button("💾 Cadastrar Prateleira")
+        
+        if submitted:
+            if not codigo_prateleira:
+                st.error("❌ Código da prateleira é obrigatório!")
+            else:
+                nova_prateleira = {
+                    'id': len(st.session_state.prateleiras_sistema) + 1,
+                    'codigo': codigo_prateleira,
+                    'setor': setor,
+                    'corredor': corredor,
+                    'nivel': nivel,
+                    'posicao': posicao,
+                    'capacidade': capacidade,
+                    'tipo_produto': tipo_produto,
+                    'ativa': ativa,
+                    'descricao': descricao,
+                    'observacoes': observacoes,
+                    'data_cadastro': datetime.now().isoformat()
+                }
+                
+                st.session_state.prateleiras_sistema.append(nova_prateleira)
+                st.success(f"✅ Prateleira {codigo_prateleira} cadastrada com sucesso!")
+                st.rerun()
+    
+    # Lista de prateleiras
+    st.subheader("📋 Prateleiras Cadastradas")
+    
+    if st.session_state.prateleiras_sistema:
+        df_prateleiras = pd.DataFrame(st.session_state.prateleiras_sistema)
+        
+        # Filtros
+        col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
+        with col_filtro1:
+            filtro_setor = st.selectbox("Filtrar por Setor", ["Todos"] + list(df_prateleiras['setor'].unique()))
+        with col_filtro2:
+            filtro_tipo = st.selectbox("Filtrar por Tipo", ["Todos"] + list(df_prateleiras['tipo_produto'].unique()))
+        with col_filtro3:
+            filtro_status = st.selectbox("Filtrar por Status", ["Todas", "Ativa", "Inativa"])
+        
+        # Aplicar filtros
+        df_filtrado = df_prateleiras.copy()
+        if filtro_setor != "Todos":
+            df_filtrado = df_filtrado[df_filtrado['setor'] == filtro_setor]
+        if filtro_tipo != "Todos":
+            df_filtrado = df_filtrado[df_filtrado['tipo_produto'] == filtro_tipo]
+        if filtro_status != "Todas":
+            status_bool = filtro_status == "Ativa"
+            df_filtrado = df_filtrado[df_filtrado['ativa'] == status_bool]
+        
+        # Exibir tabela
+        st.dataframe(
+            df_filtrado[['codigo', 'setor', 'corredor', 'nivel', 'posicao', 'capacidade', 'tipo_produto', 'ativa']],
+            use_container_width=True
+        )
+        
+        # Visualização do layout
+        st.subheader("🗺️ Layout do Estoque")
+        
+        # Criar visualização simples
+        if not df_filtrado.empty:
+            col_viz1, col_viz2 = st.columns(2)
+            
+            with col_viz1:
+                st.write("**Distribuição por Setor:**")
+                setor_counts = df_filtrado['setor'].value_counts()
+                st.bar_chart(setor_counts)
+            
+            with col_viz2:
+                st.write("**Distribuição por Tipo:**")
+                tipo_counts = df_filtrado['tipo_produto'].value_counts()
+                st.bar_chart(tipo_counts)
+
+def render_estoque_prateleiras():
+    """Renderiza a página de estoque por prateleira"""
+    st.header("🗂️ Estoque Itens por Prateleira")
+    
+    # Inicializar dados de estoque por prateleira se não existir
+    if 'estoque_prateleiras' not in st.session_state:
+        st.session_state.estoque_prateleiras = []
+    
+    # Formulário de alocação
+    with st.form("alocacao_estoque"):
+        st.subheader("📦 Alocar Item na Prateleira")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            sku_produto = st.text_input("SKU do Produto", key="sku_aloc")
+            codigo_prateleira = st.text_input("Código da Prateleira", key="cod_prat_aloc")
+            quantidade = st.number_input("Quantidade", min_value=1, key="qtd_aloc")
+            data_alocacao = st.date_input("Data de Alocação", key="data_aloc")
+        
+        with col2:
+            responsavel = st.text_input("Responsável", key="resp_aloc")
+            tipo_alocacao = st.selectbox("Tipo de Alocação", ["Inicial", "Reposição", "Transferência", "Ajuste"], key="tipo_aloc")
+            observacoes = st.text_area("Observações", key="obs_aloc")
+        
+        submitted = st.form_submit_button("💾 Alocar Item")
+        
+        if submitted:
+            if not sku_produto or not codigo_prateleira:
+                st.error("❌ SKU e código da prateleira são obrigatórios!")
+            else:
+                nova_alocacao = {
+                    'id': len(st.session_state.estoque_prateleiras) + 1,
+                    'sku': sku_produto,
+                    'prateleira': codigo_prateleira,
+                    'quantidade': quantidade,
+                    'data_alocacao': data_alocacao.isoformat(),
+                    'responsavel': responsavel,
+                    'tipo_alocacao': tipo_alocacao,
+                    'observacoes': observacoes,
+                    'data_registro': datetime.now().isoformat()
+                }
+                
+                st.session_state.estoque_prateleiras.append(nova_alocacao)
+                st.success(f"✅ Item {sku_produto} alocado na prateleira {codigo_prateleira}!")
+                st.rerun()
+    
+    # Lista de alocações
+    st.subheader("📋 Itens Alocados por Prateleira")
+    
+    if st.session_state.estoque_prateleiras:
+        df_alocacoes = pd.DataFrame(st.session_state.estoque_prateleiras)
+        
+        # Filtros
+        col_filtro1, col_filtro2 = st.columns(2)
+        with col_filtro1:
+            filtro_prateleira = st.selectbox("Filtrar por Prateleira", ["Todas"] + list(df_alocacoes['prateleira'].unique()))
+        with col_filtro2:
+            busca_sku = st.text_input("Buscar por SKU", key="busca_sku_aloc")
+        
+        # Aplicar filtros
+        df_filtrado = df_alocacoes.copy()
+        if filtro_prateleira != "Todas":
+            df_filtrado = df_filtrado[df_filtrado['prateleira'] == filtro_prateleira]
+        if busca_sku:
+            df_filtrado = df_filtrado[df_filtrado['sku'].str.contains(busca_sku, case=False, na=False)]
+        
+        # Exibir tabela
+        st.dataframe(
+            df_filtrado[['sku', 'prateleira', 'quantidade', 'data_alocacao', 'responsavel', 'tipo_alocacao']],
+            use_container_width=True
+        )
+        
+        # Resumo por prateleira
+        st.subheader("📊 Resumo por Prateleira")
+        if not df_filtrado.empty:
+            resumo_prateleira = df_filtrado.groupby('prateleira').agg({
+                'quantidade': 'sum',
+                'sku': 'count'
+            }).reset_index()
+            resumo_prateleira.columns = ['Prateleira', 'Quantidade Total', 'Tipos de Produtos']
+            
+            st.dataframe(resumo_prateleira, use_container_width=True)
+            
+            # Gráfico de ocupação
+            st.subheader("📈 Ocupação das Prateleiras")
+            fig = px.bar(
+                resumo_prateleira, 
+                x='Prateleira', 
+                y='Quantidade Total',
+                title="Quantidade de Itens por Prateleira"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
 def main():
     """Função principal do dashboard"""
     
@@ -21701,6 +21966,20 @@ def main():
         render_movements()
     elif current_page == 'relatorios':
         render_reports()
+    elif current_page == 'cadastro_usuarios':
+        render_cadastro_usuarios()
+    elif current_page == 'cadastro_produtos':
+        render_cadastro_produtos()
+    elif current_page == 'cadastro_fornecedores':
+        render_cadastro_fornecedores()
+    elif current_page == 'controle_serial':
+        render_controle_serial()
+    elif current_page == 'controle_sku':
+        render_controle_sku()
+    elif current_page == 'mapeamento_prateleiras':
+        render_mapeamento_prateleiras()
+    elif current_page == 'estoque_prateleiras':
+        render_estoque_prateleiras()
 
 if __name__ == "__main__":
     main()
