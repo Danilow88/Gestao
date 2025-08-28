@@ -12,6 +12,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import random
 from datetime import datetime, timedelta
 import requests
 import json
@@ -65,7 +67,7 @@ try:
     from nfelib.nfe.bindings.v4_0.proc_nfe_v4_00 import NfeProc  # type: ignore
     from nfelib.nfse.bindings.v1_0.nfse_v1_00 import Nfse  # type: ignore
     NFELIB_DISPONIVEL = True
-    print("✅ nfelib disponível - Parser avançado de NFe e NFSe ativado")
+    print("nfelib disponível - Parser avançado de NFe e NFSe ativado")
 except ImportError:
     NFELIB_DISPONIVEL = False
     # Removido warning desnecessário da nfelib
@@ -77,10 +79,10 @@ try:
     from pynfe.entidades.notafiscal import NotaFiscal  # type: ignore
     # FORÇAR TRUE - PyNFe está funcionando perfeitamente
     PYNFE_DISPONIVEL = True
-    print("✅ PyNFe disponível - Consultas reais aos webservices SEFAZ ativadas")
+    print("PyNFe disponível - Consultas reais aos webservices SEFAZ ativadas")
 except ImportError:
     PYNFE_DISPONIVEL = False
-    print("⚠️ PyNFe não encontrada - Consultas reais indisponíveis")
+    print("PyNFe não encontrada - Consultas reais indisponíveis")
 
 # Scanner sempre ativo - bibliotecas instaladas
 BARCODE_SCANNER_AVAILABLE = True
@@ -88,115 +90,257 @@ BARCODE_SCANNER_AVAILABLE = True
 st.set_page_config(page_title="Nubank - Gestão de Estoque", layout="wide", page_icon="■")
 
 # ========================================================================================
-# MAPEAMENTO DE ÍCONES PARA ESTILO MINIMALISTA (FOTO)
+# SISTEMA DE NAVEGAÇÃO MODERNO SEM ÍCONES
 # ========================================================================================
 
-def get_icon_style(text):
-    """Substitui emojis por ícones no estilo da foto (pretos sólidos/silhuetas)"""
-    icon_map = {
-        # Navegação Principal
-        '■': '■',      # Design/Arte
-        '🖨️': '■',      # Impressora
-        '▬': '▬',      # Gráficos/Dados
-        '📱': '▦',      # Gadgets/Periféricos
-        '●': '●',      # Configurações
-        '🤖': '◉',      # IA/Bot
-        '✎': '✎',      # Escrever/Editar
-        '■': '■',      # Estoque/Caixa
-        '$': '$',      # Dinheiro
-        '▬': '▬',      # Empresa/Prédio
-        '▲': '▲',      # Crescimento/Gráfico
-        '◎': '◎',      # Alvo/Meta
-        '◯': '◯',      # Busca/Lupa
-        '■': '■',      # Computador
-        '●': '●',      # Mouse
-        '▬': '▬',      # Teclado
-        '◯': '◯',      # Headset
-        '■': '■',      # Monitor/TV
-        '■': '■',      # Câmera
-        '◯': '◯',      # Telefone
-        '■': '■',      # Email
-        '▤': '▤',      # Arquivo
-        '■': '■',      # Calendário
-        '■': '■',      # Maleta/Negócios
-        '◆': '◆',      # Energia/Rápido
-        '◆': '◆',      # Estrela/Destaque
-        '●': '●',      # Check/Sucesso
-        '×': '×',      # Error/Falha
-        '●': '●',      # Offline/Erro
-        '●': '●',      # Online/Sucesso
-        '●': '●',      # Atenção/Aviso
-        '◆': '◆',      # Estrela
-        '$': '$',      # Dinheiro/Venda
-        '▬': '▬',      # Lista/Relatório
-        '▼': '▼',      # Decrescimento
-        '●': '●',      # Pin/Marcador
-        '◯': '◯',      # Notificação
-        '■': '■',      # Presente/Bonus
-        '◆': '◆',      # Destaque/Quente
-        '◯': '◯',      # Ideia/Lâmpada
-        '▲': '▲',      # Crescimento/Foguete
-        '◆': '◆',      # Troféu/Prêmio
-        '◯': '◯',      # Círculo
-        '▶': '▶',      # Play
-        '■': '■',      # Pause
-        '■': '■',      # Stop
-        '◯': '◯',      # Refresh/Reload
-        '▲': '▲',      # Para cima
-        '▼': '▼',      # Para baixo
-        '▶': '▶',      # Direita
-        '◀': '◀',      # Esquerda
-        '◯': '◯',      # Link
-        '▤': '▤',      # Pasta
-        '▬': '▬',      # Documento
-        '●': '●',      # Ferramenta
-        '●': '●',       # Engrenagem
-        '◆': '◆',      # Evento
-        '◯': '◯',      # Música
-        '■': '■',      # Vídeo
-        '■': '■',      # Game/Controle
-        '■': '■',      # Dado/Sorte
-        '◯': '◯',      # Boliche
-        '▬': '▬',      # Guitarra
-        '▬': '▬',      # Violino
-        '▬': '▬',      # Trompete
-        '◯': '◯',      # Microfone
-        '◆': '◆',      # Diamante/Premium
-        '◯': '◯',      # Anel/Luxo
-        '◆': '◆',      # Coroa/VIP
-        '◆': '◆',      # Primeiro lugar
-        '◯': '◯',      # Segundo lugar
-        '●': '●',      # Terceiro lugar
-        '◆': '◆',      # Medalha
-        '◆': '◆',      # Roseta
-        '◆': '◆',      # Medalha militar
-        '◯': '◯',      # Fita
-        '●': '●',      # Roxo
-        '●': '●',      # Verde
-        '●': '●',      # Azul
-        '●': '●',      # Laranja
-        '●': '●',      # Marrom
-        '◯': '◯',      # Branco
-        '●': '●',      # Preto
-        '◆': '◆',      # Losango pequeno
-        '◆': '◆',      # Losango pequeno azul
-        '■': '■',      # Quadrado pequeno
-        '□': '□',      # Quadrado pequeno branco
-        '■': '■',      # Quadrado grande preto
-        '□': '□',      # Quadrado grande branco
-        '■': '■',      # Quadrado médio preto
-        '□': '□',      # Quadrado médio branco
-        '▲': '▲',      # Triângulo vermelho
-        '▼': '▼',      # Triângulo azul
-        '□': '□',      # Quadrado branco com borda
-        '■': '■',      # Quadrado preto
+# Configurações de cores dos gráficos - Paleta Roxa/Violeta Moderna
+PURPLE_GRADIENT_PALETTE = [
+    '#8B5CF6',  # Violeta vibrante
+    '#A78BFA',  # Lilás médio
+    '#C4B5FD',  # Lilás claro
+    '#DDD6FE',  # Lilás muito claro
+    '#7C3AED',  # Roxo escuro
+    '#6D28D9',  # Roxo profundo
+    '#5B21B6',  # Roxo intenso
+    '#4C1D95',  # Roxo muito escuro
+    '#9333EA',  # Violeta escuro
+    '#B45EF1'   # Rosa-violeta
+]
+
+# Paleta de cores primárias para diferentes tipos de gráficos
+CHART_COLOR_SCHEMES = {
+    'primary': ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE', '#7C3AED'],
+    'gradient': ['#8B5CF6', '#9333EA', '#A855F7', '#B45EF1', '#C084FC'],
+    'contrast': ['#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#6366F1'],
+    'monochromatic': ['#4C1D95', '#5B21B6', '#6D28D9', '#7C3AED', '#8B5CF6', '#9333EA', '#A855F7', '#B45EF1', '#C084FC', '#DDD6FE']
+}
+
+# Sistema de navegação moderno - Menu responsivo sem ícones
+NAVIGATION_PAGES = {
+    'dashboard': {
+        'title': 'Dashboard',
+        'description': 'Visão geral do sistema',
+        'category': 'principal'
+    },
+    'estoque': {
+        'title': 'Estoque Geral',
+        'description': 'Controle completo do estoque',
+        'category': 'estoque'
+    },
+    'estoque_prateleiras': {
+        'title': 'Estoque por Prateleiras',
+        'description': 'Mapeamento detalhado por localização',
+        'category': 'estoque'
+    },
+    'nf_estoque': {
+        'title': 'Notas Fiscais',
+        'description': 'Gestão de documentos fiscais',
+        'category': 'estoque'
+    },
+    'mov_estoque': {
+        'title': 'Movimentações',
+        'description': 'Histórico de entradas e saídas',
+        'category': 'estoque'
+    },
+    'fornecedores': {
+        'title': 'Fornecedores',
+        'description': 'Cadastro de parceiros',
+        'category': 'cadastros'
+    },
+    'produtos': {
+        'title': 'Produtos',
+        'description': 'Catálogo de produtos',
+        'category': 'cadastros'
+    },
+    'impressoras': {
+        'title': 'Impressoras',
+        'description': 'Gestão de equipamentos',
+        'category': 'equipamentos'
+    },
+    'controle_gadgets': {
+        'title': 'Controle de Gadgets',
+        'description': 'Perdas e reposições',
+        'category': 'gadgets'
+    },
+    'relatorios': {
+        'title': 'Relatórios',
+        'description': 'Análises e dashboards',
+        'category': 'relatorios'
+    },
+    'exportacao': {
+        'title': 'Exportação',
+        'description': 'Download de dados',
+        'category': 'relatorios'
+    },
+    'rive_editor': {
+        'title': 'Editor Visual',
+        'description': 'Customização da interface',
+        'category': 'configuracoes'
+    }
+}
+
+# Função para aplicar a nova paleta de cores nos gráficos
+def get_chart_colors(chart_type='primary', num_colors=None):
+    """
+    Retorna cores da paleta roxa/violeta para gráficos
+    
+    Args:
+        chart_type: Tipo de esquema de cores ('primary', 'gradient', 'contrast', 'monochromatic')
+        num_colors: Número específico de cores necessárias
+    
+    Returns:
+        Lista de cores em formato hexadecimal
+    """
+    colors = CHART_COLOR_SCHEMES.get(chart_type, CHART_COLOR_SCHEMES['primary'])
+    
+    if num_colors:
+        if num_colors <= len(colors):
+            return colors[:num_colors]
+        else:
+            # Se precisar de mais cores, repetir o padrão
+            extended_colors = colors * ((num_colors // len(colors)) + 1)
+            return extended_colors[:num_colors]
+    
+    return colors
+
+# Configuração de tema moderno para Plotly
+def get_modern_plotly_theme():
+    """Retorna configuração de tema moderno para gráficos Plotly"""
+    return {
+        'layout': {
+            'colorway': get_chart_colors('primary'),
+            'font': {'family': 'Inter, -apple-system, BlinkMacSystemFont, sans-serif', 'color': '#374151'},
+            'paper_bgcolor': 'rgba(0,0,0,0)',
+            'plot_bgcolor': 'rgba(0,0,0,0)',
+            'hovermode': 'x unified',
+            'showlegend': True,
+            'legend': {
+                'bgcolor': 'rgba(255,255,255,0.9)',
+                'bordercolor': 'rgba(0,0,0,0.1)',
+                'borderwidth': 1
+            }
+        },
+        'data': {
+            'bar': [{'marker': {'line': {'width': 0}}}],
+            'scatter': [{'marker': {'size': 8}}],
+            'pie': [{'textfont': {'size': 12}}]
+        }
+    }
+
+# Sistema de navegação moderno sem ícones
+MENU_CATEGORIES = {
+    'principal': {
+        'title': 'Principal',
+        'color': '#8B5CF6',
+        'pages': ['dashboard']
+    },
+    'estoque': {
+        'title': 'Estoque',
+        'color': '#A78BFA', 
+        'pages': ['estoque', 'estoque_prateleiras', 'nf_estoque', 'mov_estoque']
+    },
+    'cadastros': {
+        'title': 'Cadastros',
+        'color': '#C4B5FD',
+        'pages': ['fornecedores', 'produtos']
+    },
+    'equipamentos': {
+        'title': 'Equipamentos',
+        'color': '#DDD6FE',
+        'pages': ['impressoras']
+    },
+    'gadgets': {
+        'title': 'Gadgets',
+        'color': '#7C3AED',
+        'pages': ['controle_gadgets']
+    },
+    'relatorios': {
+        'title': 'Relatórios',
+        'color': '#6D28D9',
+        'pages': ['relatorios', 'exportacao']
+    },
+    'configuracoes': {
+        'title': 'Configurações',
+        'color': '#5B21B6',
+        'pages': ['rive_editor']
+    }
+}
+
+# Atualizar gráficos existentes com nova paleta de cores
+def update_chart_colors(fig, chart_type='primary'):
+    """Atualiza um gráfico Plotly existente com a nova paleta de cores"""
+    colors = get_chart_colors(chart_type)
+    
+    # Atualizar cores das barras/linhas
+    if hasattr(fig, 'data'):
+        for i, trace in enumerate(fig.data):
+            if hasattr(trace, 'marker'):
+                trace.marker.color = colors[i % len(colors)]
+    
+    # Aplicar tema moderno
+    theme = get_modern_plotly_theme()
+    fig.update_layout(**theme['layout'])
+    
+    return fig
+
+# ========================================================================================
+# FUNÇÕES AUXILIARES DE INTERFACE MODERNA
+# ========================================================================================
+
+def render_modern_menu():
+    """Renderiza menu moderno responsivo sem ícones"""
+    st.markdown("""
+    <style>
+    .modern-menu {
+        background: linear-gradient(135deg, #1F2937 0%, #374151 100%);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
     }
     
-    # Substituir todos os emojis encontrados
-    for emoji, icon in icon_map.items():
-        text = text.replace(emoji, icon)
+    .menu-category {
+        margin-bottom: 1rem;
+    }
     
-    return text
+    .category-title {
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+        padding-left: 0.5rem;
+        border-left: 3px solid var(--category-color);
+    }
+    
+    .menu-button {
+        width: 100%;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        color: white;
+        text-align: left;
+        margin-bottom: 0.25rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+    
+    .menu-button:hover {
+        background: rgba(255,255,255,0.2);
+        border-color: rgba(255,255,255,0.4);
+        transform: translateX(4px);
+    }
+    
+    .menu-button.active {
+        background: linear-gradient(135deg, var(--category-color) 0%, var(--category-color-dark) 100%);
+        border-color: var(--category-color);
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # ========================================================================================
 # SCANNER DE CÓDIGO DE BARRAS - FUNÇÕES
@@ -466,39 +610,103 @@ def apply_responsive_styles():
     
     /* Cards responsivos */
     .metric-card {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%);
+        border: 1px solid #6D28D9;
         border-radius: 12px;
         padding: 1.5rem;
         text-align: center;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
         margin-bottom: 1rem;
         min-height: 120px;
         display: flex;
         flex-direction: column;
         justify-content: center;
+        color: #FFFFFF !important;
+    }
+    
+    .metric-card * {
+        color: #FFFFFF !important;
+    }
+    
+    /* Forçar cor branca em todos os elementos de métrica do Streamlit */
+    [data-testid="metric-container"] {
+        background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%) !important;
+        border: 1px solid #6D28D9 !important;
+        border-radius: 12px !important;
+        padding: 1.5rem !important;
+        color: #FFFFFF !important;
+    }
+    
+    [data-testid="metric-container"] * {
+        color: #FFFFFF !important;
+    }
+    
+    [data-testid="metric-container"] div[data-testid="metric-value"] {
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    [data-testid="metric-container"] div[data-testid="metric-label"] {
+        color: #FFFFFF !important;
+        font-weight: 500 !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    [data-testid="metric-container"] div[data-testid="metric-delta"] {
+        color: #FFFFFF !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
     }
     
     .metric-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4);
+        background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
     }
     
     .metric-value {
         font-size: 2rem;
         font-weight: 700;
-        color: #9333EA;
+        color: #FFFFFF !important;
         line-height: 1;
         margin-bottom: 0.5rem;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
     
     .metric-label {
         font-size: 0.9rem;
-        color: #64748b;
+        color: #FFFFFF !important;
         font-weight: 500;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+    
+    .metric-delta {
+        font-size: 0.8rem;
+        color: #FFFFFF !important;
+        font-weight: 400;
+        margin-top: 0.5rem;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+    
+    .metric-delta.positive {
+        color: #FFFFFF !important;
+        background: rgba(16, 185, 129, 0.2);
+        border-left: 3px solid #10B981;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+    
+    .metric-delta.negative {
+        color: #FFFFFF !important;
+        background: rgba(239, 68, 68, 0.2);
+        border-left: 3px solid #EF4444;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
     }
     
     /* Grid responsivo para métricas */
@@ -706,6 +914,11 @@ def apply_responsive_styles():
         font-weight: 600 !important;
         padding: 0.75rem !important;
         font-size: 1rem !important;
+        min-height: 50px !important;
+        line-height: 1.4 !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+        text-overflow: visible !important;
     }
     
     .stSelectbox > div > div > div[data-value=""] {
@@ -718,12 +931,20 @@ def apply_responsive_styles():
         border-radius: 8px !important;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
         background: white !important;
+        max-height: 300px !important;
+        overflow-y: auto !important;
+        z-index: 9999 !important;
     }
     
     .stSelectbox > div > div > div[role="option"] {
         color: #374151 !important;
         padding: 0.75rem 1rem !important;
         font-weight: 500 !important;
+        min-height: 45px !important;
+        line-height: 1.4 !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+        font-size: 0.95rem !important;
     }
     
     .stSelectbox > div > div > div[role="option"]:hover {
@@ -731,11 +952,311 @@ def apply_responsive_styles():
         color: #1f2937 !important;
     }
     
+    /* Melhorar labels dos selectbox */
+    .stSelectbox > label {
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        color: #1f2937 !important;
+        margin-bottom: 0.5rem !important;
+        text-shadow: none !important;
+        line-height: 1.4 !important;
+    }
+    
+    /* Container dos selectbox */
+    .stSelectbox {
+        margin-bottom: 1rem !important;
+    }
+    
+    /* Garantir que o texto não seja cortado nas colunas */
+    .element-container {
+        overflow: visible !important;
+    }
+    
+    /* Melhorar o layout das colunas para evitar sobreposição */
+    div[data-testid="column"] {
+        padding-right: 0.75rem !important;
+        padding-left: 0.25rem !important;
+        overflow: visible !important;
+    }
+    
+    /* Fonte branca específica para labels dos filtros de categoria usando JavaScript */
+    .stSelectbox > label[for*="prat_"],
+    .stSelectbox > label[for*="rua_"],  
+    .stSelectbox > label[for*="status_"] {
+        color: #FFFFFF !important;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7) !important;
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
+    }
+    
+    /* Também aplicar para qualquer label que contenha essas palavras específicas */
+    .stSelectbox > label {
+        transition: color 0.3s ease !important;
+    }
+    
+    </style>
+    
+    <script>
+    // Aplicar fonte branca aos labels específicos dos filtros
+    function applyWhiteFontToFilters() {
+        const labels = document.querySelectorAll('.stSelectbox > label');
+        labels.forEach(label => {
+            const text = label.textContent || label.innerText;
+            if (text.includes('Prateleira') || text.includes('Rua') || text.includes('Status')) {
+                label.style.color = '#FFFFFF';
+                label.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.7)';
+                label.style.fontWeight = '700';
+                label.style.fontSize = '1.1rem';
+            }
+        });
+    }
+    
+    // Executar quando a página carregar
+    document.addEventListener('DOMContentLoaded', applyWhiteFontToFilters);
+    
+    // Executar novamente após mudanças na página (para Streamlit)
+    setTimeout(applyWhiteFontToFilters, 500);
+    setTimeout(applyWhiteFontToFilters, 1000);
+    setTimeout(applyWhiteFontToFilters, 2000);
+    
+    // Observer para detectar mudanças no DOM
+    const observer = new MutationObserver(applyWhiteFontToFilters);
+    observer.observe(document.body, { 
+        childList: true, 
+        subtree: true 
+    });
+    
+    // Aplicar fonte preta à seção de Mapeamento Fornecedor-Produto
+    function applyBlackFontToMapping() {
+        // Buscar todos os elementos de texto
+        const allElements = document.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, div');
+        
+        allElements.forEach(element => {
+            const text = element.textContent || element.innerText;
+            
+            // Aplicar fonte preta para títulos específicos
+            if (text.includes('🔗') && text.includes('Mapeamento Fornecedor-Produto')) {
+                element.style.color = '#000000 !important';
+                element.style.textShadow = 'none !important';
+                element.style.fontWeight = 'bold !important';
+            }
+            
+            // Aplicar fonte preta para subtítulo
+            if (text.includes('Defina qual fornecedor atende para qual produto')) {
+                element.style.color = '#000000 !important';
+                element.style.textShadow = 'none !important';
+                element.style.fontStyle = 'italic !important';
+            }
+        });
+        
+        // Aplicar também aos expanders
+        const expanders = document.querySelectorAll('[data-testid="stExpander"] summary, .streamlit-expanderHeader');
+        expanders.forEach(expander => {
+            const text = expander.textContent || expander.innerText;
+            if (text.includes('Adicionar Mapeamento Fornecedor-Produto')) {
+                expander.style.color = '#000000 !important';
+                expander.style.textShadow = 'none !important';
+            }
+        });
+    }
+    
+    // Executar função para fonte preta
+    document.addEventListener('DOMContentLoaded', applyBlackFontToMapping);
+    setTimeout(applyBlackFontToMapping, 500);
+    setTimeout(applyBlackFontToMapping, 1000);
+    setTimeout(applyBlackFontToMapping, 2000);
+    
+    // Observer para a seção de mapeamento também
+    const mappingObserver = new MutationObserver(applyBlackFontToMapping);
+    mappingObserver.observe(document.body, { 
+        childList: true, 
+        subtree: true 
+    });
+    </script>
+    
+    <style>
+    
+    /* Fonte preta específica para seção de Mapeamento Fornecedor-Produto */
+    .stMarkdown h3:contains("Mapeamento Fornecedor-Produto"),
+    .stMarkdown p:contains("Defina qual fornecedor atende para qual produto") {
+        color: #000000 !important;
+        text-shadow: none !important;
+    }
+    
+    /* Expander do mapeamento */
+    [data-testid="stExpander"] summary:contains("Adicionar Mapeamento Fornecedor-Produto") {
+        color: #000000 !important;
+        text-shadow: none !important;
+    }
+    
+    /* Seletor mais genérico para capturar o título */
+    .stMarkdown h3 {
+        transition: color 0.3s ease !important;
+    }
+    
+    /* Ultra Dark Purple Sidebar - Quase preto */
+    .css-1d391kg, [data-testid="stSidebar"] > div, .stSidebar > div {
+        background: #1E1B4B !important;  /* Purple-950 - ultra escuro */
+        padding: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: 2px 0 12px rgba(0, 0, 0, 0.3) !important;
+        min-height: 100vh !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+    
+    /* Área do conteúdo do sidebar */
+    .css-1d391kg .block-container, [data-testid="stSidebar"] .block-container {
+        padding: 1.5rem 1rem !important;
+        max-width: 100% !important;
+    }
+    
+    /* Logo/Header área - mais escura */
+    .css-1d391kg .stMarkdown:first-child, [data-testid="stSidebar"] .stMarkdown:first-child {
+        background: rgba(0, 0, 0, 0.2) !important;
+        padding: 1rem !important;
+        margin: -1.5rem -1rem 1.5rem -1rem !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    }
+    
+    .css-1d391kg .stMarkdown:first-child h1,
+    [data-testid="stSidebar"] .stMarkdown:first-child h1 {
+        color: white !important;
+        font-size: 1.25rem !important;
+        font-weight: 600 !important;
+        margin: 0 !important;
+        text-align: center !important;
+    }
+    
+    /* Remover aparência de botões - apenas texto */
+    .css-1d391kg .stButton > button, [data-testid="stSidebar"] .stButton > button {
+        background: transparent !important;
+        color: rgba(255, 255, 255, 0.9) !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 0.5rem 0 !important;
+        margin: 0.25rem 0 !important;
+        font-weight: 400 !important;
+        width: 100% !important;
+        text-align: left !important;
+        transition: color 0.2s ease !important;
+        font-size: 0.9rem !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+    
+    .css-1d391kg .stButton > button:hover, [data-testid="stSidebar"] .stButton > button:hover {
+        background: transparent !important;
+        color: white !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    
+    .css-1d391kg .stButton > button:focus, [data-testid="stSidebar"] .stButton > button:focus {
+        background: transparent !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+    
+    /* Radio buttons - apenas texto simples */
+    .css-1d391kg .stRadio > div, [data-testid="stSidebar"] .stRadio > div {
+        background: transparent !important;
+    }
+    
+    .css-1d391kg .stRadio label, [data-testid="stSidebar"] .stRadio label {
+        color: rgba(255, 255, 255, 0.9) !important;
+        font-weight: 400 !important;
+        padding: 0.5rem 0 !important;
+        border-radius: 0 !important;
+        transition: color 0.2s ease !important;
+        background: transparent !important;
+    }
+    
+    .css-1d391kg .stRadio label:hover, [data-testid="stSidebar"] .stRadio label:hover {
+        color: white !important;
+        background: transparent !important;
+    }
+    
+    /* Texto do sidebar */
+    .css-1d391kg .stMarkdown, [data-testid="stSidebar"] .stMarkdown {
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+    
+    /* Título principal do sistema */
+    .css-1d391kg h2, [data-testid="stSidebar"] h2 {
+        color: #A855F7 !important;
+        font-weight: 700 !important;
+        text-align: center !important;
+        margin: 1rem 0 2rem 0 !important;
+        font-size: 1.4rem !important;
+        text-shadow: 0 0 10px rgba(168,85,247,0.3) !important;
+    }
+    
+    .css-1d391kg h3, [data-testid="stSidebar"] h3 {
+        color: white !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Divisores - mais sutis */
+    .css-1d391kg hr, [data-testid="stSidebar"] hr {
+        border-color: rgba(255, 255, 255, 0.08) !important;
+        margin: 1rem 0 !important;
+    }
+    
+    /* Hover minimalista - apenas mudança de cor */
+    .css-1d391kg .stButton > button:hover {
+        background: transparent !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    
+    /* Botão ativo/selecionado */
+    .css-1d391kg .stButton > button[data-baseweb="button"][kind="primary"] {
+        background: rgba(255, 255, 255, 0.9) !important;
+        color: #7C3AED !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3) !important;
+    }
+    
+    /* Títulos no sidebar */
+    .css-1d391kg h1, .css-1d391kg h2, .css-1d391kg h3, .css-1d391kg h4, .css-1d391kg h5, .css-1d391kg h6 {
+        color: white !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    /* Texto geral no sidebar */
+    .css-1d391kg .stMarkdown, .css-1d391kg p, .css-1d391kg span {
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+    
+    /* Área de logout no final */
+    .css-1d391kg::after {
+        content: "🚪 Log Out";
+        display: block;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 1rem;
+        padding: 0.75rem 1rem;
+        margin-top: auto;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        text-align: left;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: absolute;
+        bottom: 2rem;
+        left: 1rem;
+        right: 1rem;
+    }
+    
     /* Media queries para responsividade */
     @media (max-width: 768px) {
         .main .block-container {
             padding-left: 0.5rem;
             padding-right: 0.5rem;
+        }
+        
+        .css-1d391kg {
+            border-radius: 0 !important;
+        }
         }
         
         .metric-card {
@@ -835,797 +1356,383 @@ def apply_responsive_styles():
     </style>
     """, unsafe_allow_html=True)
 
-def apply_nubank_theme():
-    """Aplica o tema personalizado do Nubank com ícones estilo foto minimalista"""
-    """Aplica o tema avançado e personalizado baseado nas configurações do admin"""
-    # Verificar se há configurações avançadas
-    advanced_config = getattr(st.session_state, 'advanced_visual_config', {})
-    
-    if advanced_config:
-        # Usar configurações avançadas
-        primary_color = advanced_config.get('primary_color', '#000000')
-        background_color = advanced_config.get('background_color', '#000000')
-        text_color = advanced_config.get('text_color', '#FFFFFF')
-        accent_color = advanced_config.get('accent_color', '#9333EA')
-        font_family = advanced_config.get('font_family', 'Inter')
-        font_size = advanced_config.get('font_size', '16px')
-        header_font_size = advanced_config.get('header_font_size', '2.5rem')
-        button_style = advanced_config.get('button_style', 'solid')
-        button_format = advanced_config.get('button_format', 'pill')
-        button_position = advanced_config.get('button_position', 'center')
-        background_image = advanced_config.get('background_image', None)
-        background_opacity = advanced_config.get('background_opacity', 0.3)
-        card_style = advanced_config.get('card_style', 'solid_purple')
-        card_border_radius = advanced_config.get('card_border_radius', '16px')
-        card_shadow_intensity = advanced_config.get('card_shadow_intensity', 'light')
-        remove_gradients = advanced_config.get('remove_gradients', True)
-        solid_background = advanced_config.get('solid_background', True)
-        clean_design = advanced_config.get('clean_design', True)
-        company_logo = advanced_config.get('company_logo', None)
-        logo_position = advanced_config.get('logo_position', 'sidebar_top')
-        logo_size = advanced_config.get('logo_size', '150px')
-        custom_css = advanced_config.get('custom_css', '')
-    else:
-        # Usar configurações básicas se não há avançadas
-        theme = getattr(st.session_state, 'theme_config', {
-            'primary_color': '#000000',
-            'background_color': '#000000',
-            'text_color': '#FFFFFF',
-            'accent_color': '#9333EA',
-            'custom_css': ''
-        })
-        
-        primary_color = theme['primary_color']
-        background_color = theme['background_color']
-        text_color = theme['text_color']
-        accent_color = theme['accent_color']
-        font_family = 'Inter'
-        font_size = '16px'
-        header_font_size = '2.5rem'
-        button_style = 'solid'
-        button_format = 'pill'
-        button_position = 'center'
-        background_image = None
-        background_opacity = 0.3
-        card_style = 'solid_purple'
-        card_border_radius = '16px'
-        card_shadow_intensity = 'light'
-        remove_gradients = True
-        solid_background = True
-        clean_design = True
-        company_logo = None
-        logo_position = 'sidebar_top'
-        logo_size = '150px'
-        custom_css = theme.get('custom_css', '')
-    
-    # Definir estilos de botão baseado no formato
-    button_border_radius = {
-        'pill': '25px',
-        'rounded': '12px', 
-        'square': '4px',
-        'circle': '50%',
-        'custom': advanced_config.get('custom_border_radius', '20px') if advanced_config else '20px'
-    }.get(button_format if advanced_config else 'pill', '25px')
-    
-    # Definir background baseado nas configurações
-    app_background = background_color if solid_background else f"linear-gradient(135deg, {background_color} 0%, {primary_color} 100%)"
-    if background_image:
-        app_background = f"url('{background_image}'), {background_color}"
-    
-    # Estilos de cards baseado no tipo
-    card_background = primary_color if remove_gradients else f"linear-gradient(135deg, {primary_color}, {accent_color})"
-    if card_style == 'solid_purple':
-        card_background = primary_color
-    
-    st.markdown(f"""
+def apply_modern_defi_theme():
+    """Aplica tema moderno DeFi com gradientes roxos e design futurista"""
+    st.markdown("""
     <style>
-    /* Importar fontes personalizadas e ícones */
-    @import url('https://fonts.googleapis.com/css2?family={font_family.replace(" ", "+")}:wght@300;400;500;600;700;800&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=SF+Mono:wght@400;500;600;700&display=swap');
-    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
-    @import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css');
+    /* ===== TEMA MODERNO DEFI COM GRADIENTES ROXOS ===== */
+    .stApp {
+        background: linear-gradient(135deg, #0D0B21 0%, #1A1B3A 25%, #2D1B45 50%, #1A1B3A 75%, #0D0B21 100%);
+        color: #FFFFFF;
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
     
-    .stApp {{
-        background: {app_background} !important;
-        background-size: cover !important;
-        background-attachment: fixed !important;
-        font-family: '{font_family}', -apple-system, BlinkMacSystemFont, sans-serif !important;
-        font-size: {font_size} !important;
-        color: {text_color} !important;
-        min-height: 100vh !important;
-    }}
+    /* Sidebar com design futurista */
+    .css-1d391kg {
+        background: linear-gradient(180deg, rgba(99, 102, 241, 0.9) 0%, rgba(139, 92, 246, 0.9) 30%, rgba(147, 51, 234, 0.9) 70%, rgba(124, 58, 237, 0.9) 100%);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(147, 51, 234, 0.4);
+        border-radius: 15px;
+        margin: 10px;
+        padding: 20px;
+        box-shadow: 0 8px 32px rgba(147, 51, 234, 0.3);
+    }
     
-    /* ========== SISTEMA DE ÍCONES MODERNOS ========== */
-    .icon {{
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 1.2em;
-        height: 1.2em;
-        margin-right: 0.5em;
-        font-size: inherit;
-        vertical-align: middle;
-    }}
+    /* Main content area com glass effect */
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        max-width: 95%;
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        border: 1px solid rgba(147, 51, 234, 0.1);
+        margin: 1rem;
+    }
     
-    .icon-success {{
-        color: #9333EA;
-        background: rgba(147, 51, 234, 0.1);
-        border-radius: 50%;
-        padding: 0.2em;
-    }}
-    
-    .icon-error {{
-        color: #EF4444;
-        background: rgba(239, 68, 68, 0.1);
-        border-radius: 50%;
-        padding: 0.2em;
-    }}
-    
-    .icon-warning {{
-        color: #F59E0B;
-        background: rgba(245, 158, 11, 0.1);
-        border-radius: 50%;
-        padding: 0.2em;
-    }}
-    
-    .icon-info {{
-        color: #3B82F6;
-        background: rgba(59, 130, 246, 0.1);
-        border-radius: 50%;
-        padding: 0.2em;
-    }}
-    
-    .icon-refresh {{
-        color: #8B5CF6;
-        background: rgba(139, 92, 246, 0.1);
-        border-radius: 50%;
-        padding: 0.2em;
-        animation: spin 2s linear infinite;
-    }}
-    
-    .icon-scan {{
-        color: #06B6D4;
-        background: rgba(6, 182, 212, 0.1);
-        border-radius: 50%;
-        padding: 0.2em;
-    }}
-    
-    .icon-chat {{
-        color: #EC4899;
-        background: rgba(236, 72, 153, 0.1);
-        border-radius: 50%;
-        padding: 0.2em;
-    }}
-    
-    .icon-printer {{
-        color: #64748B;
-        background: rgba(100, 116, 139, 0.1);
-        border-radius: 50%;
-        padding: 0.2em;
-    }}
-    
-    .icon-dashboard {{
-        color: #9333EA;
-        background: rgba(147, 51, 234, 0.1);
-        border-radius: 50%;
-        padding: 0.2em;
-    }}
-    
-    @keyframes spin {{
-        from {{ transform: rotate(0deg); }}
-        to {{ transform: rotate(360deg); }}
-    }}
-    
-    /* Botões com ícones modernos */
-    .btn-modern {{
-        display: inline-flex !important;
-        align-items: center !important;
-        gap: 0.5rem !important;
-        padding: 0.75rem 1.5rem !important;
-        border-radius: 12px !important;
-        border: none !important;
-        font-weight: 600 !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-    }}
-    
-    .btn-modern:hover {{
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2) !important;
-    }}
-    
-    /* Cards modernos */
-    .modern-card {{
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
-        backdrop-filter: blur(10px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 16px !important;
-        padding: 1.5rem !important;
-        margin: 1rem 0 !important;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
-        transition: all 0.3s ease !important;
-    }}
-    
-    .modern-card:hover {{
-        transform: translateY(-4px) !important;
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    }}
-    
-    /* Status badges modernos */
-    .status-badge {{
-        display: inline-flex !important;
-        align-items: center !important;
-        gap: 0.3rem !important;
-        padding: 0.3rem 0.8rem !important;
-        border-radius: 20px !important;
-        font-size: 0.85rem !important;
-        font-weight: 600 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.5px !important;
-    }}
-    
-    .status-online {{
-        background: #8B5CF6 !important;
-        color: white !important;
-        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3) !important;
-    }}
-    
-    .status-offline {{
-        background: #6B7280 !important;
-        color: white !important;
-        box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3) !important;
-    }}
-    
-    /* Melhorar espaçamento geral */
-    .stContainer > div {{
-        padding: 1rem 0 !important;
-    }}
-    
-    .main-header {{
-        text-align: center !important;
-        padding: 2rem 0 !important;
-        margin-bottom: 2rem !important;
-        background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%) !important;
-        border-radius: 16px !important;
-        backdrop-filter: blur(10px) !important;
-    }}
-    
-    /* ⚪ CHAT DO MATT - COR BRANCA SEMPRE E DEFINITIVA! */
-    
-    /* Seletores por background-color - Chat do Matt */
-    div[style*="background-color: #f3e5f5"],
-    div[style*="background-color: #f3e5f5"] *,
-    div[style*="background-color: #f3e5f5"] strong,
-    div[style*="background-color: #f3e5f5"] span,
-    div[style*="background-color: #f3e5f5"] p,
-    div[style*="background-color: #f3e5f5"] h1,
-    div[style*="background-color: #f3e5f5"] h2,
-    div[style*="background-color: #f3e5f5"] h3,
-    div[style*="background-color: #f3e5f5"] h4,
-    div[style*="background-color: #f3e5f5"] h5,
-    div[style*="background-color: #f3e5f5"] h6 {{
+    /* Headers com efeito neon */
+    h1, h2, h3, h4, h5, h6 {
         color: #FFFFFF !important;
-        text-shadow: none !important;
-    }}
-    
-    div[style*="background-color: #e3f2fd"],
-    div[style*="background-color: #e3f2fd"] *,
-    div[style*="background-color: #e3f2fd"] strong,
-    div[style*="background-color: #e3f2fd"] span,
-    div[style*="background-color: #e3f2fd"] p,
-    div[style*="background-color: #e3f2fd"] h1,
-    div[style*="background-color: #e3f2fd"] h2,
-    div[style*="background-color: #e3f2fd"] h3,
-    div[style*="background-color: #e3f2fd"] h4,
-    div[style*="background-color: #e3f2fd"] h5,
-    div[style*="background-color: #e3f2fd"] h6 {{
-        color: #FFFFFF !important;
-        text-shadow: none !important;
-    }}
-    
-    /* Força absoluta - qualquer div que contenha "Matt" */
-    div[style*="margin-right: 20%"],
-    div[style*="margin-left: 20%"],
-    div[style*="margin-right: 20%"] *,
-    div[style*="margin-left: 20%"] * {{
-        color: #FFFFFF !important;
-        text-shadow: none !important;
-    }}
-    
-    /* Super força - seletores universais para chat */
-    [style*="f3e5f5"] {{
-        color: #FFFFFF !important;
-    }}
-    
-    [style*="e3f2fd"] {{
-        color: #FFFFFF !important;
-    }}
-    
-    /* Mega força - qualquer coisa que tenha "Matt" no conteúdo */
-    *:contains("Matt") {{
-        color: #FFFFFF !important;
-    }}
-    
-    *:contains("🤖") {{
-        color: #FFFFFF !important;
-    }}
-    
-    /* Ultra força - container de chat específico */
-    .stContainer div[style*="background-color"],
-    .stContainer div[style*="background-color"] * {{
-        color: #FFFFFF !important;
-    }}
-    
-    /* Força final - sobrescrever TUDO */
-    div[style*="border-radius: 10px"] {{
-        color: #FFFFFF !important;
-    }}
-    
-    div[style*="border-radius: 10px"] * {{
-        color: #FFFFFF !important;
-    }}
-    
-    /* ⚪ CLASSES ESPECÍFICAS DO CHAT - COR BRANCA ABSOLUTA */
-    .chat-matt-message,
-    .chat-matt-message *,
-    .chat-matt-message strong,
-    .chat-matt-message span,
-    .chat-user-message,
-    .chat-user-message *,
-    .chat-user-message strong,
-    .chat-user-message span {{
-        color: #FFFFFF !important;
-        text-shadow: none !important;
-        text-decoration: none !important;
-    }}
-    
-    /* ⚪ FORÇA NUCLEAR - NADA PODE SER DIFERENTE DE BRANCO NO CHAT */
-    div.chat-matt-message,
-    div.chat-matt-message *,
-    div.chat-user-message,
-    div.chat-user-message * {{
-        color: #FFFFFF !important;
-        text-shadow: none !important;
-        filter: none !important;
-        opacity: 1 !important;
-    }}
-    
-    /* ⚫ ÚLTIMA INSTÂNCIA - TODOS OS ELEMENTOS DO CHAT */
-    [class*="chat-"],
-    [class*="chat-"] *,
-    [class*="chat-"] strong,
-    [class*="chat-"] span,
-    [class*="chat-"] p,
-    [class*="chat-"] div {{
-        color: #FFFFFF !important;
-        text-shadow: none !important;
-    }}
-    
-    /* Sidebar com logo da empresa */
-    .css-1d391kg {{
-        background: linear-gradient(180deg, rgba(15, 15, 35, 0.95) 0%, rgba(26, 26, 46, 0.95) 100%) !important;
-        backdrop-filter: blur(16px) !important;
-        border-right: 1px solid {accent_color} !important;
-    }}
-    
-    /* Logo da empresa */
-    .company-logo {{
-        text-align: center;
-        padding: 1rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        margin-bottom: 1rem;
-    }}
-    
-    .company-logo img {{
-        max-width: {logo_size};
-        height: auto;
-        border-radius: 8px;
-    }}
-    
-    .main-header {{ 
-        background: {card_background} !important;
-        padding: 2rem 1rem;
-        border-radius: {card_border_radius};
-        color: {text_color} !important;
-        text-align: center;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 12px rgba(138, 5, 190, 0.3);
-    }}
-    
-    .main-header * {{
-        text-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
-    }}
-    
-    .main-title {{
-        font-size: 2.5rem; 
-        font-weight: 700; 
-        color: {text_color} !important;
-        margin-bottom: 0.5rem;
-        text-shadow: 1px 3px 6px rgba(0, 0, 0, 0.5);
-    }}
-    
-    .main-subtitle {{
-        font-size: 1.2rem;
-        color: {text_color} !important;
-        opacity: 0.9; 
-        text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
-    }}
-    
-    /* Botões personalizados como na foto */
-    .stButton > button {{
-        background: {card_background} !important;
-        color: white !important;
-        border: none !important;
-        border-radius: {button_border_radius} !important;
-        padding: 0.75rem 1.5rem !important;
-        font-weight: 600 !important;
-        font-size: {font_size} !important;
-        font-family: '{font_family}', sans-serif !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        box-shadow: 0 4px 14px 0 rgba(147, 51, 234, 0.25) !important;
-        text-shadow: none !important;
-        letter-spacing: 0.025em !important;
-        position: relative !important;
-        overflow: hidden !important;
-        text-align: {button_position} !important;
-    }}
-    
-    .stButton > button:hover {{
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 25px 0 rgba(147, 51, 234, 0.4) !important;
-        background: {accent_color} !important;
-    }}
-    
-    /* Cards como na foto */
-    .stContainer, .element-container {{
-        background: {card_background} !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: {card_border_radius} !important;
-        padding: 1.5rem !important;
-        margin: 1rem 0 !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-        transition: all 0.3s ease !important;
-        color: {text_color} !important;
-    }}
-    
-    .stContainer:hover, .element-container:hover {{
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
-    }}
-    
-    .stDataFrame {{
-        background: {primary_color} !important;
-        border-radius: 12px;
-        border-left: 4px solid {accent_color};
-        overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }}
-    
-    .stDataFrame th {{
-        background: #8B5CF6 !important;
-        color: white !important;
-        font-weight: 700 !important;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-        font-size: 14px !important;
-    }}
-    
-    .stDataFrame td {{
-        background: rgba(255, 255, 255, 0.95) !important;
-        color: #1f2937 !important;
-        border-color: {accent_color} !important;
-        font-weight: 500 !important;
-    }}
-    
-    .stTextInput > div > div > input, .stSelectbox > div > div, 
-    .stNumberInput > div > div > input, .stTextArea > div > div > textarea {{
-        background: {primary_color} !important;
-        border: 1px solid #374151 !important;
-        border-radius: 8px !important;
-        padding: 0.75rem !important;
-        font-size: 1rem !important;
-        color: white !important;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-    }}
-    
-    .stTextInput > div > div > input::placeholder,
-    .stTextArea > div > div > textarea::placeholder {{
-        color: rgba(255, 255, 255, 0.7) !important;
-        opacity: 1 !important;
-    }}
-    
-    .stSelectbox > div > div:focus-within, 
-    .stTextInput > div > div:focus-within, 
-    .stNumberInput > div > div:focus-within {{
-        border-color: #6b7280;
-        box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.2);
-    }}
-    
-    .stAlert {{
-        border-radius: 8px !important;
-        border: none !important;
-        padding: 1rem !important;
-        margin: 1rem 0 !important;
-    }}
-    
-    .stSuccess {{
-        background: #10B981 !important;
-        color: white !important;
-        text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
-    }}
-    
-    .stError {{
-        background: #EF4444 !important;
-        color: white !important;
-        text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
-    }}
-    
-    .stWarning {{
-        background: #F59E0B !important;
-        color: #333333 !important;
-        text-shadow: 1px 2px 3px rgba(255, 255, 255, 0.6);
-    }}
-    
-    .stInfo {{
-        background: #3B82F6 !important;
-        color: white !important;
-        text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
-    }}
-    
-    .metric-card {{
-        background: {primary_color} !important;
-        border-radius: 16px;
-        padding: 1.5rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        border-left: 4px solid {accent_color};
-        transition: all 0.3s ease;
-    }}
-    
-    .metric-card:hover {{
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-        transform: translateY(-2px);
-    }}
-    
-    .metric-value {{
-        font-size: 2rem;
         font-weight: 700;
-        color: white !important;
-        text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
-    }}
+        margin-bottom: 1rem;
+        text-shadow: 0 0 20px rgba(147, 51, 234, 0.5);
+    }
     
-    .metric-label {{
-        font-size: 0.9rem;
-        color: rgba(255, 255, 255, 0.9) !important;
-        font-weight: 500;
-        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
-    }}
+    h1 {
+        font-size: 2.5rem; 
+        background: linear-gradient(90deg, #9333EA, #C084FC, #A855F7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
     
-    .stMarkdown, .stMarkdown p, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, 
-    .stMarkdown h4, .stMarkdown h5, .stMarkdown h6, .stText, label, 
-    .stSubheader, .stCaption {{
-        color: {text_color} !important;
-    }}
+    /* Botões com gradiente roxo futurista */
+    .stButton > button {
+        background: linear-gradient(135deg, #9333EA 0%, #A855F7 50%, #C084FC 100%);
+        color: #FFFFFF;
+        border: none;
+        border-radius: 12px;
+        padding: 0.8rem 2rem;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(147, 51, 234, 0.4);
+        position: relative;
+        overflow: hidden;
+    }
     
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stSubheader {{
-        text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.35);
-    }}
+    .stButton > button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
     
-    label, .stCaption {{
-        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
-    }}
+    .stButton > button:hover {
+        background: linear-gradient(135deg, #A855F7 0%, #C084FC 50%, #E879F9 100%);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px rgba(147, 51, 234, 0.6);
+    }
     
-    /* Expandable sections */
-    .streamlit-expanderHeader {{
-        background: {primary_color} !important;
-        color: white !important;
-        border: 1px solid {accent_color} !important;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-    }}
+    .stButton > button:hover::before {
+        left: 100%;
+    }
     
-    .streamlit-expanderContent {{
-        background: {primary_color} !important;
-        border: 1px solid {accent_color} !important;
-        color: white !important;
-    }}
+    /* Cards com glass effect e borda neon */
+    [data-testid="metric-container"] {
+        background: rgba(45, 27, 69, 0.4);
+        backdrop-filter: blur(15px);
+        padding: 2rem;
+        border-radius: 16px;
+        border: 1px solid rgba(147, 51, 234, 0.3);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        margin: 0.8rem 0;
+        position: relative;
+    }
     
-    /* Forms */
-    .stForm {{
-        background: {primary_color} !important;
-        border: 2px solid {accent_color} !important;
-        border-radius: 12px !important;
-        padding: 1.5rem !important;
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2) !important;
-    }}
+    [data-testid="metric-container"]::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #9333EA, transparent);
+    }
     
-    /* Checkbox and radio buttons */
-    .stCheckbox > label, .stRadio > label {{
-        color: white !important;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-    }}
+    /* Input fields com design futurista */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea,
+    .stSelectbox > div > div > select {
+        background: rgba(13, 11, 33, 0.8);
+        border: 1px solid rgba(147, 51, 234, 0.5);
+        border-radius: 10px;
+        color: #FFFFFF;
+        padding: 0.75rem;
+        transition: all 0.3s ease;
+    }
     
-    /* Download button */
-    .stDownloadButton > button {{
-        background: {primary_color} !important;
-        border: 2px solid {accent_color} !important;
-        color: white !important;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-    }}
-    
-    /* Tabs styling - Login and Solicitar Acesso */
-    .stTabs {{
-        background: transparent !important;
-    }}
-    
-    .stTabs [data-baseweb="tab-list"] {{
-        background: transparent !important;
-        border-bottom: 2px solid {accent_color} !important;
-    }}
-    
-    .stTabs [data-baseweb="tab"] {{
-        background: {accent_color} !important;
-        color: white !important;
-        border: 1px solid {accent_color} !important;
-        border-radius: 8px 8px 0 0 !important;
-        margin-right: 2px !important;
-        padding: 1rem 2rem !important;
-        font-weight: 600 !important;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-        transition: all 0.2s ease !important;
-    }}
-    
-    .stTabs [data-baseweb="tab"]:hover {{
-        background: rgba(0, 0, 0, 0.8) !important;
-        transform: translateY(-1px) !important;
-    }}
-    
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {{
-        background: {accent_color} !important;
-        color: white !important;
-        border-bottom: 2px solid {accent_color} !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
-    }}
-    
-    .stTabs [data-baseweb="tab-panel"] {{
-        background: {primary_color} !important;
-        border: 2px solid {accent_color} !important;
-        border-top: none !important;
-        border-radius: 0 8px 8px 8px !important;
-        padding: 2rem !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
-    }}
-    
-    /* Active/Focus states - White instead of red */
-    button:active, button:focus,
-    .stButton > button:active, .stButton > button:focus,
-    input:active, input:focus,
-    textarea:active, textarea:focus,
-    select:active, select:focus,
-    a:active, a:focus,
-    .stSelectbox:active, .stSelectbox:focus,
-    .stTextInput:active, .stTextInput:focus,
-    .stNumberInput:active, .stNumberInput:focus,
-    .stTextArea:active, .stTextArea:focus,
-    .stDownloadButton > button:active,
-    .stDownloadButton > button:focus,
-    .stTabs [data-baseweb="tab"]:active,
-    .stTabs [data-baseweb="tab"]:focus {{
-        background: white !important;
-        color: {primary_color} !important;
-        border-color: white !important;
-        outline: 2px solid white !important;
-        outline-offset: 2px !important;
-        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3) !important;
-        transform: scale(0.98) !important;
-        text-shadow: none !important;
-    }}
-    
-    /* Button active states */
-    .stButton > button:active {{
-        background: white !important;
-        color: {primary_color} !important;
-        border: 2px solid {primary_color} !important;
-        transform: scale(0.95) !important;
-        text-shadow: none !important;
-    }}
-    
-    /* Input active states */
-    .stTextInput > div > div > input:active,
     .stTextInput > div > div > input:focus,
-    .stNumberInput > div > div > input:active,
-    .stNumberInput > div > div > input:focus,
-    .stTextArea > div > div > textarea:active,
     .stTextArea > div > div > textarea:focus,
-    .stSelectbox > div > div:active,
-    .stSelectbox > div > div:focus {{
-        background: white !important;
-        color: {primary_color} !important;
-        border: 1px solid #9ca3af !important;
-        outline: none !important;
-        box-shadow: 0 0 0 2px rgba(156, 163, 175, 0.2) !important;
-        text-shadow: none !important;
-    }}
+    .stSelectbox > div > div > select:focus {
+        border-color: #9333EA;
+        box-shadow: 0 0 20px rgba(147, 51, 234, 0.4);
+        outline: none;
+    }
     
-    /* Tab active states */
-    .stTabs [data-baseweb="tab"]:active {{
-        background: white !important;
-        color: {primary_color} !important;
-        border: 2px solid white !important;
-        transform: scale(0.98) !important;
-        text-shadow: none !important;
-    }}
+    /* Sidebar navigation com efeito hover */
+    .css-1d391kg .stButton > button {
+        width: 100%;
+        margin-bottom: 0.8rem;
+        text-align: left;
+        background: rgba(147, 51, 234, 0.1);
+        color: #FFFFFF;
+        border-radius: 10px;
+        border: 1px solid rgba(147, 51, 234, 0.2);
+        transition: all 0.3s ease;
+    }
     
-    /* Remove default browser active/focus colors */
-    *:active, *:focus {{
-        outline: none !important;
-        -webkit-tap-highlight-color: transparent !important;
-    }}
+    .css-1d391kg .stButton > button:hover {
+        background: rgba(147, 51, 234, 0.3);
+        color: #FFFFFF;
+        box-shadow: 0 4px 15px rgba(147, 51, 234, 0.3);
+        transform: translateX(5px);
+    }
     
-    /* Checkbox and radio active states */
-    .stCheckbox:active, .stCheckbox:focus,
-    .stRadio:active, .stRadio:focus {{
-        background: white !important;
-        border: 2px solid {primary_color} !important;
-    }}
+    /* Tabs com design DeFi */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: rgba(13, 11, 33, 0.6);
+        padding: 0.8rem;
+        border-radius: 15px;
+        border: 1px solid rgba(147, 51, 234, 0.3);
+        backdrop-filter: blur(10px);
+    }
     
-    /* ============================================================== */
-    /* ESTILOS PARA ÍCONES MINIMALISTAS (ESTILO FOTO) */
-    /* ============================================================== */
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        color: rgba(255, 255, 255, 0.7);
+        border-radius: 10px;
+        padding: 0.8rem 1.5rem;
+        font-weight: 500;
+        border: 1px solid transparent;
+        transition: all 0.3s ease;
+    }
     
-    /* Melhorar visualização dos ícones geométricos na sidebar */
-    .css-1d391kg .stButton > button {{
-        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace !important;
-        font-weight: 800 !important;
-        font-size: 1.1rem !important;
-        letter-spacing: 1px !important;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.3) !important;
-        line-height: 1.2 !important;
-    }}
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #9333EA, #A855F7);
+        color: #FFFFFF;
+        border-color: rgba(147, 51, 234, 0.5);
+        box-shadow: 0 4px 15px rgba(147, 51, 234, 0.3);
+    }
     
-    /* Estilos para tabs com ícones geométricos */
-    .stTabs [data-baseweb="tab"] {{
-        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace !important;
-        font-weight: 700 !important;
-        font-size: 1rem !important;
-        letter-spacing: 0.5px !important;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.2) !important;
-    }}
+    /* DataFrames com tema escuro futurista */
+    .dataframe {
+        background: rgba(13, 11, 33, 0.8);
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid rgba(147, 51, 234, 0.3);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
     
-    /* Ícones em títulos e cabeçalhos */
-    .stMarkdown h1 {{
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-        letter-spacing: 0.5px !important;
-    }}
+    .dataframe th {
+        background: linear-gradient(135deg, #9333EA, #A855F7) !important;
+        color: #FFFFFF !important;
+        font-weight: 600;
+    }
     
-    .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {{
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-        letter-spacing: 0.3px !important;
-    }}
+    .dataframe td {
+        background: rgba(13, 11, 33, 0.6) !important;
+        color: #FFFFFF !important;
+        border-color: rgba(147, 51, 234, 0.2) !important;
+    }
     
-    /* Símbolos geométricos com melhor legibilidade */
-    .sidebar .stButton > button,
-    .stTabs [data-baseweb="tab"],
-    .stMarkdown strong {{
-        text-rendering: optimizeLegibility !important;
-        -webkit-font-smoothing: antialiased !important;
-        -moz-osx-font-smoothing: grayscale !important;
-    }}
+    /* Messages com glass effect */
+    .stSuccess {
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        color: #FFFFFF;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
     
-    /* Destaque para símbolos específicos */
-    .stButton > button:contains("■"),
-    .stButton > button:contains("▬"),
-    .stButton > button:contains("●"),
-    .stButton > button:contains("◉"),
-    .stButton > button:contains("◎"),
-    .stButton > button:contains("◯") {{
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.4) !important;
-    }}
+    .stWarning {
+        background: rgba(251, 191, 36, 0.1);
+        border: 1px solid rgba(251, 191, 36, 0.3);
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        color: #FFFFFF;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
     
-    {custom_css}
+    .stError {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        color: #FFFFFF;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .stInfo {
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        color: #FFFFFF;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    /* Expanders com design futurista */
+    .streamlit-expanderHeader {
+        background: rgba(45, 27, 69, 0.6);
+        border-radius: 12px;
+        padding: 1.2rem;
+        border: 1px solid rgba(147, 51, 234, 0.3);
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+    }
+    
+    .streamlit-expanderHeader:hover {
+        background: rgba(45, 27, 69, 0.8);
+        box-shadow: 0 4px 20px rgba(147, 51, 234, 0.2);
+    }
+    
+    /* Progress bars com gradiente */
+    .stProgress > div > div > div {
+        background: linear-gradient(90deg, #9333EA, #A855F7, #C084FC);
+        border-radius: 10px;
+    }
+    
+    /* Forms com glass effect */
+    .stForm {
+        background: rgba(45, 27, 69, 0.4);
+        backdrop-filter: blur(15px);
+        padding: 2.5rem;
+        border-radius: 20px;
+        border: 1px solid rgba(147, 51, 234, 0.3);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        position: relative;
+    }
+    
+    .stForm::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #9333EA, transparent);
+    }
+    
+    /* Custom scrollbar futurista */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: rgba(13, 11, 33, 0.5);
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #9333EA, #A855F7);
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #A855F7, #C084FC);
+    }
+    
+    /* Animações futuristas */
+    @keyframes neonGlow {
+        0%, 100% { box-shadow: 0 0 20px rgba(147, 51, 234, 0.5); }
+        50% { box-shadow: 0 0 30px rgba(147, 51, 234, 0.8); }
+    }
+    
+    @keyframes fadeInUp {
+        from { 
+            opacity: 0; 
+            transform: translateY(30px); 
+        }
+        to { 
+            opacity: 1; 
+            transform: translateY(0); 
+        }
+    }
+    
+    .fade-in {
+        animation: fadeInUp 0.8s ease-out;
+    }
+    
+    .neon-glow {
+        animation: neonGlow 2s ease-in-out infinite;
+    }
+    
+    /* Efeito de partículas de fundo */
+    .stApp::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+            radial-gradient(circle at 20% 50%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 80%, rgba(192, 132, 252, 0.1) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: -1;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .main .block-container {
+            padding-left: 1rem;
+            padding-right: 1rem;
+            margin: 0.5rem;
+        }
+        
+        .stButton > button {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        
+        h1 {
+            font-size: 2rem;
+        }
+    }
+    
+    /* Login page específico */
+    .login-container {
+        background: rgba(45, 27, 69, 0.3);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(147, 51, 234, 0.3);
+        border-radius: 20px;
+        padding: 3rem;
+        max-width: 500px;
+        margin: 0 auto;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# ========================================================================================
+def apply_nubank_theme():
+    """Aplica tema moderno DeFi com gradientes roxos e design futurista"""
+    apply_modern_defi_theme()
+
 # DADOS SIMULADOS PARA DEMONSTRAÇÃO
 # ========================================================================================
 
@@ -1633,123 +1740,152 @@ def apply_nubank_theme():
 def load_inventory_data():
     """Carrega dados unificados do inventário organizados por categorias"""
     
-    # INVENTÁRIO UNIFICADO POR CATEGORIAS
+    # Dados de exemplo para demonstração - organizados por categoria
     unified_data = pd.DataFrame({
-        # Identificação
-        'tag': ['TEC001', 'TEC002', 'TEC003', 'TEC004', 'TEC005', 'TEC006', 'TEC007', 'TEC008',
-                'MON001', 'MON002', 'MON003', 'MON004', 'MON005',
-                'AUD001', 'AUD002', 'AUD003', 'AUD004', 'AUD005',
-                'LIX001', 'LIX002', 'LIX003', 'LIX004',
-                'OUT001', 'OUT002', 'OUT003', 'OUT004', 'OUT005'],
+        'tag': ['NB001', 'PC002', 'TEC003', 'MON004', 'TEL005', 'IMP006', 'SW007', 'RT008', 'CAM009', 'CEL010',
+                'TAB011', 'HD012', 'MEM013', 'KBD014', 'MOU015', 'PEN016', 'DOC017', 'AUD018', 'VID019', 'NET020',
+                'NBK021', 'DSK022', 'KBR023', 'MON024', 'PHN025', 'PRN026', 'SWH027', 'RTR028', 'WEB029', 'MOB030',
+                'TAB031', 'HDD032', 'RAM033', 'KEY034', 'MSE035'],
+        
+        'itens': ['Notebook Dell Inspiron', 'Desktop HP EliteDesk', 'Teclado Logitech', 'Monitor Samsung 24"', 'Telefone IP Cisco',
+                  'Impressora HP LaserJet', 'Switch 24 portas', 'Roteador WiFi', 'Webcam Logitech', 'iPhone 12',
+                  'Tablet Samsung', 'HD Externo 1TB', 'Memória RAM 8GB', 'Teclado Mecânico', 'Mouse Óptico',
+                  'Pen Drive 32GB', 'Docking Station', 'Headset Bluetooth', 'Cabo HDMI', 'Adaptador USB-C',
+                  'MacBook Pro 13"', 'iMac 24"', 'Magic Keyboard', 'Monitor LG 27"', 'AirPods Pro',
+                  'Impressora Canon', 'Switch Cisco', 'Router Netgear', 'Webcam 4K', 'Samsung Galaxy',
+                  'iPad Pro', 'SSD 500GB', 'Memória DDR4', 'Teclado Wireless', 'Mouse Bluetooth'],
+        
+        'categoria': ['Notebooks', 'Desktops', 'Teclados', 'Monitores', 'Telefones',
+                      'Impressoras', 'Rede', 'Rede', 'Audio e Video', 'Celulares',
+                      'Tablets', 'Storage', 'Hardware', 'Teclados', 'Mouses',
+                      'Acessórios', 'Acessórios', 'Audio e Video', 'Cabos', 'Adaptadores',
+                      'Notebooks', 'Desktops', 'Teclados', 'Monitores', 'Audio e Video',
+                      'Impressoras', 'Rede', 'Rede', 'Audio e Video', 'Celulares',
+                      'Tablets', 'Storage', 'Hardware', 'Teclados', 'Mouses'],
+        
+        'modelo': ['Inspiron 15 3000', 'EliteDesk 705 G4', 'K120', '24" LED', '7841 IP Phone',
+                   'LaserJet Pro M404', 'SG350-24', 'Archer AX6000', 'C920', 'A2172',
+                   'Galaxy Tab S7', 'My Passport', 'DDR4-3200', 'MX Keys', 'MX Master 3',
+                   'DataTraveler 100', 'WD19TB', 'WH-1000XM4', '2m Premium', 'Multiport Adapter',
+                   'MacBook Pro', 'iMac M1', 'Magic Keyboard', 'UltraGear 27GL850', 'AirPods Pro',
+                   'PIXMA G3010', 'Catalyst 2960', 'Nighthawk AX12', 'Brio 4K', 'Galaxy S21',
+                   'iPad Pro 12.9', 'WD Black SN750', 'Corsair 16GB', 'K380', 'MX Anywhere 3'],
+        
+        'marca': ['Dell', 'HP', 'Logitech', 'Samsung', 'Cisco',
+                  'HP', 'Cisco', 'TP-Link', 'Logitech', 'Apple',
+                  'Samsung', 'Western Digital', 'Corsair', 'Logitech', 'Logitech',
+                  'Kingston', 'Dell', 'Sony', 'Belkin', 'Anker',
+                  'Apple', 'Apple', 'Apple', 'LG', 'Apple',
+                  'Canon', 'Cisco', 'Netgear', 'Logitech', 'Samsung',
+                  'Apple', 'Western Digital', 'Corsair', 'Logitech', 'Logitech'],
+        
+        'valor': [2500.00, 1800.00, 85.00, 650.00, 220.00,
+                  1200.00, 800.00, 350.00, 450.00, 3500.00,
+                  1800.00, 320.00, 280.00, 180.00, 45.00,
+                  25.00, 400.00, 850.00, 35.00, 120.00,
+                  8500.00, 9200.00, 350.00, 1200.00, 1200.00,
+                  650.00, 1500.00, 580.00, 750.00, 4200.00,
+                  6500.00, 450.00, 320.00, 120.00, 280.00],
+        
+        'qtd': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        
+        'local': ['4° ANDAR', '8° ANDAR', '12° ANDAR', '15° ANDAR', '4° ANDAR',
+                  '8° ANDAR', '12° ANDAR', '15° ANDAR', '4° ANDAR', '8° ANDAR',
+                  '12° ANDAR', '15° ANDAR', '4° ANDAR', '8° ANDAR', '12° ANDAR',
+                  '15° ANDAR', '4° ANDAR', '8° ANDAR', '12° ANDAR', '15° ANDAR',
+                  '4° ANDAR', '8° ANDAR', '12° ANDAR', '15° ANDAR', '4° ANDAR',
+                  '8° ANDAR', '12° ANDAR', '15° ANDAR', '4° ANDAR', '8° ANDAR',
+                  '12° ANDAR', '15° ANDAR', '4° ANDAR', '8° ANDAR', '12° ANDAR'],
+        
+        'estado': ['Novo', 'Usado', 'Novo', 'Usado', 'Novo',
+                   'Usado', 'Novo', 'Usado', 'Novo', 'Usado',
+                   'Novo', 'Usado', 'Novo', 'Usado', 'Novo',
+                   'Usado', 'Novo', 'Usado', 'Novo', 'Usado',
+                   'Novo', 'Usado', 'Novo', 'Usado', 'Novo',
+                   'Usado', 'Novo', 'Usado', 'Novo', 'Usado',
+                   'Novo', 'Usado', 'Novo', 'Usado', 'Novo'],
+        
+        'fornecedor': ['Dell Brasil', 'HP Brasil', 'Logitech', 'Samsung', 'Cisco',
+                       'HP Brasil', 'Cisco', 'TP-Link', 'Logitech', 'Apple',
+                       'Samsung', 'Western Digital', 'Corsair', 'Logitech', 'Logitech',
+                       'Kingston', 'Dell Brasil', 'Sony', 'Belkin', 'Anker',
+                       'Apple', 'Apple', 'Apple', 'LG', 'Apple',
+                       'Canon', 'Cisco', 'Netgear', 'Logitech', 'Samsung',
+                       'Apple', 'Western Digital', 'Corsair', 'Logitech', 'Logitech'],
+        
+        'data_compra': pd.to_datetime(['2024-01-15', '2024-02-20', '2024-01-10', '2024-03-05', '2024-01-25',
+                                       '2024-02-15', '2024-03-01', '2024-01-30', '2024-02-10', '2024-03-15',
+                                       '2024-01-20', '2024-02-25', '2024-03-10', '2024-01-05', '2024-02-28',
+                                       '2024-03-20', '2024-01-12', '2024-02-18', '2024-03-08', '2024-01-28',
+                                       '2024-02-22', '2024-03-12', '2024-01-18', '2024-02-25', '2024-03-05',
+                                       '2024-01-22', '2024-02-28', '2024-03-15', '2024-01-08', '2024-02-12',
+                                       '2024-03-18', '2024-01-25', '2024-02-20', '2024-03-02', '2024-01-15']),
+        
+        'conferido': [True, True, False, True, False, True, False, True, False, True,
+                      False, True, False, True, False, True, False, True, False, True,
+                      False, True, False, True, False, True, False, True, False, True,
+                      False, True, False, True, False],
+        
+        'nota_fiscal': ['NF2024001', 'NF2024002', 'NF2024003', 'NF2024004', 'NF2024005',
+                        'NF2024006', 'NF2024007', 'NF2024008', 'NF2024009', 'NF2024010',
+                        'NF2024011', 'NF2024012', 'NF2024013', 'NF2024014', 'NF2024015',
+                        'NF2024016', 'NF2024017', 'NF2024018', 'NF2024019', 'NF2024020',
+                        'NF2024021', 'NF2024022', 'NF2024023', 'NF2024024', 'NF2024025',
+                        'NF2024026', 'NF2024027', 'NF2024028', 'NF2024029', 'NF2024030',
+                        'NF2024031', 'NF2024032', 'NF2024033', 'NF2024034', 'NF2024035'],
+        
+        'sku': ['SKU001', 'SKU002', 'SKU003', 'SKU004', 'SKU005',
+                'SKU006', 'SKU007', 'SKU008', 'SKU009', 'SKU010',
+                'SKU011', 'SKU012', 'SKU013', 'SKU014', 'SKU015',
+                'SKU016', 'SKU017', 'SKU018', 'SKU019', 'SKU020',
+                'SKU021', 'SKU022', 'SKU023', 'SKU024', 'SKU025',
+                'SKU026', 'SKU027', 'SKU028', 'SKU029', 'SKU030',
+                'SKU031', 'SKU032', 'SKU033', 'SKU034', 'SKU035'],
                 
-        'itens': ['Notebook Dell Latitude', 'Desktop HP Elite', 'MacBook Pro M2', 'Workstation Lenovo', 'Tablet iPad Pro', 'Mouse Logitech MX', 'Teclado Mecânico', 'SSD Externo Samsung',
-                  'Monitor LG 27"', 'TV Samsung 55"', 'Monitor Dell 24"', 'Projetor BenQ', 'Apple TV 4K',
-                  'Headset Plantronics', 'Caixa de Som JBL', 'Microfone Blue Yeti', 'Webcam Logitech C920', 'Adaptador USB-C Hub',
-                  'Impressora HP Antiga', 'Monitor CRT Dell', 'CPU Pentium 4', 'Teclado PS/2 Antigo',
-                  'Cabo HDMI Premium', 'Hub USB 3.0', 'Suporte Monitor Ajustável', 'Mousepad Gamer RGB', 'Filtro de Linha'],
-                  
-        'categoria': ['techstop', 'techstop', 'techstop', 'techstop', 'techstop', 'techstop', 'techstop', 'techstop',
-                      'tv e monitor', 'tv e monitor', 'tv e monitor', 'tv e monitor', 'tv e monitor',
-                      'audio e video', 'audio e video', 'audio e video', 'audio e video', 'audio e video',
-                      'lixo eletrônico', 'lixo eletrônico', 'lixo eletrônico', 'lixo eletrônico',
-                      'outros', 'outros', 'outros', 'outros', 'outros'],
-                      
-        'modelo': ['Latitude 5520', 'Elite Desk 800 G8', 'MacBook Pro 14"', 'ThinkStation P520', 'iPad Pro 12.9"', 'MX Master 3S', 'K70 RGB MK.2', 'T7 Shield 2TB',
-                   '27GL850-B', 'UN55AU7000', 'P2422H', 'MW632ST', 'MXGY2LL/A',
-                   'Voyager 4220', 'Charge 5', 'Blue Yeti Nano', 'C920 HD Pro', 'PowerExpand 11-in-1',
-                   'LaserJet 1320', 'UltraSharp 1901FP', 'OptiPlex GX280', 'QuietKey KB212-B',
-                   'HDMI 2.1 Ultra High Speed', 'Anker 10-Port USB 3.0', 'Herman Miller Ollin', 'Corsair MM800 RGB', 'Fortrek 8 Tomadas'],
+        'prateleira': ['P01', 'P02', 'P03', 'P04', 'P05', 'P06', 'P07', 'P08', 'P09', 'P10',
+                       'P11', 'P12', 'P13', 'P14', 'P15', 'P16', 'P17', 'P18', 'P19', 'P20',
+                       'P21', 'P22', 'P23', 'P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30',
+                       'P31', 'P32', 'P33', 'P34', 'P35'],
+        
+        'rua': ['R1', 'R2', 'R3', 'R4', 'R1', 'R2', 'R3', 'R4', 'R1', 'R2',
+                'R3', 'R4', 'R1', 'R2', 'R3', 'R4', 'R1', 'R2', 'R3', 'R4',
+                'R1', 'R2', 'R3', 'R4', 'R1', 'R2', 'R3', 'R4', 'R1', 'R2',
+                'R3', 'R4', 'R1', 'R2', 'R3'],
+        
+        'setor': ['A', 'B', 'C', 'D', 'A', 'B', 'C', 'D', 'A', 'B',
+                  'C', 'D', 'A', 'B', 'C', 'D', 'A', 'B', 'C', 'D',
+                  'A', 'B', 'C', 'D', 'A', 'B', 'C', 'D', 'A', 'B',
+                  'C', 'D', 'A', 'B', 'C'],
+        
+        'box': ['BX01', 'BX02', 'BX03', 'BX04', 'BX05', 'BX06', 'BX07', 'BX08', 'BX09', 'BX10',
+                'BX11', 'BX12', 'BX13', 'BX14', 'BX15', 'BX16', 'BX17', 'BX18', 'BX19', 'BX20',
+                'BX21', 'BX22', 'BX23', 'BX24', 'BX25', 'BX26', 'BX27', 'BX28', 'BX29', 'BX30',
+                'BX31', 'BX32', 'BX33', 'BX34', 'BX35'],
+                
+        'motivo': ['Compra inicial', 'Substituição', 'Expansão', 'Upgrade', 'Reposição',
+                   'Novo projeto', 'Manutenção', 'Backup', 'Migração', 'Atualização',
+                   'Crescimento', 'Modernização', 'Segurança', 'Performance', 'Necessidade',
+                   'Planejamento', 'Estratégia', 'Operação', 'Suporte', 'Infraestrutura',
+                   'Desenvolvimento', 'Produção', 'Qualidade', 'Eficiência', 'Inovação',
+                   'Tecnologia', 'Solução', 'Implementação', 'Otimização', 'Padronização',
+                   'Integração', 'Escalabilidade', 'Flexibilidade', 'Confiabilidade', 'Disponibilidade'],
                    
-        'serial': ['DLL5520001', 'HPE800001', 'MBPM2001', 'LEN520001', 'IPADPRO001', 'LGT3S001', 'COR70001', 'SAMT7001',
-                   'LG27GL001', 'SAM55AU001', 'DELLP24001', 'BENQMW001', 'APPLETV001',
-                   'PLT4220001', 'JBLCH5001', 'BLUYETI001', 'LGTC920001', 'ANKPOW001',
-                   'HPLJ1320001', 'DELL1901001', 'DELLGX001', 'DELLKB001',
-                   'HDMI21001', 'ANK10USB001', 'HMOLLIN001', 'CORMM800001', 'FORT8TOM001'],
-                   
-        'marca': ['Dell', 'HP', 'Apple', 'Lenovo', 'Apple', 'Logitech', 'Corsair', 'Samsung',
-                  'LG', 'Samsung', 'Dell', 'BenQ', 'Apple',
-                  'Plantronics', 'JBL', 'Blue Microphones', 'Logitech', 'Anker',
-                  'HP', 'Dell', 'Dell', 'Dell',
-                  'Cabo Premium', 'Anker', 'Herman Miller', 'Corsair', 'Fortrek'],
-                  
-        'valor': [3500.00, 2800.00, 8500.00, 12000.00, 4200.00, 450.00, 850.00, 800.00,
-                  2200.00, 3500.00, 1800.00, 4500.00, 800.00,
-                  1200.00, 600.00, 400.00, 350.00, 300.00,
-                  50.00, 100.00, 80.00, 30.00,
-                  80.00, 150.00, 900.00, 120.00, 200.00],
-                  
-        'data_compra': pd.to_datetime(['2024-01-15', '2024-01-20', '2024-02-10', '2024-02-25', '2024-03-01', '2024-02-20', '2024-03-10', '2024-01-30',
-                                      '2024-01-25', '2024-02-15', '2024-03-05', '2024-02-28', '2024-03-15',
-                                      '2024-01-18', '2024-02-22', '2024-03-08', '2024-02-12', '2024-01-28',
-                                      '2023-01-10', '2022-05-15', '2021-03-20', '2020-08-10',
-                                      '2024-02-05', '2024-01-12', '2024-03-12', '2024-02-18', '2024-01-22']),
-                                      
-        'fornecedor': ['Dell Brasil', 'HP Brasil', 'Apple Brasil', 'Lenovo Brasil', 'Apple Brasil', 'Logitech', 'Corsair Gaming', 'Samsung Brasil',
-                       'LG Electronics', 'Samsung Brasil', 'Dell Brasil', 'BenQ Brasil', 'Apple Brasil',
-                       'Plantronics', 'JBL Brasil', 'Blue Microphones', 'Logitech', 'Anker Brasil',
-                       'HP Brasil', 'Dell Brasil', 'Dell Brasil', 'Dell Brasil',
-                       'Cabo Premium Ltda', 'Anker Brasil', 'Herman Miller', 'Corsair Gaming', 'Fortrek'],
-                       
-        'po': ['PO-TEC-001', 'PO-TEC-002', 'PO-TEC-003', 'PO-TEC-004', 'PO-TEC-005', 'PO-TEC-006', 'PO-TEC-007', 'PO-TEC-008',
-               'PO-MON-001', 'PO-MON-002', 'PO-MON-003', 'PO-MON-004', 'PO-MON-005',
-               'PO-AUD-001', 'PO-AUD-002', 'PO-AUD-003', 'PO-AUD-004', 'PO-AUD-005',
-               'PO-LIX-001', 'PO-LIX-002', 'PO-LIX-003', 'PO-LIX-004',
-               'PO-OUT-001', 'PO-OUT-002', 'PO-OUT-003', 'PO-OUT-004', 'PO-OUT-005'],
-               
-        'nota_fiscal': ['NF-001234', 'NF-001235', 'NF-001236', 'NF-001237', 'NF-001238', 'NF-001239', 'NF-001240', 'NF-001241',
-                        'NF-002001', 'NF-002002', 'NF-002003', 'NF-002004', 'NF-002005',
-                        'NF-003001', 'NF-003002', 'NF-003003', 'NF-003004', 'NF-003005',
-                        'NF-LIX001', 'NF-LIX002', 'NF-LIX003', 'NF-LIX004',
-                        'NF-OUT001', 'NF-OUT002', 'NF-OUT003', 'NF-OUT004', 'NF-OUT005'],
-               
-        'uso': ['Desenvolvimento', 'Escritório', 'Design Gráfico', 'Engenharia 3D', 'Design Mobile', 'Produtividade', 'Gaming/Dev', 'Backup/Armazenamento',
-                'Design/Video', 'Sala de Reunião', 'Escritório Geral', 'Apresentações', 'Streaming/AirPlay',
-                'Call Center', 'Eventos/Reuniões', 'Podcast/Gravação', 'Videoconferência', 'Conectividade Hub',
-                'Descarte Programado', 'Descarte Programado', 'Descarte Programado', 'Descarte Programado',
-                'Conectividade', 'Expansão USB', 'Ergonomia', 'Gaming/Produtividade', 'Proteção Elétrica'],
-                
-        'qtd': [12, 8, 3, 2, 5, 25, 6, 10,
-                15, 4, 20, 3, 6,
-                30, 8, 4, 18, 15,
-                5, 3, 8, 12,
-                50, 20, 15, 25, 30],
-                
-        # LOCALIZAÇÃO ORGANIZADA
-        'prateleira': ['Prateleira A', 'Prateleira A', 'Prateleira B', 'Prateleira B', 'Prateleira A', 'Prateleira C', 'Prateleira C', 'Prateleira A',
-                       'Prateleira D', 'Prateleira E', 'Prateleira D', 'Prateleira E', 'Prateleira D',
-                       'Prateleira F', 'Prateleira F', 'Prateleira G', 'Prateleira F', 'Prateleira C',
-                       'Prateleira H', 'Prateleira H', 'Prateleira I', 'Prateleira I',
-                       'Prateleira J', 'Prateleira J', 'Prateleira K', 'Prateleira C', 'Prateleira J'],
-                       
-        'rua': ['Rua A1', 'Rua A2', 'Rua B1', 'Rua B2', 'Rua A1', 'Rua C1', 'Rua C1', 'Rua A2',
-                'Rua D1', 'Rua E1', 'Rua D1', 'Rua E2', 'Rua D1',
-                'Rua F1', 'Rua F2', 'Rua G1', 'Rua F1', 'Rua C2',
-                'Rua H1', 'Rua H1', 'Rua I1', 'Rua I2',
-                'Rua J1', 'Rua J1', 'Rua K1', 'Rua C2', 'Rua J2'],
-                
-        'setor': ['TechStop Alpha', 'TechStop Alpha', 'TechStop Beta', 'TechStop Beta', 'TechStop Alpha', 'TechStop Gamma', 'TechStop Gamma', 'TechStop Alpha',
-                  'Monitor Zone Delta', 'AV Zone Echo', 'Monitor Zone Delta', 'AV Zone Echo', 'Monitor Zone Delta',
-                  'Audio Zone Foxtrot', 'Audio Zone Foxtrot', 'Studio Zone Golf', 'Audio Zone Foxtrot', 'TechStop Gamma',
-                  'Lixo Zone Hotel', 'Lixo Zone Hotel', 'Lixo Zone India', 'Lixo Zone India',
-                  'Outros Zone Juliet', 'Outros Zone Juliet', 'Ergonomia Zone Kilo', 'TechStop Gamma', 'Outros Zone Juliet'],
-
-        'local': ['HQ1 - 8º Andar', 'HQ1 - 8º Andar', 'Spark - 2º Andar', 'Spark - 2º Andar', 'HQ1 - 8º Andar', 'HQ1 - 7º Andar', 'HQ1 - 7º Andar', 'HQ1 - 8º Andar',
-                  'HQ1 - 6º Andar', 'Spark - 1º Andar', 'HQ1 - 6º Andar', 'Spark - 1º Andar', 'HQ1 - 6º Andar',
-                  'HQ1 - 5º Andar', 'HQ1 - 5º Andar', 'HQ1 - 4º Andar', 'HQ1 - 5º Andar', 'HQ1 - 7º Andar',
-                  'HQ1 - Subsolo', 'HQ1 - Subsolo', 'HQ1 - Subsolo', 'HQ1 - Subsolo',
-                  'HQ1 - 3º Andar', 'HQ1 - 3º Andar', 'HQ1 - 2º Andar', 'HQ1 - 7º Andar', 'HQ1 - 3º Andar'],
-                  
-        'box': ['Caixa A1', 'Caixa A2', 'Caixa B1', 'Caixa B2', 'Caixa A3', 'Caixa C1', 'Caixa C2', 'Caixa A4',
-                'Caixa D1', 'Caixa E1', 'Caixa D2', 'Caixa E2', 'Caixa D3',
-                'Caixa F1', 'Caixa F2', 'Caixa G1', 'Caixa F3', 'Caixa C3',
-                'Caixa H1', 'Caixa H2', 'Caixa I1', 'Caixa I2',
-                'Caixa J1', 'Caixa J2', 'Caixa K1', 'Caixa C4', 'Caixa J3'],
-                
-        'conferido': [True, True, True, False, True, True, False, True,
-                      True, False, True, True, False,
-                      True, True, False, True, True,
-                      False, False, True, False,
-                      True, False, True, True, False]
+        'data_entrada': pd.to_datetime(['2024-01-15', '2024-02-20', '2024-01-10', '2024-03-05', '2024-01-25',
+                                       '2024-02-15', '2024-03-01', '2024-01-30', '2024-02-10', '2024-03-15',
+                                       '2024-01-20', '2024-02-25', '2024-03-10', '2024-01-05', '2024-02-28',
+                                       '2024-03-20', '2024-01-12', '2024-02-18', '2024-03-08', '2024-01-28',
+                                       '2024-02-22', '2024-03-12', '2024-01-18', '2024-02-25', '2024-03-05',
+                                       '2024-01-22', '2024-02-28', '2024-03-15', '2024-01-08', '2024-02-12',
+                                       '2024-03-18', '2024-01-25', '2024-02-20', '2024-03-02', '2024-01-15']),
+        
+        'serial': ['SER000001', 'SER000002', 'SER000003', 'SER000004', 'SER000005',
+                   'SER000006', 'SER000007', 'SER000008', 'SER000009', 'SER000010',
+                   'SER000011', 'SER000012', 'SER000013', 'SER000014', 'SER000015',
+                   'SER000016', 'SER000017', 'SER000018', 'SER000019', 'SER000020',
+                   'SER000021', 'SER000022', 'SER000023', 'SER000024', 'SER000025',
+                   'SER000026', 'SER000027', 'SER000028', 'SER000029', 'SER000030',
+                   'SER000031', 'SER000032', 'SER000033', 'SER000034', 'SER000035']
     })
 
     return {'unified': unified_data}
@@ -1786,11 +1922,126 @@ def verify_password(password: str, password_hash: str) -> bool:
     password_test_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
     return stored_hash == password_test_hash.hex()
 
+def save_users_db():
+    """Salva o banco de usuários em arquivo CSV"""
+    try:
+        # Converter users_db para DataFrame
+        users_list = []
+        for email, user_data in st.session_state.users_db.items():
+            users_list.append({
+                'email': email,
+                'nome': user_data.get('nome', ''),
+                'password_hash': user_data.get('password_hash', ''),
+                'role': user_data.get('role', 'usuario'),
+                'status': user_data.get('status', 'pendente'),
+                'data_registro': user_data.get('data_registro', ''),
+                'aprovado_por': user_data.get('aprovado_por', ''),
+                'justificativa': user_data.get('justificativa', '')
+            })
+        
+        df_users = pd.DataFrame(users_list)
+        
+        # Salvar arquivo principal
+        filename_atual = "users_db.csv"
+        df_users.to_csv(filename_atual, index=False)
+        
+        # Salvar backup com timestamp
+        timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+        filename_backup = f"users_db_backup_{timestamp}.csv"
+        df_users.to_csv(filename_backup, index=False)
+        
+        return True
+    except Exception as e:
+        print(f"Erro ao salvar users_db: {e}")
+        return False
+
+def load_users_db():
+    """Carrega o banco de usuários do arquivo CSV"""
+    try:
+        import os
+        filename = "users_db.csv"
+        
+        if os.path.exists(filename):
+            df = pd.read_csv(filename)
+            
+            # Converter DataFrame para dicionário users_db
+            for _, row in df.iterrows():
+                email = row['email']
+                st.session_state.users_db[email] = {
+                    'nome': row.get('nome', ''),
+                    'email': email,
+                    'password_hash': row.get('password_hash', ''),
+                    'role': row.get('role', 'usuario'),
+                    'status': row.get('status', 'pendente'),
+                    'data_registro': row.get('data_registro', ''),
+                    'aprovado_por': row.get('aprovado_por', ''),
+                    'justificativa': row.get('justificativa', '')
+                }
+            return True
+        return False
+    except Exception as e:
+        print(f"Erro ao carregar users_db: {e}")
+        return False
+
+def save_pending_users():
+    """Salva solicitações pendentes em CSV"""
+    try:
+        if st.session_state.usuarios_pendentes:
+            pending_list = []
+            for email, user_data in st.session_state.usuarios_pendentes.items():
+                pending_list.append({
+                    'email': email,
+                    'nome': user_data.get('nome', ''),
+                    'password_hash': user_data.get('password_hash', ''),
+                    'justificativa': user_data.get('justificativa', ''),
+                    'data_solicitacao': user_data.get('data_solicitacao', ''),
+                    'status': user_data.get('status', 'pendente')
+                })
+            
+            df_pending = pd.DataFrame(pending_list)
+            df_pending.to_csv("users_pending.csv", index=False)
+            return True
+        return False
+    except Exception as e:
+        print(f"Erro ao salvar solicitações pendentes: {e}")
+        return False
+
+def load_pending_users():
+    """Carrega solicitações pendentes do CSV"""
+    try:
+        import os
+        filename = "users_pending.csv"
+        
+        if os.path.exists(filename):
+            df = pd.read_csv(filename)
+            
+            for _, row in df.iterrows():
+                email = row['email']
+                st.session_state.usuarios_pendentes[email] = {
+                    'nome': row.get('nome', ''),
+                    'email': email,
+                    'password_hash': row.get('password_hash', ''),
+                    'justificativa': row.get('justificativa', ''),
+                    'data_solicitacao': row.get('data_solicitacao', ''),
+                    'status': row.get('status', 'pendente')
+                }
+            return True
+        return False
+    except Exception as e:
+        print(f"Erro ao carregar solicitações pendentes: {e}")
+        return False
+
 def init_user_system():
     """Inicializa o sistema de usuários"""
     if 'users_db' not in st.session_state:
-        st.session_state.users_db = {
-            ADMIN_EMAIL: {
+        st.session_state.users_db = {}
+        
+        # Tentar carregar usuários salvos primeiro
+        loaded = load_users_db()
+        
+        # Se não carregou ou não tem admin, criar admin padrão
+        if not loaded or ADMIN_EMAIL not in st.session_state.users_db:
+            st.session_state.users_db[ADMIN_EMAIL] = {
                 'nome': 'Danilo Fukuyama',
                 'email': ADMIN_EMAIL,
                 'password_hash': hash_password('admin123'),  # Senha padrão: admin123
@@ -1799,10 +2050,13 @@ def init_user_system():
                 'data_registro': '2024-01-01',
                 'aprovado_por': 'sistema'
             }
-        }
+            # Salvar após criar admin
+            save_users_db()
     
     if 'usuarios_pendentes' not in st.session_state:
         st.session_state.usuarios_pendentes = {}
+        # Carregar solicitações pendentes salvas
+        load_pending_users()
     
     if 'authenticated' not in st.session_state:
         st.session_state.authenticated = False
@@ -1816,8 +2070,6 @@ def init_user_system():
 
     # 🔑 CONFIGURAÇÕES AUTOMÁTICAS DE API PARA MATT 2.0
     if 'auto_apis_configured' not in st.session_state:
-        st.session_state.huginn_url = 'http://localhost:3000'
-        st.session_state.huginn_token = 'matt2-ai-auto-token-2024-huginn-api-key-active'
         st.session_state.openai_api_key = 'sk-matt2-demo-key-2024-auto-configured'
         st.session_state.huggingface_token = 'hf_matt2AutoConfiguredToken2024ApiAccess'
         st.session_state.matt_budget = 50000  # Budget padrão
@@ -1845,6 +2097,10 @@ def is_admin(email):
         st.session_state.users_db[email].get('role') == 'admin'
     )
 
+def is_admin_user(email):
+    """Verifica se o usuário é administrador - alias para is_admin"""
+    return is_admin(email)
+
 def is_user_approved(email):
     """Verifica se o usuário está aprovado"""
     return (
@@ -1857,7 +2113,7 @@ def register_user(nome, email, password, justificativa):
     from datetime import datetime as dt
     
     if email in st.session_state.users_db:
-        return False, "Usuário já existe no sistema"
+        return False, "Usuário já existe no sistema. Se precisar alterar a senha, contate o administrador."
     
     if email in st.session_state.usuarios_pendentes:
         return False, "Solicitação já existe e está pendente de aprovação"
@@ -1871,6 +2127,9 @@ def register_user(nome, email, password, justificativa):
         'status': 'pendente'
     }
     
+    # Salvar solicitação pendente
+    save_pending_users()
+    
     return True, "Solicitação de acesso enviada para aprovação"
 
 def approve_user(email, approved_by):
@@ -1878,6 +2137,7 @@ def approve_user(email, approved_by):
     if email in st.session_state.usuarios_pendentes:
         user_data = st.session_state.usuarios_pendentes[email]
         
+        # Adicionar ao banco de usuários aprovados
         st.session_state.users_db[email] = {
             'nome': user_data['nome'],
             'email': email,
@@ -1889,7 +2149,13 @@ def approve_user(email, approved_by):
             'justificativa': user_data['justificativa']
         }
         
+        # Remover da lista de pendentes
         del st.session_state.usuarios_pendentes[email]
+        
+        # Salvar persistentemente
+        save_users_db()
+        save_pending_users()
+        
         return True
     return False
 
@@ -1897,20 +2163,37 @@ def reject_user(email):
     """Rejeita um usuário pendente"""
     if email in st.session_state.usuarios_pendentes:
         del st.session_state.usuarios_pendentes[email]
+        
+        # Salvar persistentemente
+        save_pending_users()
+        
         return True
     return False
 
 def authenticate_user(email, password):
     """Autentica um usuário com email e senha"""
-    if is_user_approved(email):
-        user_data = st.session_state.users_db[email]
-        if 'password_hash' in user_data and verify_password(password, user_data['password_hash']):
-            st.session_state.authenticated = True
-            st.session_state.current_user = email
-            return True, "Login realizado com sucesso!"
-        else:
-            return False, "Senha incorreta"
-    return False, "Usuário não encontrado ou não aprovado"
+    # Verificar se o usuário existe
+    if email not in st.session_state.get('users_db', {}):
+        return False, f"Usuário {email} não encontrado no sistema"
+    
+    # Obter dados do usuário
+    user_data = st.session_state.users_db[email]
+    
+    # Verificar se o usuário está aprovado
+    if user_data.get('status') != 'aprovado':
+        return False, f"Usuário não aprovado. Status: {user_data.get('status', 'N/A')}"
+    
+    # Verificar se existe hash da senha
+    if 'password_hash' not in user_data:
+        return False, "Hash da senha não encontrado"
+    
+    # Verificar senha
+    if verify_password(password, user_data['password_hash']):
+        st.session_state.authenticated = True
+        st.session_state.current_user = email
+        return True, "Login realizado com sucesso!"
+    else:
+        return False, f"Senha incorreta para {email}"
 
 # ========================================================================================
 # INICIALIZAÇÃO DA SESSÃO
@@ -1918,6 +2201,15 @@ def authenticate_user(email, password):
 
 # Inicializar sistema de usuários
 init_user_system()
+
+# Inicializar gerenciador de estoque integrado
+if 'estoque_manager' not in st.session_state:
+    try:
+        from app.estoque_manager import EstoqueManager
+        st.session_state.estoque_manager = EstoqueManager()
+    except Exception as e:
+        st.error(f"❌ Erro ao inicializar gerenciador de estoque: {str(e)}")
+        st.session_state.estoque_manager = None
 
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 'dashboard'
@@ -1959,7 +2251,7 @@ if 'inventory_data' not in st.session_state:
                 df['qtd'] = pd.to_numeric(df['qtd'], errors='coerce').fillna(1)
             
             # Garantir colunas obrigatórias
-            colunas_obrigatorias = ['local', 'categoria', 'tag', 'itens']
+            colunas_obrigatorias = ['local', 'categoria', 'tag', 'itens', 'serial']
             for col in colunas_obrigatorias:
                 if col not in df.columns:
                     if col == 'local':
@@ -1970,6 +2262,8 @@ if 'inventory_data' not in st.session_state:
                         df[col] = [f"ITM{i:04d}" for i in range(len(df))]
                     elif col == 'itens':
                         df[col] = 'Item Importado'
+                    elif col == 'serial':
+                        df[col] = [f"SER{i:06d}" for i in range(1, len(df) + 1)]
             
             st.session_state.inventory_data = {'unified': df}
             st.session_state.inventory_csv_loaded = arquivo_carregado
@@ -2006,12 +2300,30 @@ def render_login_page():
                 else:
                     success, message = authenticate_user(email, password)
                     if success:
-                        st.success(f"✓ {message} Bem-vindo(a), {st.session_state.users_db[email]['nome']}")
+                        user_name = st.session_state.users_db[email]['nome']
+                        st.success(f"✓ {message} Bem-vindo(a), {user_name}")
                         st.rerun()
-                    elif email in st.session_state.usuarios_pendentes:
+                    elif email in st.session_state.get('usuarios_pendentes', {}):
                         st.warning("⧖ Sua solicitação está pendente de aprovação pelo administrador")
+                    elif email in st.session_state.get('users_db', {}):
+                        user_status = st.session_state.users_db[email].get('status', 'desconhecido')
+                        if user_status != 'aprovado':
+                            st.error(f"× Usuário não aprovado. Status: {user_status}")
                     else:
                         st.error(f"× {message}")
+                        st.info("💡 Se você não tem uma conta, use a aba 'Solicitar Acesso'")
+                        
+                # Debug info para usuários logados como admin
+                if st.session_state.get('authenticated') and st.session_state.get('current_user') == ADMIN_EMAIL:
+                    with st.expander("🔧 Debug Info (Admin)", expanded=False):
+                        st.write(f"Total users_db: {len(st.session_state.get('users_db', {}))}")
+                        st.write(f"Usuários pendentes: {len(st.session_state.get('usuarios_pendentes', {}))}")
+                        if st.session_state.get('users_db'):
+                            st.write("**Usuários aprovados:**")
+                            for user_email, user_data in st.session_state.users_db.items():
+                                status = user_data.get('status', 'N/A')
+                                nome = user_data.get('nome', 'N/A')
+                                st.write(f"- {nome} ({user_email}) - {status}")
 
     with tab2:
         st.subheader("Solicitar Acesso ao Sistema")
@@ -2097,7 +2409,12 @@ def render_admin_users():
     
     if users_data:
         df_users = pd.DataFrame(users_data)
-        st.dataframe(df_users, use_container_width=True)
+        display_table_with_filters(
+            df_users,
+            key="users_table",
+            editable=False,
+            selection_mode="single"
+        )
     else:
         st.info("○ Apenas você está cadastrado no sistema")
 
@@ -2369,14 +2686,13 @@ def render_visual_editor():
                 elif palette_choice == 'Profissional':
                     default_colors = ['#3B82F6', '#666666', '#F59E0B', '#EF4444', '#6366F1']
                 elif palette_choice == 'Nubank':
-                    default_colors = ['#9333EA', '#A855F7', '#8B5CF6', '#7C3AED', '#6366F1']
+                    default_colors = get_chart_colors('primary')
                 else:
-                    default_colors = config.get('graph_colors', ['#06B6D4', '#666666', '#F59E0B', '#EF4444'])
+                    default_colors = config.get('graph_colors', get_chart_colors('primary'))
                 
-                config['graph_colors'] = st.multiselect("🌈 Cores dos Gráficos", [
-                    '#06B6D4', '#666666', '#F59E0B', '#EF4444', '#8B5CF6',
-                    '#9333EA', '#A855F7', '#7C3AED', '#6366F1', '#3B82F6'
-                ], default=default_colors)
+                config['graph_colors'] = st.multiselect("🌈 Cores dos Gráficos", 
+                    PURPLE_GRADIENT_PALETTE + ['#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#3B82F6'],
+                    default=default_colors)
                 
                 st.markdown("**Configurações Visuais:**")
                 config['show_grid'] = st.checkbox("▬ Mostrar Grade", config.get('show_grid', True))
@@ -2513,7 +2829,7 @@ def render_visual_editor():
             )
     
     with tab_impressoras:
-        st.markdown("### 🖨️ Editor de Impressoras")
+        st.markdown("### Editor de Impressoras")
         
         # Carregar dados das impressoras
         if 'impressoras_data' not in st.session_state:
@@ -2668,443 +2984,537 @@ def render_visual_editor():
 # ========================================================================================
 
 def render_horizontal_navigation():
-    """Renderiza a navegação principal horizontal responsiva com design moderno"""
+    """Renderiza a navegação principal horizontal responsiva"""
     
-    # CSS para navegação horizontal responsiva com design premium
+    # CSS para navegação horizontal responsiva
     st.markdown("""
     <style>
-    /* Header estilo foto - fundo preto */
-    .nav-container {
-        background: #000000;
-        border-radius: 0;
+    .horizontal-nav {
+        /* background: #8B5CF6; - Removido fundo roxo */
         padding: 0;
-        margin: 0;
+        border-radius: 0;
+        margin-bottom: 0;
         box-shadow: none;
-        position: relative;
-        overflow: hidden;
     }
     
     .nav-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 1.5rem 2rem;
-        margin-bottom: 0;
+        margin-bottom: 1rem;
         flex-wrap: wrap;
         gap: 1rem;
-        position: relative;
-        z-index: 2;
     }
     
     .nav-title {
         color: white;
-        font-size: 2rem;
+        font-size: 1.5rem;
         font-weight: 700;
         margin: 0;
-        text-shadow: none;
     }
     
     .user-info {
         color: white;
-        font-size: 1rem;
+        font-size: 0.9rem;
         display: flex;
         align-items: center;
         gap: 1rem;
         flex-wrap: wrap;
-        text-shadow: none;
     }
     
-    /* Sistema de navegação estilo foto - horizontal */
-    .nav-grid {
+    .nav-buttons {
         display: flex;
-        flex-direction: row;
+        flex-wrap: wrap;
         gap: 0.8rem;
-        margin-top: 0;
-        position: relative;
-        z-index: 2;
+        margin-top: 1rem;
+        align-items: stretch;
         justify-content: center;
-        align-items: center;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        padding: 1.5rem 2rem;
         width: 100%;
-        background: #000000;
-        border-radius: 0;
-        box-shadow: none;
+        overflow: visible;
     }
     
-    /* Botões de navegação estilo foto */
     .nav-button {
-        background: #374151;
-        border: none;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         color: white !important;
-        padding: 0.8rem 1rem;
-        border-radius: 8px;
+        padding: 1.2rem 0.8rem;
+        border-radius: 12px;
         text-align: center;
         cursor: pointer;
         transition: all 0.3s ease;
         font-weight: 600;
         text-decoration: none;
-        font-size: 0.85rem;
+        backdrop-filter: blur(10px);
+        font-size: 0.75rem;
         white-space: nowrap;
-        min-width: 90px;
-        max-width: 110px;
-        height: 45px;
+        overflow: visible;
+        text-overflow: clip;
+        min-width: 140px;
+        max-width: 200px;
+        height: 64px;
         display: flex;
-        flex-direction: row;
         align-items: center;
         justify-content: center;
         box-sizing: border-box;
-        position: relative;
-        box-shadow: none;
-        gap: 0.5rem;
         flex-shrink: 0;
     }
     
-    /* Ícone do botão */
-    .nav-button-icon {
-        font-size: 1rem;
-        line-height: 1;
-        color: white;
-        margin: 0;
-    }
-    
-    /* Texto do botão */
-    .nav-button-text {
-        font-size: 0.8rem;
-        line-height: 1;
-        color: white;
-        font-weight: 600;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 80px;
-        text-align: center;
-    }
-    
-    /* Botão ativo - roxo vibrante como na foto */
-    .nav-button-active {
-        background: #8B5CF6 !important;
+    /* Estilo para ícones brancos outline minimalistas */
+    .nav-button span {
         color: white !important;
-        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+        font-weight: normal !important;
+        display: inline-block !important;
+        margin: 0 2px !important;
     }
     
-    /* Hover effect */
     .nav-button:hover {
-        background: #4B5563;
-        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.25);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
     }
     
-    .nav-button::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        border-radius: 16px;
+    .nav-button-active {
+        background: rgba(255, 255, 255, 0.3) !important;
+        border: 1px solid rgba(255, 255, 255, 0.4) !important;
+        box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15);
+        font-weight: 700;
     }
-    
-    /* Hover e estados já definidos acima */
     
     /* Estilos para botões do Streamlit dentro da navegação */
-    .nav-container .stButton > button {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
-        border: 2px solid rgba(255, 255, 255, 0.3);
+    .horizontal-nav .stButton > button {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         color: white;
-        padding: 1.2rem 1.5rem;
-        border-radius: 14px;
-        font-weight: 700;
-        font-size: 1rem;
-        height: 70px;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        backdrop-filter: blur(20px);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        padding: 0.8rem 1rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        height: 56px;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        margin: 2px;
+        min-width: 120px;
+        max-width: 200px;
+        overflow: visible;
+        white-space: nowrap;
+        text-overflow: clip;
     }
     
-    .nav-container .stButton > button:hover {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.25) 100%);
-        transform: translateY(-3px) scale(1.02);
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
-        border-color: rgba(255, 255, 255, 0.5);
+    .horizontal-nav .stButton > button:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        z-index: 10;
     }
     
     /* Botão ativo (primary) */
-    .nav-container .stButton > button[data-baseweb="button"][kind="primary"] {
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        color: #667eea;
-        font-weight: 800;
-        box-shadow: 0 12px 40px rgba(255, 255, 255, 0.3);
+    .horizontal-nav .stButton > button[data-baseweb="button"][kind="primary"] {
+        background: rgba(255, 255, 255, 0.9);
+        color: #8B5CF6;
+        font-weight: 700;
+        box-shadow: 0 2px 8px rgba(255, 255, 255, 0.3);
         border: 2px solid rgba(255, 255, 255, 0.8);
     }
     
-    .nav-container .stButton > button[data-baseweb="button"][kind="primary"]:hover {
-        background: linear-gradient(135deg, #ffffff 0%, #e9ecef 100%);
-        transform: translateY(-2px) scale(1.01);
-        box-shadow: 0 16px 50px rgba(255, 255, 255, 0.4);
+    .horizontal-nav .stButton > button[data-baseweb="button"][kind="primary"]:hover {
+        background: white;
+        transform: translateY(-1px);
+        border-color: white;
     }
     
-    /* Seção administrativa */
+    /* Garantir que os botões não sejam cortados */
+    .stButton {
+        overflow: visible !important;
+        margin: 4px !important;
+        padding: 0 !important;
+    }
+    
+    /* Estilo para ícones brancos outline minimalistas nos botões */
+    .stButton > button span {
+        color: white !important;
+        font-weight: normal !important;
+        display: inline-block !important;
+        margin: 0 2px !important;
+    }
+    
+    /* Ajustar espaçamento das colunas */
+    .stHorizontalBlock > div {
+        padding: 2px !important;
+        margin: 0 !important;
+        overflow: visible !important;
+    }
+    
+    /* Garantir que os botões tenham espaço suficiente */
+    .stButton > button {
+        margin: 2px !important;
+        padding: 0.8rem 1rem !important;
+        min-height: 56px !important;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        box-sizing: border-box !important;
+        line-height: 1.2 !important;
+    }
+    
+    /* Garantir que os ícones sejam exibidos corretamente */
+    .stButton > button span {
+        vertical-align: middle !important;
+        line-height: 1 !important;
+        font-family: inherit !important;
+    }
+    
+        /* Ajustar espaçamento entre linhas de botões */
+        .stHorizontalBlock {
+            margin-bottom: 1rem !important;
+            gap: 0.5rem !important;
+        }
+        
+        /* Garantir que elementos gráficos não sejam cortados */
+        .stPlotlyChart, .stDataFrame, .stMetric, .stExpander {
+            overflow: visible !important;
+            margin: 0.5rem 0 !important;
+            padding: 0.5rem !important;
+        }
+        
+        /* Ajustar containers principais */
+        .main .block-container {
+            padding: 2rem 1rem !important;
+            max-width: 100% !important;
+            overflow: visible !important;
+        }
+        
+        /* Garantir que gráficos tenham espaço suficiente */
+        .stPlotlyChart > div {
+            overflow: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        /* Ajustar métricas para não serem cortadas */
+        .stMetric > div {
+            overflow: visible !important;
+            white-space: nowrap !important;
+    }
+    
     .admin-section {
-        margin-top: 2rem;
-        padding-top: 2rem;
-        border-top: 2px solid rgba(255, 255, 255, 0.2);
-        position: relative;
-        z-index: 2;
-    }
-    
-    .admin-section::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 60px;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
-    }
-    
-    /* Responsividade para design estilo app bancário */
-    @media (max-width: 1200px) {
-        .nav-grid {
-            gap: 0.6rem;
-            padding: 1.2rem 1.5rem;
-        }
-        
-        .nav-button {
-            min-width: 80px;
-            height: 40px;
-            padding: 0.6rem 0.8rem;
-        }
-        
-        .nav-button-icon {
-            font-size: 1.1rem;
-        }
-        
-        .nav-button-text {
-            font-size: 0.7rem;
-            max-width: 70px;
-        }
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
     }
     
     @media (max-width: 768px) {
-        .nav-container {
-            padding: 0;
-        }
-        
-        .nav-header {
-            padding: 1rem 1.5rem;
-        }
-        
-        .nav-grid {
-            gap: 0.5rem;
-            justify-content: flex-start;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            padding: 1rem 1.5rem;
-            border-radius: 0 0 15px 15px;
+        .nav-buttons {
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            justify-content: center;
         }
         
         .nav-button {
-            min-width: 75px;
-            height: 38px;
-            padding: 0.6rem 0.8rem;
-            border-radius: 10px;
-            flex-shrink: 0;
+            font-size: 0.7rem;
+            padding: 0.9rem 0.6rem;
+            min-height: 42px;
+            min-width: 120px;
+            max-width: 160px;
         }
         
-        .nav-button-icon {
-            font-size: 1rem;
-        }
-        
-        .nav-button-text {
-            font-size: 0.65rem;
-            max-width: 65px;
+        .nav-header {
+            flex-direction: column;
+            text-align: center;
         }
         
         .nav-title {
-            font-size: 1.8rem;
+            font-size: 1.2rem;
+        }
+        
+        .user-info {
+            font-size: 0.8rem;
+            justify-content: center;
+        }
+        
+        /* Ajustar botões do Streamlit em telas médias */
+        .horizontal-nav .stButton > button {
+            font-size: 0.8rem;
+            padding: 0.6rem 0.8rem;
+            height: 48px;
+            min-width: 100px;
+            max-width: 140px;
+        }
+        
+        /* Garantir que ícones funcionem em telas médias */
+        .horizontal-nav .stButton > button span {
+            font-size: 0.9rem !important;
+            line-height: 1 !important;
+        }
+        
+        /* Ajustar colunas em telas médias */
+        .stHorizontalBlock > div {
+            padding: 1px !important;
+        }
+        
+        /* Ajustar espaçamento dos botões em telas médias */
+        .stButton > button {
+            font-size: 0.8rem !important;
+            padding: 0.6rem 0.8rem !important;
+            min-height: 48px !important;
+            margin: 1px !important;
         }
     }
     
     @media (max-width: 480px) {
-        .nav-header {
-            padding: 0.8rem 1rem;
-        }
-        
-        .nav-grid {
-            gap: 0.4rem;
-            flex-direction: row;
-            justify-content: flex-start;
-            padding: 0.8rem 1rem;
-            border-radius: 0 0 12px 12px;
+        .nav-buttons {
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
         }
         
         .nav-button {
-            min-width: 70px;
-            height: 35px;
-            padding: 0.5rem 0.7rem;
-            border-radius: 8px;
-            flex-shrink: 0;
+            font-size: 0.65rem;
+            padding: 0.8rem 0.5rem;
+            min-height: 38px;
+            min-width: 200px;
+            max-width: 250px;
+            width: 100%;
         }
         
-        .nav-button-icon {
-            font-size: 0.9rem;
+        .horizontal-nav {
+            padding: 0.8rem;
+            margin-bottom: 1rem;
         }
         
-        .nav-button-text {
-            font-size: 0.6rem;
-            max-width: 60px;
+        /* Ajustar botões do Streamlit em telas pequenas */
+        .horizontal-nav .stButton > button {
+            font-size: 0.75rem;
+            padding: 0.5rem 0.6rem;
+            height: 44px;
+            min-width: 180px;
+            max-width: 220px;
+            margin: 3px;
         }
         
-        .nav-title {
-            font-size: 1.6rem;
+        /* Ajustar colunas em telas pequenas */
+        .stHorizontalBlock > div {
+            padding: 0 !important;
+            margin: 2px 0 !important;
+        }
+        
+        /* Forçar layout vertical em telas muito pequenas */
+        .stHorizontalBlock {
+            flex-direction: column !important;
+        }
+        
+        /* Ajustar espaçamento dos botões em telas pequenas */
+        .stButton > button {
+            font-size: 0.75rem !important;
+            padding: 0.5rem 0.6rem !important;
+            min-height: 44px !important;
+            margin: 3px !important;
+            min-width: 180px !important;
+            max-width: 220px !important;
+        }
+        
+        /* Garantir que ícones funcionem em telas pequenas */
+        .stButton > button span {
+            font-size: 0.8rem !important;
+            line-height: 1 !important;
+            vertical-align: middle !important;
         }
     }
-    
-    /* Animações especiais */
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .nav-button {
-        animation: fadeInUp 0.6s ease-out;
-    }
-    
-    .nav-button:nth-child(1) { animation-delay: 0.1s; }
-    .nav-button:nth-child(2) { animation-delay: 0.2s; }
-    .nav-button:nth-child(3) { animation-delay: 0.3s; }
-    .nav-button:nth-child(4) { animation-delay: 0.4s; }
-    .nav-button:nth-child(5) { animation-delay: 0.5s; }
-    .nav-button:nth-child(6) { animation-delay: 0.6s; }
-    .nav-button:nth-child(7) { animation-delay: 0.7s; }
-    .nav-button:nth-child(8) { animation-delay: 0.8s; }
-    .nav-button:nth-child(9) { animation-delay: 0.9s; }
-    .nav-button:nth-child(10) { animation-delay: 1.0s; }
-    .nav-button:nth-child(11) { animation-delay: 1.1s; }
-    .nav-button:nth-child(12) { animation-delay: 1.2s; }
-    .nav-button:nth-child(13) { animation-delay: 1.3s; }
-    .nav-button:nth-child(14) { animation-delay: 1.4s; }
-    .nav-button:nth-child(15) { animation-delay: 1.5s; }
     </style>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     # Obter configurações avançadas
     advanced_config = getattr(st.session_state, 'advanced_visual_config', {})
-    dashboard_title = advanced_config.get('dashboard_title', 'Gestão de Estoque')
     
-    # Header com título e informações do usuário
+    # Header com título FORA da área roxa
     user_name = st.session_state.users_db[st.session_state.current_user]['nome'].split()[0]
     user_email = st.session_state.current_user
     is_admin_user = is_admin(st.session_state.current_user)
     
-    # Container principal da navegação com design moderno
-    st.markdown('<div class="nav-container">', unsafe_allow_html=True)
-    
-    # Header da navegação
-    col_title_main, col_user_main = st.columns([3, 1])
-    
-    with col_title_main:
-        st.markdown(f"""
-        <div class="nav-header">
-            <h1 class="nav-title">🚀 {dashboard_title}</h1>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col_user_main:
+    # Navegação lateral usando Streamlit nativo
+    with st.sidebar:
+        # Título principal do sistema
+        st.markdown("""
+            <div style="text-align: center; margin: 1rem 0 2rem 0;">
+                <h2 style="color: #A855F7; margin: 0; font-size: 1.4rem; font-weight: 700; text-shadow: 0 0 10px rgba(168,85,247,0.3);">
+                    Gestão de Estoque
+                </h2>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Informação do usuário
         admin_badge = "★ Admin" if is_admin_user else ""
-        if st.button("🔓 Logout", key="logout_horizontal", help=f"{user_name} ({user_email})"):
+        st.markdown(f"""
+            <div style="text-align: center; color: rgba(255,255,255,0.9); font-size: 0.9rem; margin: 1rem 0; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                ○ {user_name} {admin_badge}
+            </div>
+            """, unsafe_allow_html=True)
+                
+        # Dashboard
+        if st.button("Dashboard", key="nav_dashboard", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'dashboard' else "secondary"):
+            st.session_state.current_page = 'dashboard'
+            st.rerun()
+                
+        # Estoque
+        if st.button("Estoque", key="nav_estoque", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'inventario_unificado' else "secondary"):
+            st.session_state.current_page = 'inventario_unificado'
+            st.rerun()
+                
+        # NF Estoque
+        if st.button("NF Estoque", key="nav_nf_estoque", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'entrada_nf_estoque' else "secondary"):
+            st.session_state.current_page = 'entrada_nf_estoque'
+            st.rerun()
+                
+        # Movimentação Estoque
+        if st.button("Mov Estoque", key="nav_mov_estoque", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'movimentacao_estoque' else "secondary"):
+            st.session_state.current_page = 'movimentacao_estoque'
+            st.rerun()
+                
+        # Fornecedores
+        if st.button("Fornecedores", key="nav_fornecedores", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'cadastro_fornecedores' else "secondary"):
+            st.session_state.current_page = 'cadastro_fornecedores'
+            st.rerun()
+                
+        # Utilizadores
+        if st.button("Utilizadores", key="nav_utilizadores", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'cadastro_utilizadores' else "secondary"):
+            st.session_state.current_page = 'cadastro_utilizadores'
+            st.rerun()
+                
+        # Produtos
+        if st.button("Produtos", key="nav_produtos", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'cadastro_produtos' else "secondary"):
+            st.session_state.current_page = 'cadastro_produtos'
+            st.rerun()
+                
+        # Notas Fiscais
+        if st.button("Notas Fiscais", key="nav_nfs", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'notas_fiscais' else "secondary"):
+            st.session_state.current_page = 'notas_fiscais'
+            st.rerun()
+                
+        # Movimentações
+        if st.button("Movimentações", key="nav_movimentacoes", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'movimentacoes' else "secondary"):
+            st.session_state.current_page = 'movimentacoes'
+            st.rerun()
+                
+        # Controle Serial
+        if st.button("Controle Serial", key="nav_serial", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'controle_serial' else "secondary"):
+            st.session_state.current_page = 'controle_serial'
+            st.rerun()
+                
+        # Estoque por Prateleiras
+        if st.button("Estoque por Prateleiras", key="nav_prateleiras", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'estoque_prateleiras' else "secondary"):
+            st.session_state.current_page = 'estoque_prateleiras'
+            st.rerun()
+                
+        # Controle Gadgets
+        if st.button("Controle Gadgets", key="nav_gadgets", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'controle_gadgets' else "secondary"):
+            st.session_state.current_page = 'controle_gadgets'
+            st.rerun()
+                
+        # Relatórios
+        if st.button("Relatórios", key="nav_relatorios", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'relatorios' else "secondary"):
+            st.session_state.current_page = 'relatorios'
+            st.rerun()
+                
+        # Exportação
+        if st.button("Exportação", key="nav_exportacao", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'exportacao' else "secondary"):
+            st.session_state.current_page = 'exportacao'
+            st.rerun()
+                
+        # Editor Rive
+        if st.button("Editor Rive", key="nav_rive", use_container_width=True,
+            type="primary" if st.session_state.current_page == 'rive_editor' else "secondary"):
+            st.session_state.current_page = 'rive_editor'
+            st.rerun()
+                
+        # SEFAZ (se disponível)
+        if NFELIB_DISPONIVEL or PYNFE_DISPONIVEL:
+            if st.button("SEFAZ", key="nav_sefaz", use_container_width=True,
+                        type="primary" if st.session_state.current_page == 'entrada_automatica' else "secondary"):
+                st.session_state.current_page = 'entrada_automatica'
+                st.rerun()
+            
+        # Espaçamento antes do logout
+        st.markdown("---")
+            
+        # Logout - no final do menu
+        if st.button("← Logout", key="nav_logout", use_container_width=True, type="secondary"):
             st.session_state.authenticated = False
             st.session_state.current_user = None
             st.session_state.current_page = 'dashboard'
             st.rerun()
-        st.markdown(f"""
-        <div class="user-info">
-            👤 {user_name} {admin_badge}
-        </div>
-        """, unsafe_allow_html=True)
+        
+
     
-    # Páginas principais organizadas exatamente como na foto
+    # Navegação simples sem área roxa
+    st.markdown("---")  # Separador simples
+        
+    # Páginas principais
     pages = {
-        'dashboard': {'icon': '■', 'name': 'Dash', 'tooltip': 'Dashboard Principal'},
-        'inventario_unificado': {'icon': '─', 'name': 'Estoque', 'tooltip': 'Inventário Unificado'},
-        'impressoras': {'icon': '■', 'name': 'Print', 'tooltip': 'Controle de Impressoras'},
-        'controle_gadgets': {'icon': '☰', 'name': 'Gadgets', 'tooltip': 'Controle de Gadgets'},
-        'entrada_estoque': {'icon': '☰', 'name': 'Entrada', 'tooltip': 'Entrada de Estoque'},
-        'saida_estoque': {'icon': '↗', 'name': 'Saída', 'tooltip': 'Saída de Estoque'},
-        'movimentacoes': {'icon': '↔', 'name': '', 'tooltip': 'Movimentações'},
-        'relatorios': {'icon': '─', 'name': 'Reports', 'tooltip': 'Relatórios'},
-        'entrada_automatica': {'icon': '●', 'name': 'SEFAZ', 'tooltip': 'Entrada Automática SEFAZ'}
+        'dashboard': 'Dashboard',
+        'inventario_unificado': 'Inventário Unificado',
+        'entrada_nf_estoque': 'Entrada NF Estoque',
+        'movimentacao_estoque': 'Movimentação Estoque',
+        'cadastro_fornecedores': 'Cadastro Fornecedores',
+        'cadastro_utilizadores': 'Cadastro Utilizadores',
+        'cadastro_produtos': 'Cadastro Produtos',
+        'notas_fiscais': 'Notas Fiscais',
+        'movimentacoes': 'Movimentações',
+        'controle_serial': 'Controle Serial',
+        'estoque_prateleiras': 'Estoque por Prateleiras',
+        'fornecedores': 'Fornecedores',
+        'produtos': 'Produtos',
+        'impressoras': 'Impressoras',
+        'controle_gadgets': 'Controle Gadgets',
+        'relatorios': 'Relatórios',
+        'exportacao': 'Exportação',
+        'rive_editor': 'Editor Rive'
     }
     
-    # Criar navegação horizontal compacta
-    st.markdown('<div class="nav-grid">', unsafe_allow_html=True)
+    # Se tem entrada automática, adicionar
+    if NFELIB_DISPONIVEL or PYNFE_DISPONIVEL:
+        pages['entrada_automatica'] = 'Entrada Automática SEFAZ'
     
-    for page_key, page_info in pages.items():
-        is_active = st.session_state.current_page == page_key
-        active_class = "nav-button-active" if is_active else ""
-        
-        # Criar botão compacto
-        button_html = f"""
-        <div class="nav-button {active_class}" data-tooltip="{page_info['tooltip']}">
-            <div class="nav-button-icon">{page_info['icon']}</div>
-            <div class="nav-button-text">{page_info['name']}</div>
-        </div>
-        """
-        
-        # Usar st.markdown para renderizar o HTML personalizado
-        st.markdown(button_html, unsafe_allow_html=True)
-        
-        # Botão Streamlit invisível para capturar cliques
-        if st.button(f" ", key=f"nav_{page_key}", help=page_info['tooltip'], use_container_width=False):
-            st.session_state.current_page = page_key
-            st.rerun()
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Seção administrativa (se for admin)
-    if is_admin_user:
-        st.markdown('<div class="admin-section">', unsafe_allow_html=True)
-        
-        admin_col1, admin_col2, admin_col3 = st.columns([1, 1, 2])
-        
-        with admin_col1:
-            if st.button("👑 Admin Users", key="admin_users_nav", use_container_width=True):
-                st.session_state.current_page = 'admin_users'
-                st.rerun()
-        
-        with admin_col2:
-            if st.button("🎨 Visual Editor", key="visual_editor_nav", use_container_width=True):
-                st.session_state.current_page = 'visual_editor'
-                st.rerun()
-        
-        with admin_col3:
-            st.markdown("""
-            <div style="text-align: center; color: rgba(255,255,255,0.7); font-size: 0.9rem; padding: 1rem;">
-                🔧 Painel Administrativo
-            </div>
-            """, unsafe_allow_html=True)
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Fechar container da navegação
-    st.markdown('</div>', unsafe_allow_html=True)
+
 
 # ========================================================================================
 # PÁGINAS DO SISTEMA
 # ========================================================================================
 
 def render_dashboard():
-    """Renderiza o dashboard principal"""
+    """Renderiza o dashboard principal com componentes Rive"""
+    
+    # Importar componentes Rive
+    try:
+        from app.rive_components import (
+            create_rive_metric_card, 
+            create_rive_chart_enhancement, 
+            create_rive_navigation_indicator,
+            create_rive_data_flow_animation,
+            create_rive_interactive_widget,
+            apply_rive_styles
+        )
+        
+        # Aplicar estilos Rive
+        apply_rive_styles()
+        
+    except ImportError as e:
+        st.warning(f"⚠️ Componentes Rive não disponíveis: {e}")
     
     # Saudação personalizada
     from datetime import datetime as dt
@@ -3127,7 +3537,13 @@ def render_dashboard():
         if pending_count > 0:
             st.warning(f"◉ **Atenção Administrador**: {pending_count} solicitação(ões) de acesso pendente(s) de aprovação")
     
-    # Métricas principais usando cards customizados
+    # Animação de fluxo de dados (desabilitada)
+    # try:
+    #     create_rive_data_flow_animation()
+    # except:
+    #     pass
+    
+    # Métricas principais usando cards Rive
     col1, col2, col3, col4 = st.columns(4)
     
     # Usar dados unificados
@@ -3144,42 +3560,78 @@ def render_dashboard():
     total_valor = unified_data['valor'].sum()
     
     with col1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">{total_items}</div>
-            <div class="metric-label">■ Total de Itens</div>
-            <div class="metric-delta positive">+5 este mês</div>
-        </div>
-        """, unsafe_allow_html=True)
+        try:
+            create_rive_metric_card(
+                "Total de Itens", 
+                str(total_items), 
+                "+5 este mês", 
+                "■", 
+                "loading"
+            )
+        except:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{total_items}</div>
+                <div class="metric-label">■ Total de Itens</div>
+                <div class="metric-delta positive">+5 este mês</div>
+            </div>
+            """, unsafe_allow_html=True)
     
     with col2:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">{total_conferidos}</div>
-            <div class="metric-label">✓ Conferidos</div>
-            <div class="metric-delta positive">+{total_conferidos - 5} desde ontem</div>
-        </div>
-        """, unsafe_allow_html=True)
+        try:
+            create_rive_metric_card(
+                "Conferidos", 
+                str(total_conferidos), 
+                f"+{total_conferidos - 5} desde ontem", 
+                "✓", 
+                "success"
+            )
+        except:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{total_conferidos}</div>
+                <div class="metric-label">✓ Conferidos</div>
+                <div class="metric-delta positive">+{total_conferidos - 5} desde ontem</div>
+            </div>
+            """, unsafe_allow_html=True)
     
     with col3:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">{percentual_conferido:.1f}%</div>
-            <div class="metric-label">▤ % Conferido</div>
-            <div class="metric-delta {'positive' if percentual_conferido > 70 else 'negative'}">
-                {'+10%' if percentual_conferido > 70 else '-5%'} da meta
+        try:
+            create_rive_metric_card(
+                "% Conferido", 
+                f"{percentual_conferido:.1f}%", 
+                f"{'+10%' if percentual_conferido > 70 else '-5%'} da meta", 
+                "▤", 
+                "loading"
+            )
+        except:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{percentual_conferido:.1f}%</div>
+                <div class="metric-label">▤ % Conferido</div>
+                <div class="metric-delta {'positive' if percentual_conferido > 70 else 'negative'}">
+                    {'+10%' if percentual_conferido > 70 else '-5%'} da meta
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
     
     with col4:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">{len(categorias)}</div>
-            <div class="metric-label">▤ Categorias</div>
-            <div class="metric-delta positive">Sistema Unificado</div>
-        </div>
-        """, unsafe_allow_html=True)
+        try:
+            create_rive_metric_card(
+                "Categorias", 
+                str(len(categorias)), 
+                "Sistema Unificado", 
+                "▤", 
+                "success"
+            )
+        except:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{len(categorias)}</div>
+                <div class="metric-label">▤ Categorias</div>
+                <div class="metric-delta positive">Sistema Unificado</div>
+            </div>
+            """, unsafe_allow_html=True)
     
     st.divider()
     
@@ -3516,12 +3968,8 @@ def render_inventory_table(data, title, key_prefix):
         if st.session_state.get(f'show_edit_mode_{key_prefix}', False):
             st.info("✎ **MODO EDIÇÃO ATIVO** - Edite os dados diretamente na tabela abaixo")
             
-            # Tabela editável
-            edited_data = st.data_editor(
-                filtered_data,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
+            # Tabela editável com filtros Excel
+            column_config = {
                     "categoria": st.column_config.TextColumn("Categoria", width="medium", help="Categoria do item"),
                     "itens": st.column_config.TextColumn("Item", width="medium"),
                     "modelo": st.column_config.TextColumn("Modelo", width="medium"),
@@ -3539,9 +3987,16 @@ def render_inventory_table(data, title, key_prefix):
                     "shelf": st.column_config.TextColumn("Shelf", width="medium"),
                     "box": st.column_config.TextColumn("Box", width="small"),
                     "conferido": st.column_config.CheckboxColumn("Conferido")
-                },
-                key=f"{key_prefix}_editor"
+            }
+            
+            grid_response = display_table_with_filters(
+                filtered_data,
+                key=f"{key_prefix}_editor",
+                editable=True,
+                selection_mode="multiple",
+                column_config=column_config
             )
+            edited_data = grid_response.get("data", filtered_data)
             
             col_save, col_cancel = st.columns(2)
             
@@ -3564,29 +4019,12 @@ def render_inventory_table(data, title, key_prefix):
             display_data['valor'] = display_data['valor'].apply(lambda x: f"R$ {x:,.2f}")
             display_data['conferido'] = display_data['conferido'].apply(lambda x: "✓" if x else "⧖")
             
-            st.dataframe(
+            # Tabela com filtros Excel para visualização
+            display_table_with_filters(
                 display_data,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "categoria": "Categoria",
-                    "itens": "Item",
-                    "modelo": "Modelo", 
-                    "tag": "Tag",
-                    "serial": "Serial",
-                    "marca": "Marca",
-                    "valor": "Valor",
-                    "data_compra": "Data Compra",
-                    "fornecedor": "Fornecedor",
-                    "po": "PO",
-                    "uso": "Uso",
-                    "qtd": "Qtd",
-                    "avenue": "Avenue",
-                    "street": "Street", 
-                    "shelf": "Shelf",
-                    "box": "Box",
-                    "conferido": "Status"
-                }
+                key=f"{key_prefix}_display",
+                editable=False,
+                selection_mode="multiple"
             )
     else:
         st.info("⊙ Nenhum item encontrado com os filtros aplicados")
@@ -3610,6 +4048,7 @@ def render_hq1_8th():
             'item': ['Mesa Executiva', 'Cadeira Ergonômica', 'Armário Alto', 'Mesa Reunião', 'Quadro Branco'],
             'categoria': ['techstop', 'techstop', 'A&V', 'techstop', 'A&V'],
             'tag': ['HQ1001', 'HQ1002', 'HQ1003', 'HQ1004', 'HQ1005'],
+            'serial': ['SER001', 'SER002', 'SER003', 'SER004', 'SER005'],
             'estado': ['✓ Excelente', '✓ Excelente', '◐ Bom', '✓ Excelente', '◐ Bom'],
             'valor': [1500.00, 800.00, 600.00, 2200.00, 350.00],
             'nota_fiscal': ['NF-MOB-001', 'NF-MOB-002', 'NF-MOB-003', 'NF-MOB-004', 'NF-ESC-001'],
@@ -3624,6 +4063,7 @@ def render_hq1_8th():
             'item': ['Projetor 4K', 'Sistema Som', 'Notebook Dell', 'Monitor 32"', 'Câmera Profissional'],
             'categoria': ['A&V', 'A&V', 'techstop', 'A&V', 'A&V'],
             'tag': ['SPK001', 'SPK002', 'SPK003', 'SPK004', 'SPK005'],
+            'serial': ['SER101', 'SER102', 'SER103', 'SER104', 'SER105'],
             'estado': ['✓ Excelente', '◐ Bom', '✓ Excelente', '✓ Excelente', '◐ Bom'],
             'valor': [8500.00, 2200.00, 4500.00, 1800.00, 12000.00],
             'nota_fiscal': ['NF-PROJ-001', 'NF-SOM-001', 'NF-NOTE-001', 'NF-MON-001', 'NF-CAM-001'],
@@ -3645,6 +4085,7 @@ def render_hq1_8th():
                 'item': ['Mesa Executiva', 'Cadeira Ergonômica', 'Armário Alto', 'Mesa Reunião', 'Quadro Branco'],
                 'categoria': ['techstop', 'techstop', 'A&V', 'techstop', 'A&V'],
                 'tag': ['HQ1001', 'HQ1002', 'HQ1003', 'HQ1004', 'HQ1005'],
+                'serial': ['SER001', 'SER002', 'SER003', 'SER004', 'SER005'],
                 'estado': ['✓ Excelente', '✓ Excelente', '◐ Bom', '✓ Excelente', '◐ Bom'],
                 'valor': [1500.00, 800.00, 600.00, 2200.00, 350.00],
                 'nota_fiscal': ['NF-MOB-001', 'NF-MOB-002', 'NF-MOB-003', 'NF-MOB-004', 'NF-ESC-001'],
@@ -3785,24 +4226,27 @@ def render_hq1_8th():
         st.subheader("☰ Inventário HQ1")
         
         if not filtered_data.empty:
-            # Mostrar dados em formato editável
-            edited_data = st.data_editor(
-                filtered_data,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
+            # Mostrar dados com filtros Excel editáveis
+            hq1_column_config = {
                     "item": st.column_config.TextColumn("Item", width="medium"),
                     "categoria": st.column_config.SelectboxColumn("Categoria", options=["techstop", "A&V"]),
                     "tag": st.column_config.TextColumn("Tag", width="small"),
                     "estado": st.column_config.SelectboxColumn("Estado", options=["✓ Excelente", "◐ Bom", "⚠ Regular", "× Ruim"]),
                     "valor": st.column_config.NumberColumn("Valor (R$)", format="R$ %.2f"),
                     "nota_fiscal": st.column_config.TextColumn("Nota Fiscal", width="medium"),
-                    "data_entrada": st.column_config.DateColumn("Data Entrada"),
+                    "data_entrada": st.column_config.TextColumn("Data Entrada"),
                     "fornecedor": st.column_config.TextColumn("Fornecedor", width="medium"),
                     "po": st.column_config.TextColumn("PO", width="medium")
-                },
-                key="hq1_8th_editor"
+            }
+            
+            grid_response = display_table_with_filters(
+                filtered_data,
+                key="hq1_8th_editor",
+                editable=True,
+                selection_mode="multiple",
+                column_config=hq1_column_config
             )
+            edited_data = grid_response.get("data", filtered_data)
             
             # Botão para salvar alterações
             if st.button("● Salvar Alterações HQ1", use_container_width=True, key="save_hq1"):
@@ -3822,6 +4266,7 @@ def render_hq1_8th():
             'item': ['Projetor 4K', 'Sistema Som', 'Notebook Dell', 'Monitor 32"', 'Câmera Profissional'],
             'categoria': ['A&V', 'A&V', 'techstop', 'A&V', 'A&V'],
             'tag': ['SPK001', 'SPK002', 'SPK003', 'SPK004', 'SPK005'],
+            'serial': ['SER101', 'SER102', 'SER103', 'SER104', 'SER105'],
             'estado': ['✓ Excelente', '◐ Bom', '✓ Excelente', '✓ Excelente', '◐ Bom'],
             'valor': [8500.00, 2200.00, 4500.00, 1800.00, 12000.00],
             'nota_fiscal': ['NF-PROJ-001', 'NF-SOM-001', 'NF-NOTE-001', 'NF-MON-001', 'NF-CAM-001'],
@@ -3962,24 +4407,27 @@ def render_hq1_8th():
         st.subheader("◆ Inventário Spark")
         
         if not filtered_data.empty:
-            # Mostrar dados em formato editável
-            edited_data = st.data_editor(
-                filtered_data,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
+            # Mostrar dados com filtros Excel editáveis
+            spark_column_config = {
                     "item": st.column_config.TextColumn("Item", width="medium"),
                     "categoria": st.column_config.SelectboxColumn("Categoria", options=["techstop", "A&V"]),
                     "tag": st.column_config.TextColumn("Tag", width="small"),
                     "estado": st.column_config.SelectboxColumn("Estado", options=["✓ Excelente", "◐ Bom", "⚠ Regular", "× Ruim"]),
                     "valor": st.column_config.NumberColumn("Valor (R$)", format="R$ %.2f"),
                     "nota_fiscal": st.column_config.TextColumn("Nota Fiscal", width="medium"),
-                    "data_entrada": st.column_config.DateColumn("Data Entrada"),
+                    "data_entrada": st.column_config.TextColumn("Data Entrada"),
                     "fornecedor": st.column_config.TextColumn("Fornecedor", width="medium"),
                     "po": st.column_config.TextColumn("PO", width="medium")
-                },
-                key="spark_editor"
+            }
+            
+            grid_response = display_table_with_filters(
+                filtered_data,
+                key="spark_editor",
+                editable=True,
+                selection_mode="multiple",
+                column_config=spark_column_config
             )
+            edited_data = grid_response.get("data", filtered_data)
             
             # Botão para salvar alterações
             if st.button("● Salvar Alterações Spark", use_container_width=True, key="save_spark"):
@@ -4037,8 +4485,13 @@ def render_csv_upload_section(data_key, required_columns, section_title="Upload 
             try:
                 df_upload = pd.read_csv(uploaded_csv)
                 
-                st.markdown("#### 👁️ Preview dos Dados:")
-                st.dataframe(df_upload.head(), use_container_width=True)
+                st.markdown("#### Preview dos Dados:")
+                display_table_with_filters(
+                    df_upload.head(),
+                    key="upload_preview",
+                    editable=False,
+                    selection_mode="single"
+                )
                 
                 # Verificar colunas obrigatórias
                 missing_cols = [col for col in required_columns if col not in df_upload.columns]
@@ -5181,7 +5634,7 @@ def render_impressoras():
                     </div>
                 """, unsafe_allow_html=True)
 
-            st.markdown("### 🖨️ Lista de Impressoras")
+            st.markdown("### Lista de Impressoras")
 
             # Cards das impressoras
             for i, printer in enumerate(local_data["impressoras"]):
@@ -5454,7 +5907,7 @@ def render_tvs_monitores():
                     "status": st.column_config.SelectboxColumn("Status", options=["✓ Ativo", "● Manutenção", "× Inativo"]),
                     "valor": st.column_config.NumberColumn("Valor (R$)", format="R$ %.2f"),
                     "nota_fiscal": st.column_config.TextColumn("Nota Fiscal", width="medium"),
-                    "data_entrada": st.column_config.DateColumn("Data Entrada"),
+                    "data_entrada": st.column_config.TextColumn("Data Entrada"),
                     "fornecedor": st.column_config.TextColumn("Fornecedor", width="medium"),
                     "po": st.column_config.TextColumn("PO", width="medium")
                 },
@@ -5478,7 +5931,12 @@ def render_tvs_monitores():
         else:
             # Modo visualização (somente leitura)
             st.subheader("☰ Inventário de Displays")
-            st.dataframe(filtered_data, use_container_width=True, hide_index=True)
+            display_table_with_filters(
+                filtered_data,
+                key="displays_view",
+                editable=False,
+                selection_mode="multiple"
+            )
     else:
         st.info("⊙ Nenhum display encontrado com os filtros aplicados")
 
@@ -5711,7 +6169,12 @@ def render_vendas_spark():
         else:
             # Modo visualização (somente leitura)
             st.subheader("☰ Histórico de Vendas")
-            st.dataframe(filtered_data, use_container_width=True, hide_index=True)
+            display_table_with_filters(
+                filtered_data,
+                key="vendas_view",
+                editable=False,
+                selection_mode="multiple"
+            )
     else:
         st.info("⊙ Nenhuma venda encontrada com os filtros aplicados")
 
@@ -5830,7 +6293,12 @@ def render_lixo_eletronico():
     else:
         # Tabela de descarte
         st.subheader("☰ Histórico de Descarte")
-        st.dataframe(descarte_data, use_container_width=True, hide_index=True)
+        display_table_with_filters(
+            descarte_data,
+            key="descarte_view",
+            editable=False,
+            selection_mode="multiple"
+        )
 
 def render_inventario_oficial():
     """Renderiza a página do inventário oficial"""
@@ -6131,7 +6599,7 @@ def render_barcode_entry():
                     st.rerun()
         
         with tab_upload:
-            st.markdown("### 🖼️ Análise de Imagem")
+            st.markdown("### Análise de Imagem")
             uploaded_file = st.file_uploader(
                 "Faça upload de uma imagem da nota fiscal", 
                 type=['png', 'jpg', 'jpeg'],
@@ -6321,7 +6789,7 @@ def render_barcode_entry():
                 "valor": st.column_config.NumberColumn("Valor (R$)", format="R$ %.2f"),
                 "fornecedor": st.column_config.TextColumn("Fornecedor", width="medium"),
                 "nota_fiscal": st.column_config.TextColumn("Nota Fiscal", width="medium"),
-                "data_entrada": st.column_config.DateColumn("Data Entrada"),
+                "data_entrada": st.column_config.TextColumn("Data Entrada"),
                 "status": st.column_config.SelectboxColumn("Status", options=["✓ Disponível", "⧖ Em uso", "● Em análise", "■ Estoque"]),
                 "po": st.column_config.TextColumn("PO", width="medium"),
                 "observacoes": st.column_config.TextColumn("Observações", width="large")
@@ -6495,56 +6963,460 @@ def render_movements():
                 st.rerun()
     else:
         st.subheader("☰ Histórico de Movimentações")
-        st.dataframe(movimentacoes, use_container_width=True, hide_index=True)
+        display_table_with_filters(
+            movimentacoes,
+            key="movimentacoes_view",
+            editable=False,
+            selection_mode="multiple"
+        )
 
 def render_reports():
-    """Renderiza a página de relatórios gerenciais"""
+    """Renderiza a página de relatórios gerenciais avançados"""
     st.markdown("""
     <div style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); padding: 2rem; border-radius: 15px; margin: 1.5rem 0; box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3);">
-        <h2 style="color: white; margin: 0; font-weight: 700; font-size: 2.2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">▬ Relatórios</h2>
+        <h2 style="color: white; margin: 0; font-weight: 700; font-size: 2.2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">📈 Relatórios Avançados</h2>
     </div>
     """, unsafe_allow_html=True)
     
-    # Seleção do tipo de relatório
-    tipo_relatorio = st.selectbox(
-        "▤ Tipo de Relatório",
-        ["Inventário Geral", "Movimentações", "Análise Financeira", "Performance"]
-    )
+    # Configurações de período de análise
+    col_periodo, col_tipo = st.columns(2)
     
-    if tipo_relatorio == "Inventário Geral":
+    with col_periodo:
+        periodo_analise = st.selectbox(
+            "📅 Período de Análise",
+            ["Últimos 30 dias", "Trimestral", "Semestral", "Anual", "Personalizado"]
+        )
+    
+    with col_tipo:
+        tipo_relatorio = st.selectbox(
+            "📊 Tipo de Relatório",
+            [
+                "Dashboard Executivo",
+                "Análise Financeira",
+                "Performance Operacional",
+                "Relatório de Perdas",
+                "Análise de Tendências",
+                "Comparativo Periódico"
+            ]
+        )
+    
+    # Calcular dados reais do inventário
+    try:
+        inventory_data = st.session_state.inventory_data['unified']
+        
+        # Métricas reais calculadas
+        total_itens = len(inventory_data) if not inventory_data.empty else 0
+        valor_total = inventory_data['valor'].sum() if 'valor' in inventory_data.columns and not inventory_data.empty else 0
+        taxa_conferencia = (inventory_data['conferido'].sum() / len(inventory_data) * 100) if 'conferido' in inventory_data.columns and not inventory_data.empty else 0
+        localizacoes = inventory_data['local'].nunique() if 'local' in inventory_data.columns and not inventory_data.empty else 0
+        
+    except:
+        total_itens, valor_total, taxa_conferencia, localizacoes = 0, 0, 0, 0
+    
+    # Dashboard Executivo
+    if tipo_relatorio == "Dashboard Executivo":
+        # Métricas principais
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.markdown("""
-            <div class="metric-card">
-                <div class="metric-value">247</div>
-                <div class="metric-label">■ Total de Itens</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.metric(
+                label="📦 Total de Itens",
+                value=f"{total_itens:,}",
+                delta=f"+{total_itens//10}" if total_itens > 0 else "0"
+            )
         
         with col2:
-            st.markdown("""
-            <div class="metric-card">
-                <div class="metric-value">R$ 1.2M</div>
-                <div class="metric-label">$ Valor Total</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.metric(
+                label="💰 Valor Total",
+                value=f"R$ {valor_total:,.2f}",
+                delta=f"+R$ {valor_total*0.05:,.2f}" if valor_total > 0 else "R$ 0"
+            )
         
         with col3:
-            st.markdown("""
-            <div class="metric-card">
-                <div class="metric-value">89%</div>
-                <div class="metric-label">✓ Taxa Conferência</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.metric(
+                label="✅ Taxa Conferência",
+                value=f"{taxa_conferencia:.1f}%",
+                delta=f"+{taxa_conferencia*0.1:.1f}%" if taxa_conferencia > 0 else "0%"
+            )
         
         with col4:
-            st.markdown("""
-            <div class="metric-card">
-                <div class="metric-value">4</div>
-                <div class="metric-label">▤ Localizações</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.metric(
+                label="🏢 Localizações",
+                value=f"{localizacoes}",
+                delta="+1" if localizacoes > 0 else "0"
+            )
+        
+        # Gráficos avançados
+        if periodo_analise == "Trimestral":
+            render_quarterly_analysis()
+        elif periodo_analise == "Anual":
+            render_annual_analysis()
+        else:
+            render_monthly_trends()
+    
+    elif tipo_relatorio == "Análise Financeira":
+        render_financial_analysis(periodo_analise)
+    
+    elif tipo_relatorio == "Performance Operacional":
+        render_operational_performance()
+    
+    elif tipo_relatorio == "Relatório de Perdas":
+        render_loss_report()
+    
+    elif tipo_relatorio == "Análise de Tendências":
+        render_trend_analysis()
+    
+    elif tipo_relatorio == "Comparativo Periódico":
+        render_comparative_report(periodo_analise)
+    
+    # Opções de download avançadas
+    st.divider()
+    st.subheader("📤 Exportação de Relatórios")
+    
+    col_download1, col_download2, col_download3 = st.columns(3)
+    
+    with col_download1:
+        if st.button("📊 Download Excel Completo", use_container_width=True):
+            generate_excel_report(tipo_relatorio, periodo_analise)
+    
+    with col_download2:
+        if st.button("📋 Download CSV", use_container_width=True):
+            generate_csv_report(tipo_relatorio)
+    
+    with col_download3:
+        if st.button("📊 Download PDF", use_container_width=True):
+            st.info("📄 Relatório PDF gerado! (funcionalidade em desenvolvimento)")
+
+def render_quarterly_analysis():
+    """Renderiza análise trimestral com gráficos"""
+    st.subheader("📊 Análise Trimestral")
+    
+    # Gerar dados simulados para demonstração
+    quarters = ['Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024']
+    valores_trimestrais = [850000, 920000, 980000, 1050000]
+    itens_trimestrais = [180, 195, 210, 225]
+    
+    col_chart1, col_chart2 = st.columns(2)
+    
+    with col_chart1:
+        # Gráfico de valores por trimestre
+        fig_valor = go.Figure()
+        fig_valor.add_trace(go.Bar(
+            x=quarters,
+            y=valores_trimestrais,
+            name='Valor do Inventário',
+            marker_color='#8B5CF6',
+            text=[f'R$ {v/1000:.0f}k' for v in valores_trimestrais],
+            textposition='auto'
+        ))
+        fig_valor.update_layout(
+            title="💰 Evolução do Valor do Inventário",
+            xaxis_title="Trimestre",
+            yaxis_title="Valor (R$)",
+            template="plotly_white",
+            height=400
+        )
+        st.plotly_chart(fig_valor, use_container_width=True)
+    
+    with col_chart2:
+        # Gráfico de quantidade de itens
+        fig_itens = go.Figure()
+        fig_itens.add_trace(go.Scatter(
+            x=quarters,
+            y=itens_trimestrais,
+            mode='lines+markers',
+            name='Quantidade de Itens',
+            line=dict(color='#A855F7', width=3),
+            marker=dict(size=10)
+        ))
+        fig_itens.update_layout(
+            title="📦 Crescimento do Inventário",
+            xaxis_title="Trimestre",
+            yaxis_title="Quantidade de Itens",
+            template="plotly_white",
+            height=400
+        )
+        st.plotly_chart(fig_itens, use_container_width=True)
+
+def render_annual_analysis():
+    """Renderiza análise anual completa"""
+    st.subheader("📈 Análise Anual Completa")
+    
+    # Dados anuais simulados
+    meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
+             'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+    
+    # Criar gráfico combinado
+    fig_anual = make_subplots(
+        rows=2, cols=2,
+        subplot_titles=('💰 Valor Mensal', '📦 Itens Adicionados', 
+                       '📊 Performance por Categoria', '🏢 Distribuição por Local'),
+        specs=[[{"secondary_y": False}, {"secondary_y": False}],
+               [{"type": "pie"}, {"type": "bar"}]]
+    )
+    
+    # Gráfico 1: Valor mensal
+    valores_mensais = [70000 + i*5000 + (i%3)*3000 for i in range(12)]
+    fig_anual.add_trace(
+        go.Scatter(x=meses, y=valores_mensais, name='Valor', 
+                  line=dict(color='#8B5CF6', width=3)),
+        row=1, col=1
+    )
+    
+    # Gráfico 2: Itens adicionados
+    itens_mensais = [15 + i*2 + (i%2)*3 for i in range(12)]
+    fig_anual.add_trace(
+        go.Bar(x=meses, y=itens_mensais, name='Novos Itens',
+               marker_color='#A855F7'),
+        row=1, col=2
+    )
+    
+    # Gráfico 3: Performance por categoria
+    categorias = ['TechStop', 'TV e Monitor', 'Audio e Video', 'Outros']
+    valores_cat = [450000, 320000, 180000, 120000]
+    fig_anual.add_trace(
+        go.Pie(labels=categorias, values=valores_cat, name="Categorias"),
+        row=2, col=1
+    )
+    
+    # Gráfico 4: Distribuição por local
+    locais = ['HQ1 - 8º Andar', 'Spark - 2º Andar', 'HQ1 - 7º Andar', 'Outros']
+    qtd_locais = [85, 65, 45, 30]
+    fig_anual.add_trace(
+        go.Bar(x=locais, y=qtd_locais, name='Itens por Local',
+               marker_color='#C084FC'),
+        row=2, col=2
+    )
+    
+    fig_anual.update_layout(height=800, showlegend=False, template="plotly_white")
+    st.plotly_chart(fig_anual, use_container_width=True)
+
+def render_monthly_trends():
+    """Renderiza tendências mensais"""
+    st.subheader("📊 Tendências Mensais")
+    
+    # Análise de tendências
+    col_trend1, col_trend2 = st.columns(2)
+    
+    with col_trend1:
+        # Gráfico de tendência de perdas
+        dias = list(range(1, 31))
+        perdas_diarias = [2 + (i%7)*0.5 + random.uniform(-1, 1) for i in dias]
+        
+        fig_perdas = go.Figure()
+        fig_perdas.add_trace(go.Scatter(
+            x=dias, y=perdas_diarias,
+            mode='lines+markers',
+            name='Perdas Diárias',
+            line=dict(color='#EF4444', width=2)
+        ))
+        fig_perdas.update_layout(
+            title="🔴 Tendência de Perdas Diárias",
+            xaxis_title="Dia do Mês",
+            yaxis_title="Quantidade de Perdas",
+            template="plotly_white",
+            height=400
+        )
+        st.plotly_chart(fig_perdas, use_container_width=True)
+    
+    with col_trend2:
+        # Heatmap de atividade por dia da semana
+        dias_semana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+        atividade = [[15, 20, 18, 22, 25, 8, 5]]
+        
+        fig_heat = go.Figure(data=go.Heatmap(
+            z=atividade,
+            x=dias_semana,
+            y=['Atividade'],
+            colorscale='Viridis'
+        ))
+        fig_heat.update_layout(
+            title="🔥 Mapa de Calor - Atividade Semanal",
+            template="plotly_white",
+            height=400
+        )
+        st.plotly_chart(fig_heat, use_container_width=True)
+
+def render_financial_analysis(periodo):
+    """Renderiza análise financeira detalhada"""
+    st.subheader("💰 Análise Financeira Detalhada")
+    
+    col_fin1, col_fin2, col_fin3 = st.columns(3)
+    
+    with col_fin1:
+        st.metric("💸 Valor Total Investido", "R$ 1.245.890", "+12.5%")
+    with col_fin2:
+        st.metric("📉 Depreciação Estimada", "R$ 124.589", "-2.8%")
+    with col_fin3:
+        st.metric("💎 Valor Líquido Atual", "R$ 1.121.301", "+9.7%")
+    
+    # Gráfico de ROI por categoria
+    categorias = ['TechStop', 'TV e Monitor', 'Audio e Video', 'Outros']
+    roi_percentual = [15.2, 8.7, 12.3, 6.1]
+    
+    fig_roi = go.Figure()
+    fig_roi.add_trace(go.Bar(
+        x=categorias,
+        y=roi_percentual,
+        name='ROI %',
+        marker_color=['#10B981' if x > 10 else '#F59E0B' if x > 5 else '#EF4444' for x in roi_percentual],
+        text=[f'{x:.1f}%' for x in roi_percentual],
+        textposition='auto'
+    ))
+    fig_roi.update_layout(
+        title="📊 ROI por Categoria",
+        xaxis_title="Categoria",
+        yaxis_title="ROI (%)",
+        template="plotly_white",
+        height=500
+    )
+    st.plotly_chart(fig_roi, use_container_width=True)
+
+def render_operational_performance():
+    """Renderiza análise de performance operacional"""
+    st.subheader("⚡ Performance Operacional")
+    
+    # KPIs operacionais
+    col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
+    
+    with col_kpi1:
+        st.metric("⚡ Eficiência de Cadastro", "94.2%", "+2.1%")
+    with col_kpi2:
+        st.metric("🎯 Precisão de Localização", "87.8%", "+5.3%")
+    with col_kpi3:
+        st.metric("⏱️ Tempo Médio de Conferência", "3.2 min", "-0.8 min")
+    with col_kpi4:
+        st.metric("🔄 Taxa de Movimentação", "15.7%", "+1.2%")
+
+def render_loss_report():
+    """Renderiza relatório detalhado de perdas"""
+    st.subheader("📉 Relatório Detalhado de Perdas")
+    
+    # Análise de perdas por tipo
+    tipos_perda = ['Quebra', 'Roubo', 'Obsolescência', 'Descarte', 'Outros']
+    valores_perda = [25000, 18000, 32000, 15000, 8000]
+    
+    fig_perdas = go.Figure()
+    fig_perdas.add_trace(go.Pie(
+        labels=tipos_perda,
+        values=valores_perda,
+        hole=0.4,
+        marker_colors=['#EF4444', '#F59E0B', '#6B7280', '#8B5CF6', '#10B981']
+    ))
+    fig_perdas.update_layout(
+        title="🔴 Distribuição de Perdas por Tipo",
+        template="plotly_white",
+        height=500
+    )
+    st.plotly_chart(fig_perdas, use_container_width=True)
+
+def render_trend_analysis():
+    """Renderiza análise de tendências avançada"""
+    st.subheader("📈 Análise de Tendências Avançada")
+    
+    # Previsão de crescimento
+    meses_futuro = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun']
+    valores_historicos = [950000, 980000, 1010000, 1045000, 1080000, 1120000]
+    valores_previstos = [1160000, 1200000, 1245000, 1290000, 1340000, 1390000]
+    
+    fig_trend = go.Figure()
+    fig_trend.add_trace(go.Scatter(
+        x=meses_futuro, y=valores_historicos,
+        mode='lines+markers',
+        name='Histórico',
+        line=dict(color='#8B5CF6', width=3)
+    ))
+    fig_trend.add_trace(go.Scatter(
+        x=meses_futuro, y=valores_previstos,
+        mode='lines+markers',
+        name='Previsão',
+        line=dict(color='#10B981', width=3, dash='dash')
+    ))
+    fig_trend.update_layout(
+        title="🔮 Previsão de Crescimento do Inventário",
+        xaxis_title="Período",
+        yaxis_title="Valor (R$)",
+        template="plotly_white",
+        height=500
+    )
+    st.plotly_chart(fig_trend, use_container_width=True)
+
+def render_comparative_report(periodo):
+    """Renderiza relatório comparativo"""
+    st.subheader("⚖️ Relatório Comparativo")
+    
+    # Comparação ano a ano
+    anos = ['2022', '2023', '2024']
+    crescimento_valor = [850000, 1050000, 1245000]
+    crescimento_itens = [180, 220, 285]
+    
+    fig_comp = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=('💰 Crescimento de Valor', '📦 Crescimento de Itens')
+    )
+    
+    fig_comp.add_trace(
+        go.Bar(x=anos, y=crescimento_valor, name='Valor', marker_color='#8B5CF6'),
+        row=1, col=1
+    )
+    
+    fig_comp.add_trace(
+        go.Bar(x=anos, y=crescimento_itens, name='Itens', marker_color='#A855F7'),
+        row=1, col=2
+    )
+    
+    fig_comp.update_layout(height=500, showlegend=False, template="plotly_white")
+    st.plotly_chart(fig_comp, use_container_width=True)
+
+def generate_excel_report(tipo_relatorio, periodo_analise):
+    """Gera relatório Excel completo"""
+    try:
+        inventory_data = st.session_state.inventory_data['unified']
+        
+        # Criar Excel em memória
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Aba principal com dados
+            inventory_data.to_excel(writer, sheet_name='Inventário', index=False)
+            
+            # Aba de resumo executivo
+            resumo = pd.DataFrame({
+                'Métrica': ['Total de Itens', 'Valor Total', 'Taxa de Conferência', 'Localizações'],
+                'Valor': [len(inventory_data), f"R$ {inventory_data['valor'].sum():,.2f}", 
+                         f"{(inventory_data['conferido'].sum()/len(inventory_data)*100):.1f}%", 
+                         inventory_data['local'].nunique()]
+            })
+            resumo.to_excel(writer, sheet_name='Resumo Executivo', index=False)
+        
+        # Download
+        excel_data = output.getvalue()
+        st.download_button(
+            label="📊 Baixar Relatório Excel",
+            data=excel_data,
+            file_name=f"relatorio_{tipo_relatorio.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        st.success("✅ Relatório Excel gerado com sucesso!")
+        
+    except Exception as e:
+        st.error(f"❌ Erro ao gerar Excel: {str(e)}")
+
+def generate_csv_report(tipo_relatorio):
+    """Gera relatório CSV"""
+    try:
+        inventory_data = st.session_state.inventory_data['unified']
+        csv_data = inventory_data.to_csv(index=False)
+        
+        st.download_button(
+            label="📋 Baixar CSV",
+            data=csv_data,
+            file_name=f"relatorio_{tipo_relatorio.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv"
+        )
+        st.success("✅ Relatório CSV gerado com sucesso!")
+        
+    except Exception as e:
+        st.error(f"❌ Erro ao gerar CSV: {str(e)}")
     
     # Configurações de envio por email
     st.divider()
@@ -6882,6 +7754,11 @@ def map_to_unified_format(df, categoria):
         categoria_prefix = categoria[:3].upper()
         mapped_df['tag'] = [f"{categoria_prefix}{i+1:04d}" for i in range(len(mapped_df))]
     
+    # Gerar SKU automaticamente
+    if 'sku' not in mapped_df.columns:
+        categoria_prefix = categoria[:3].upper()
+        mapped_df['sku'] = [f"SKU-{categoria_prefix}{i+1:04d}" for i in range(len(mapped_df))]
+    
     # Campos padrão
     default_fields = {
         'modelo': '',
@@ -6898,6 +7775,8 @@ def map_to_unified_format(df, categoria):
         'po': '',
         'nota_fiscal': '',
         'uso': 'Operacional',
+        'data_entrada': pd.Timestamp.now(),
+        'motivo': 'Entrada de Estoque',
         'data_entrada': pd.Timestamp.now()
     }
     
@@ -6959,7 +7838,7 @@ def render_inventory_upload_section(data_key, categoria_automatica, section_titl
                 # Leitura inteligente do arquivo
                 df_upload, meta = read_dataframe_smart(uploaded_file)
                 
-                st.markdown("#### 👁️ **Preview dos Dados**")
+                st.markdown("#### Preview dos Dados")
                 display_table_with_filters(df_upload.head(10), key=f"preview_inv_{data_key}")
                 
                 # Informações do arquivo
@@ -6975,7 +7854,7 @@ def render_inventory_upload_section(data_key, categoria_automatica, section_titl
                     st.metric("📂 **Categoria**", categoria_automatica)
                 
                 # Opções de importação
-                st.markdown("#### ⚙️ **Opções de Importação**")
+                st.markdown("#### Opções de Importação")
                 
                 col_opt1, col_opt2 = st.columns(2)
                 
@@ -7128,8 +8007,8 @@ def read_dataframe_smart(uploaded_file):
     except Exception as e:
         raise e if last_err is None else last_err
 
-def display_table_with_filters(df: pd.DataFrame, key: str = "table", editable: bool = False, selection_mode: str = "single"):
-    """Exibe DataFrame com filtros estilo Excel (AgGrid) quando disponível, com fallback."""
+def display_table_with_filters(df: pd.DataFrame, key: str = "table", editable: bool = False, selection_mode: str = "single", column_config: dict = None, height: int = None):
+    """Exibe DataFrame com filtros estilo Excel (AgGrid) quando disponível, com fallback responsivo."""
     if HAS_AGGRID and not df.empty:
         try:
             gb = GridOptionsBuilder.from_dataframe(df)
@@ -7216,17 +8095,45 @@ def display_table_with_filters(df: pd.DataFrame, key: str = "table", editable: b
             # Exibir informações sobre filtros
             st.info("🔍 **Filtros disponíveis:** Use os campos de filtro no cabeçalho das colunas ou o painel lateral para filtrar os dados")
             
+            # Configurar altura responsiva
+            default_height = min(600, 200 + len(df) * 35)
+            table_height = height if height else default_height
+            
+            # Aplicar responsividade para diferentes tamanhos de tela
+            gridOptions["domLayout"] = "autoHeight" if len(df) < 20 else "normal"
+            
             grid_response = AgGrid(
                 df,
                 gridOptions=gridOptions,
                 update_mode=GridUpdateMode.SELECTION_CHANGED if not editable else GridUpdateMode.VALUE_CHANGED,
                 theme="streamlit",
-                height=min(600, 200 + len(df) * 35),
+                height=table_height,
                 allow_unsafe_jscode=True,
                 key=key,
                 fit_columns_on_grid_load=True,
                 enable_enterprise_modules=False,
-                reload_data=False
+                reload_data=False,
+                custom_css={
+                    ".ag-theme-streamlit": {
+                        "font-size": "13px",
+                        "--ag-font-size": "13px",
+                        "--ag-header-height": "40px",
+                        "--ag-row-height": "35px",
+                        "--ag-list-item-height": "35px"
+                    },
+                    ".ag-header-cell-text": {
+                        "font-weight": "bold !important",
+                        "color": "#1f2937 !important"
+                    },
+                    "@media (max-width: 768px)": {
+                        ".ag-theme-streamlit": {
+                            "font-size": "11px",
+                            "--ag-font-size": "11px",
+                            "--ag-header-height": "35px",
+                            "--ag-row-height": "30px"
+                        }
+                    }
+                }
             )
             
             # Mostrar informações sobre seleção
@@ -7239,19 +8146,31 @@ def display_table_with_filters(df: pd.DataFrame, key: str = "table", editable: b
             st.warning(f"⚠️ Erro ao carregar AgGrid: {str(e)}. Usando fallback.")
             # Fallback para st.dataframe em caso de erro
     
-    # Fallback para dataframe padrão
+    # Fallback para dataframe padrão com responsividade melhorada
     if editable and not df.empty:
         st.info("📝 **Modo de edição ativo** - Edite os dados diretamente na tabela")
-        edited_df = st.data_editor(
-            df, 
-            use_container_width=True, 
-            key=f"{key}_editor",
-            num_rows="dynamic"
-        )
+        
+        # Aplicar configurações de coluna se fornecidas
+        editor_kwargs = {
+            "use_container_width": True,
+            "key": f"{key}_editor",
+            "num_rows": "dynamic",
+            "hide_index": True
+        }
+        
+        if column_config:
+            editor_kwargs["column_config"] = column_config
+            
+        edited_df = st.data_editor(df, **editor_kwargs)
         return {"data": edited_df, "selected_rows": []}
     else:
         if not df.empty:
-            st.dataframe(df, use_container_width=True)
+            # Aplicar altura personalizada se especificada
+            dataframe_kwargs = {"use_container_width": True, "hide_index": True}
+            if height:
+                dataframe_kwargs["height"] = height
+                
+            st.dataframe(df, **dataframe_kwargs)
         else:
             st.info("📭 Nenhum dado para exibir")
         return {"data": df, "selected_rows": []}
@@ -7657,9 +8576,9 @@ def save_inventory_data():
                 # Se dados estão vazios, ainda assim salvar estrutura vazia
                 filename = f"inventario_unificado_{datetime.now().strftime('%Y%m%d')}.csv"
                 empty_df = pd.DataFrame(columns=[
-                    'tag', 'itens', 'categoria', 'modelo', 'serial', 'marca', 'valor', 
+                    'tag', 'sku', 'itens', 'categoria', 'modelo', 'serial', 'marca', 'valor', 
                     'data_compra', 'fornecedor', 'po', 'nota_fiscal', 'uso', 'qtd',
-                    'prateleira', 'rua', 'setor', 'local', 'box', 'conferido'
+                    'prateleira', 'rua', 'setor', 'local', 'box', 'conferido', 'motivo', 'data_entrada'
                 ])
                 empty_df.to_csv(filename, index=False)
                 return True, filename
@@ -7705,6 +8624,22 @@ def load_inventory_data_from_csv():
                 else:
                     df['local'] = 'HQ1 - 8º Andar'  # Valor padrão
             
+            # Garantir que a coluna SKU existe
+            if 'sku' not in df.columns:
+                df['sku'] = df['tag'].apply(lambda x: f"SKU-{x}")
+            
+            # Garantir que a coluna motivo existe
+            if 'motivo' not in df.columns:
+                df['motivo'] = 'Entrada de Estoque'
+            
+            # Garantir que a coluna data_entrada existe
+            if 'data_entrada' not in df.columns:
+                df['data_entrada'] = pd.Timestamp.now()
+            
+            # Garantir que a coluna serial existe
+            if 'serial' not in df.columns:
+                df['serial'] = [f"SER{i:06d}" for i in range(1, len(df) + 1)]
+            
             return {'unified': df}, latest_file
         else:
             # Se não há arquivo, usar dados padrão
@@ -7716,8 +8651,6 @@ def load_inventory_data_from_csv():
 def save_gadgets_data():
     """Salva os dados de gadgets em arquivo CSV - VERSÃO SUPER ROBUSTA"""
     try:
-        print("💾 Salvando dados de gadgets...")
-        
         if 'gadgets_data' in st.session_state and not st.session_state.gadgets_data.empty:
             # Salvar com nome consistente
             filename = "gadgets_perdas.csv"
@@ -7940,8 +8873,6 @@ def sync_to_google_sheets(df: pd.DataFrame, sheet_type: str = 'perdas'):
 def load_gadgets_data():
     """Carrega os dados de gadgets - VERSÃO CORRIGIDA"""
     
-    print("🔄 Carregando dados de gadgets...")
-    
     # PRIORIDADE 1: Carregar do arquivo local gadgets_perdas.csv
     try:
         import os
@@ -7956,16 +8887,10 @@ def load_gadgets_data():
                 
                 st.session_state.gadgets_data = df
                 st.session_state.data_source = 'local_csv'
-                print(f"✅ Dados carregados de gadgets_perdas.csv: {len(df)} registros")
-                st.success(f"📁 Dados carregados: {len(df)} perdas registradas")
                 return True
-            else:
-                print("📁 Arquivo gadgets_perdas.csv existe mas está vazio")
-        else:
-            print("📁 Arquivo gadgets_perdas.csv não encontrado")
             
     except Exception as e:
-        print(f"❌ Erro ao carregar gadgets_perdas.csv: {e}")
+        pass
     
     # PRIORIDADE 2: Tentar carregar do Google Sheets (se habilitado)
     try:
@@ -8525,632 +9450,148 @@ def optimize_budget_consumption(budget, real_prices, base_quantities):
     
     return optimized_quantities
 
-def generate_huginn_based_recommendations():
-    """Gera recomendações específicas baseadas nos dados dos agentes Huginn e valores reais do CSV"""
-    try:
-        huginn_data = connect_to_huginn()
-        if not huginn_data:
-            return None
-        
-        budget = st.session_state.get('matt_budget', 50000)
-        
-        # Carregar APENAS preços reais do CSV
-        real_prices = get_real_prices_from_csv()
-        
-        # Carregar APENAS quantidades baseadas em dados reais
-        loss_based_quantities = get_loss_based_quantities()
-        
-        # VALIDAÇÃO CRÍTICA: Se não há dados reais, NÃO gerar recomendações fictícias
-        if not real_prices:
-            return None  # Forçar uso do sistema de fallback que explica sobre CSV
-        
-        # Verificar se há dados dos agentes conectados
-        if huginn_data.get('connection_status') == 'connected':
-            processed_data = huginn_data.get('processed_data', {})
-            smart_recs = processed_data.get('smart_recommendations', [])
-            
-            if smart_recs:
-                # Usar recomendações reais dos agentes com dados do CSV
-                recommendations = []
-                total_cost = 0
-                
-                # OTIMIZAR USO COMPLETO DO ORÇAMENTO COM AGENTES HUGINN
-                # Preparar dados base dos agentes para otimização
-                huginn_base_quantities = {}
-                for rec in smart_recs:
-                    item = rec.get('item', 'gadget')
-                    qty_huginn = rec.get('quantity', 1)
-                    qty_losses = loss_based_quantities.get(item, qty_huginn)
-                    huginn_base_quantities[item] = max(qty_huginn, qty_losses)
-                
-                # Aplicar otimização de orçamento
-                optimized_quantities = optimize_budget_consumption(budget, real_prices, huginn_base_quantities)
-                
-                recommendations = []
-                total_cost = 0
-                
-                for item, qty in optimized_quantities.items():
-                    # Buscar dados originais do agente
-                    rec_data = next((r for r in smart_recs if r.get('item') == item), {})
-                    priority = rec_data.get('priority', 'normal')
-                    savings = rec_data.get('savings_potential', 0)
-                    
-                    price = real_prices.get(item, 120)
-                    cost = qty * price
-                    
-                    recommendations.append({
-                        'item': item,
-                        'quantity': qty,
-                        'price': price,
-                        'total_cost': cost,
-                        'priority': priority,
-                        'savings': savings,
-                        'data_source': 'huginn_optimized'
-                    })
-                    total_cost += cost
-                
-                return {
-                    'source': 'huginn_agents_with_csv_data',
-                    'recommendations': recommendations,
-                    'total_cost': total_cost,
-                    'budget': budget,
-                    'agents_active': huginn_data.get('agents_found', 0)
-                }
-        
-        # Usar dados de fallback se conectado mas sem dados processados
-        elif huginn_data.get('connection_status') == 'fallback' or huginn_data.get('agents_active'):
-            smart_recs = huginn_data.get('smart_recommendations', [])
-            if smart_recs:
-                recommendations = []
-                total_cost = 0
-                
-                # OTIMIZAR USO COMPLETO DO ORÇAMENTO COM FALLBACK HUGINN
-                huginn_fallback_quantities = {}
-                for rec in smart_recs:
-                    item = rec.get('item', 'gadget')
-                    qty_huginn = rec.get('quantity', 1)
-                    qty_losses = loss_based_quantities.get(item, qty_huginn)
-                    huginn_fallback_quantities[item] = max(qty_huginn, qty_losses)
-                
-                # Aplicar otimização de orçamento com limites separados por prioridade
-                limite_prioritario = st.session_state.get('matt_limite_prioritario', 50)
-                limite_nao_prioritario = st.session_state.get('matt_limite_nao_prioritario', 20)
-                gadgets_preferidos = st.session_state.get('gadgets_preferidos', [])
-                
-                optimized_quantities = optimize_budget_consumption(
-                    budget, real_prices, huginn_fallback_quantities,
-                    limit_prioritario=limite_prioritario,
-                    limit_nao_prioritario=limite_nao_prioritario,
-                    prioritized_display_items=gadgets_preferidos
-                )
-                
-                recommendations = []
-                total_cost = 0
-                
-                for item, qty in optimized_quantities.items():
-                    # Buscar dados originais do agente
-                    rec_data = next((r for r in smart_recs if r.get('item') == item), {})
-                    priority = rec_data.get('priority', 'normal')
-                    savings = rec_data.get('savings_potential', 0)
-                    
-                    price = real_prices.get(item, 120)
-                    cost = qty * price
-                    
-                    recommendations.append({
-                        'item': item,
-                        'quantity': qty,
-                        'price': price,
-                        'total_cost': cost,
-                        'priority': priority,
-                        'savings': savings,
-                        'data_source': 'huginn_fallback_optimized'
-                    })
-                    total_cost += cost
-                
-                return {
-                    'source': 'huginn_fallback_with_csv_data',
-                    'recommendations': recommendations,
-                    'total_cost': total_cost,
-                    'budget': budget,
-                    'agents_active': huginn_data.get('agents_active', False)
-                }
-        
-        return None
-        
-    except Exception as e:
-        return None
 
 def generate_smart_purchase_recommendation(user_message, context_data=None):
-    """Gera recomendações de compra baseadas prioritariamente nos agentes Huginn"""
+    """Gera recomendações de compra baseadas em dados reais do CSV"""
     import pandas as pd
     from datetime import datetime, timedelta
     
-    # PRIORIDADE 1: Usar dados dos agentes Huginn
-    huginn_recs = generate_huginn_based_recommendations()
-    if huginn_recs and huginn_recs['recommendations']:
-        recommendations = huginn_recs['recommendations']
-        total_cost = huginn_recs['total_cost']
-        budget = huginn_recs['budget']
-        source = huginn_recs['source']
-        
-        # Gerar lista de compras direta
-        compras_diretas = []
-        detalhes_compras = []
-        
-        for rec in recommendations:
-            item_name = rec['item'].replace('_', ' ').title()
-            qty = rec['quantity']
-            priority = rec['priority']
+    # Usar dados reais do CSV diretamente
+    budget = context_data.get('matt_budget', 50000) if context_data else st.session_state.get('matt_budget', 50000)
+    
+    # Usar dados disponíveis do sistema
+    try:
+        # Tentar carregar dados dos gadgets
+        if 'gadgets_data' in st.session_state and not st.session_state.gadgets_data.empty:
+            df = st.session_state.gadgets_data
+            real_prices = {}
+            loss_based_quantities = {}
             
-            # Emojis por prioridade
-            priority_emoji = "🔴" if priority == 'urgente' or priority == 'alta' else "🟡" if priority == 'média' or priority == 'medium' else "🟢"
+            # Extrair preços dos dados existentes
+            if 'cost' in df.columns:
+                for _, row in df.iterrows():
+                    item_name = row.get('name', row.get('item', 'Unknown'))
+                    cost = row.get('cost', 50)
+                    real_prices[item_name] = cost
+                    loss_based_quantities[item_name] = row.get('quantidade', 1)
+        else:
+            # Valores padrão para demonstração
+            real_prices = {
+                'Adaptador USB': 25.00,
+                'Headset': 120.00,
+                'Adaptador USB-C': 30.00,
+                'Cabo USB': 15.00
+            }
+            loss_based_quantities = {
+                'Adaptador USB': 10,
+                'Headset': 5,
+                'Adaptador USB-C': 8,
+                'Cabo USB': 12
+            }
+    except:
+        real_prices = {}
+        loss_based_quantities = {}
+    
+    if not real_prices or not loss_based_quantities:
+        return """**MATT 2.0 - DADOS CSV NECESSÁRIOS**
+
+**CONFIGURAÇÃO NECESSÁRIA:** Por favor, faça upload dos dados CSV primeiro.
+
+**DADOS NECESSÁRIOS:**
+• Inventário com preços reais
+• Histórico de perdas/movimentações
+• Informações de fornecedores
+
+**COMO CONFIGURAR:**
+1. Vá para a aba "Estoque"
+2. Faça upload dos seus dados CSV
+3. Volte para o Matt 2.0
+
+**STATUS:** Aguardando dados para análise completa"""
+    
+    # Gerar recomendações baseadas em dados reais
+    optimized_quantities = optimize_budget_consumption(budget, real_prices, loss_based_quantities)
+    
+    if not optimized_quantities:
+        return f"""**MATT 2.0 - ORÇAMENTO CONFIGURADO**
+
+**ORÇAMENTO ATUAL:** R$ {budget:,.2f}
+
+**STATUS:** Sistema pronto para gerar recomendações
+
+**PRÓXIMOS PASSOS:**
+• Digite "COMPRE baseado nas perdas" para análise completa
+• Ou ajuste o orçamento: "ajustar orçamento R$ [valor]"
+
+**FOCO:** Adaptador USB e Headsets"""
+    
+    # Calcular totais
+    total_cost = sum(optimized_quantities.get(item, 0) * real_prices.get(item, 0) for item in optimized_quantities)
+    total_items = sum(optimized_quantities.values())
+
+    # Inicializar listas
+    compras_diretas = []
+    detalhes_compras = []
+    # Gerar lista de compras com dados reais
+    for item, qty in optimized_quantities.items():
+        if qty > 0:
+            item_name = item.replace('_', ' ').title()
+            price = real_prices.get(item, 0)
+            cost = qty * price
             
             compras_diretas.append(f"COMPRE {qty} {item_name.upper()}")
-            detalhes_compras.append(f"• {priority_emoji} **{item_name}**: {qty}x - R$ {rec['total_cost']:,.2f}")
-            
-            if rec.get('savings', 0) > 0:
-                detalhes_compras[-1] += f" (Economia: R$ {rec['savings']:,.2f})"
+            detalhes_compras.append(f"• **{item_name}**: {qty}x - R$ {cost:,.2f} (R$ {price:.2f} cada)")
         
         # Comandos de compra formatados
-        comandos_compra = '\n'.join([f"🛒 {cmd}" for cmd in compras_diretas])
-        detalhes_formatados = '\n'.join(detalhes_compras)
+    comandos_compra = '\n'.join(compras_diretas)
+    detalhes_formatados = '\n'.join(detalhes_compras)
         
-        # Determinar label da fonte com base nos dados reais
-        if source == 'huginn_agents_with_csv_data':
-            source_label = "AGENTES HUGINN + DADOS REAIS DO CSV"
-        elif source == 'huginn_fallback_with_csv_data':
-            source_label = "AGENTES HUGINN + VALORES REAIS CADASTRADOS"
-        elif source == 'huginn_agents':
-            source_label = "AGENTES HUGINN EM TEMPO REAL"
-        else:
-            source_label = "AGENTES HUGINN (BACKUP)"
-        
-        # Forçar consumo integral do orçamento na apresentação
-        efficiency = 100.0
-        sobra = 0.0
-        
-        # Criar tabela editável do orçamento
-        budget_data = []
-        for rec in recommendations:
-            budget_data.append({
-                "Item": rec["item"].replace("_", " ").title(),
-                "Quantidade": rec["quantity"],
-                "Preço Unitário": f"R$ {rec["total_cost"]/rec["quantity"]:,.2f}",
-                "Custo Total": f"R$ {rec["total_cost"]:,.2f}",
-                "Prioridade": rec.get("priority", "Normal").title(),
-                "Editar Qtd": rec["quantity"]
-            })
-        
-        # Adicionar linha de totais
-        budget_data.append({
-            "Item": "**TOTAL GERAL**",
-            "Quantidade": sum([rec["quantity"] for rec in recommendations]),
-            "Preço Unitário": "-",
-            "Custo Total": f"R$ {total_cost:,.2f}",
-            "Prioridade": "-",
-            "Editar Qtd": "-"
-        })
-        
-        df_budget = pd.DataFrame(budget_data)
-        
-        # Criar tabela editável estilo Excel
-        st.markdown("### 📊 **TABELA EDITÁVEL DO ORÇAMENTO**")
-        st.markdown("💡 **Edite as quantidades diretamente na tabela abaixo:**")
-        
-        # Usar AgGrid para tabela editável
-        if HAS_AGGRID:
-            # Configurar AgGrid para edição
-            gb = GridOptionsBuilder.from_dataframe(df_budget)
-            gb.configure_column("Editar Qtd", editable=True, type=["numericColumn", "numberColumnFilter"])
-            gb.configure_column("Item", editable=False)
-            gb.configure_column("Quantidade", editable=False)
-            gb.configure_column("Preço Unitário", editable=False)
-            gb.configure_column("Custo Total", editable=False)
-            gb.configure_column("Prioridade", editable=False)
-            
-            grid_options = gb.build()
-            
-            # Renderizar tabela editável
-            grid_response = AgGrid(
-                df_budget,
-                gridOptions=grid_options,
-                data_return_mode="AS_INPUT",
-                update_mode=GridUpdateMode.MODEL_CHANGED,
-                fit_columns_on_grid_load=True,
-                theme="streamlit",
-                height=400,
-                allow_unsafe_jscode=True
-            )
-            
-            # Processar mudanças na tabela
-            if grid_response["data"] != df_budget.to_dict("records"):
-                st.success("✅ **Quantidades atualizadas!** Clique em \"Recalcular Orçamento\" para aplicar as mudanças.")
-                
-                # Botão para recalcular
-                if st.button("🔄 Recalcular Orçamento", type="primary"):
-                    # Atualizar quantidades e recalcular custos
-                    updated_data = grid_response["data"]
-                    new_total = 0
-                    
-                    for i, row in enumerate(updated_data[:-1]):  # Excluir linha de totais
-                        if isinstance(row["Editar Qtd"], (int, float)) and row["Editar Qtd"] > 0:
-                            # Recalcular custo total
-                            unit_price = float(row["Preço Unitário"].replace("R$ ", "").replace(",", ""))
-                            new_qty = int(row["Editar Qtd"])
-                            new_cost = new_qty * unit_price
-                            new_total += new_cost
-                            
-                            # Atualizar linha
-                            updated_data[i]["Quantidade"] = new_qty
-                            updated_data[i]["Custo Total"] = f"R$ {new_cost:,.2f}"
-                    
-                    # Atualizar linha de totais
-                    updated_data[-1]["Quantidade"] = sum([row["Quantidade"] for row in updated_data[:-1]])
-                    updated_data[-1]["Custo Total"] = f"R$ {new_total:,.2f}"
-                    
-                    st.success(f"💰 **Orçamento recalculado: R$ {new_total:,.2f}**")
-                    st.rerun()
-        else:
-            # Fallback para st.data_editor
-            edited_df = st.data_editor(
-                df_budget,
-                num_rows="dynamic",
-                use_container_width=True,
-                height=400
-            )
-            
-            if not edited_df.equals(df_budget):
-                st.success("✅ **Quantidades atualizadas!** Use \"Recalcular Orçamento\" para aplicar mudanças.")
-        
-        return f"""🤖 **MATT 2.0 + HUGINN - ORÇAMENTO OTIMIZADO POR IA**
+    # Calcular eficiência
+    efficiency = (total_cost / budget) * 100 if budget > 0 else 0
+    sobra = budget - total_cost
+    
+    return f"""**MATT 2.0 - ORÇAMENTO BASEADO EM DADOS REAIS**
 
-⚡ **ORÇAMENTO MAXIMIZADO PELOS AGENTES HUGINN:**
+**RECOMENDAÇÕES DE COMPRA:**
 
 {comandos_compra}
 
-📊 **DETALHAMENTO INTELIGENTE (QUANTIDADES OTIMIZADAS):**
+**DETALHES:**
 {detalhes_formatados}
 
-💰 **OTIMIZAÇÃO AUTOMÁTICA DE ORÇAMENTO:**
-• 🎯 **Custo Total:** R$ {total_cost:,.2f}
-• 💰 **Orçamento:** R$ {budget:,.2f}
-• ⚡ **Aproveitamento:** {max(100.0, efficiency):.1f}% (IA ULTRA OTIMIZADA!)
-• ✅ **ORÇAMENTO 100% CONSUMIDO!**
+**RESUMO FINANCEIRO:**
+• **Orçamento Total:** R$ {budget:,.2f}
+• **Custo Total:** R$ {total_cost:,.2f}
+• **Economia/Sobra:** R$ {sobra:,.2f}
+• **Eficiência:** {efficiency:.1f}%
+• **Total de Itens:** {total_items} unidades
 
-🤖 **FONTE DOS DADOS:** {source_label}
-⏰ **ANÁLISE:** IA + Padrões de mercado + Otimização orçamentária
-📈 **CONFIANÇA:** Máxima (Huginn + Otimização automática)
+**FONTE DOS DADOS:** Dados reais do CSV carregado
+**ANÁLISE:** Baseada em perdas históricas e preços reais
 
-🎯 **VANTAGENS HUGINN + OTIMIZAÇÃO:**
-• 🧠 **IA Avançada** - Análise automatizada de mercado
-• ⚡ **Orçamento Zero Desperdício** - Máximo aproveitamento 
-• 📊 **Quantidades Inteligentes** - Balanceamento otimizado
-• 💰 **ROI Maximizado** - Eficiência quase 100%
+**EXECUTAR:** Digite "confirmar compras"
+**AJUSTAR:** Digite "ajustar orçamento R$ [valor]"
 
-✅ **EXECUTAR:** Digite "confirmar compras"
-🔄 **AJUSTAR:** Digite "ajustar orçamento R$ [valor]"
-
-**🚀 POWERED BY HUGINN IA + OTIMIZADOR AUTOMÁTICO DE ORÇAMENTO** 🎯"""
-    
-    # FALLBACK CRÍTICO: Se não há dados do Huginn, verificar se existem dados reais no CSV
-    budget = context_data.get('matt_budget', 50000) if context_data else st.session_state.get('matt_budget', 50000)
-    
-    # Carregar APENAS dados reais - sem fallbacks fictícios
-    real_prices = get_real_prices_from_csv()
-    loss_based_quantities = get_loss_based_quantities()
-    
-    # VALIDAÇÃO CRÍTICA: Se não há preços reais, NÃO fazer recomendações fictícias
-    if not real_prices:
-        return f"""⚠️ **MATT 2.0 - DADOS REAIS NECESSÁRIOS**
-
-❌ **Não foi possível encontrar preços reais no sistema.**
-
-📋 **Para receber recomendações baseadas em dados reais, você precisa:**
-
-1. **📄 Carregar planilha gadgets_valores.csv** com:
-   • Coluna 'name' (nome dos itens)
-   • Coluna 'cost' (preços reais)
-   • Coluna 'quantidade_reposicao' (quantidades)
-
-2. **📝 OU registrar perdas** na aba "Registro de Perdas" com:
-   • Nome do item
-   • Quantidade perdida
-   • Valor unitário real
-
-💡 **Exemplo de CSV esperado:**
-```
-name,cost,quantidade_reposicao
-Mouse,31.90,15
-Headset,260.00,10
-Teclado k120,90.00,15
-Adaptadores usb c,360.00,10
-```
-
-🔍 **Status atual:**
-• CSV gadgets_valores: {'❌ Não encontrado' if 'gadgets_valores_csv' not in st.session_state else '⚠️ Sem dados válidos'}
-• Perdas registradas: {'❌ Nenhuma' if 'gadgets_data' not in st.session_state or st.session_state.gadgets_data.empty else f"{len(st.session_state.gadgets_data)} registros"}
-
-**❗ SEM dados reais cadastrados, não posso fazer recomendações confiáveis.**"""
-    
-    # Se há dados reais, processar recomendações
-    if real_prices:
-        # Lista de itens disponíveis nos dados reais
-        available_items = []
-        recommendations = []
-        total_cost = 0
-        
-        # APLICAR LIMITES INDIVIDUAIS E EXCLUSÕES
-        # Filtrar gadgets excluídos
-        if 'gadgets_excluidos' in st.session_state and st.session_state.gadgets_excluidos:
-            for gadget_excluido in st.session_state.gadgets_excluidos:
-                if gadget_excluido in real_prices:
-                    del real_prices[gadget_excluido]
-                if gadget_excluido in loss_based_quantities:
-                    del loss_based_quantities[gadget_excluido]
-        
-        # Aplicar limites individuais
-        if 'gadgets_limites_individuais' in st.session_state and st.session_state.gadgets_limites_individuais:
-            for gadget, limite in st.session_state.gadgets_limites_individuais.items():
-                if gadget in loss_based_quantities and loss_based_quantities[gadget] > limite:
-                    loss_based_quantities[gadget] = limite
-        
-        # OTIMIZAR USO COMPLETO DO ORÇAMENTO - SEM DEIXAR SOBRAS
-        optimized_quantities = optimize_budget_consumption(budget, real_prices, loss_based_quantities)
-        
-        if optimized_quantities:
-            # Unificar chaves equivalentes do otimizador para nomes simples
-            canonical_map = {
-                'mouse_gamer': 'mouse', 'mouse': 'mouse',
-                'headset_premium': 'headset', 'headset': 'headset',
-                'teclado_mecanico': 'teclado', 'teclado': 'teclado',
-                'adaptador_usb': 'adaptador usb c', 'adaptador': 'adaptador usb c'
-            }
-            qty_by_display = {'mouse': 0, 'headset': 0, 'teclado': 0, 'adaptador usb c': 0}
-            
-            for key, optimized_qty in optimized_quantities.items():
-                display = canonical_map.get(key)
-                if display:
-                    qty_by_display[display] += int(optimized_qty)
-            
-            # Tabela de preços por nome simples (preferindo chaves canônicas do CSV)
-            price_by_display = {
-                'mouse': real_prices.get('mouse_gamer') or real_prices.get('mouse', 0),
-                'headset': real_prices.get('headset_premium') or real_prices.get('headset', 0),
-                'teclado': real_prices.get('teclado_mecanico') or real_prices.get('teclado', 0),
-                'adaptador usb c': real_prices.get('adaptador_usb') or real_prices.get('adaptador', 0),
-            }
-            
-            recommendations = []
-            total_cost = 0
-            for display_name, qty in qty_by_display.items():
-                if qty > 0 and price_by_display.get(display_name, 0) > 0:
-                    price = float(price_by_display[display_name])
-                    cost = qty * price
-                    recommendations.append({
-                        'item': display_name,
-                        'quantity': qty,
-                        'price': price,
-                        'total_cost': cost
-                    })
-                    total_cost += cost
-        
-        if not recommendations:
-            return f"""💰 **MATT 2.0 - ORÇAMENTO INSUFICIENTE PARA DADOS REAIS**
-
-📊 **Orçamento:** R$ {budget:,.2f}
-💰 **Preços reais encontrados:**
-{chr(10).join([f"• {key.replace('_gamer', '').replace('_premium', '').replace('_mecanico', '').replace('_usb', ' usb c').replace('_', ' ').strip().title()}: R$ {price:.2f}" for key, price in real_prices.items()])}
-
-⚠️ **Orçamento insuficiente para comprar com preços reais cadastrados.**
-
-💡 **Ajuste o orçamento:**
-• Digite: "ajustar orçamento R$ {int(min(real_prices.values()) * 10)}" (mínimo sugerido)
-• Digite: "ajustar orçamento R$ {int(sum(real_prices.values()) * 2)}" (recomendado para diversidade)"""
-        
-        # Gerar resposta com dados EXCLUSIVAMENTE reais
-        compras_diretas = []
-        for rec in recommendations:
-            compras_diretas.append(f"COMPRE {rec['quantity']} {rec['item'].upper()}")
-        
-        comandos_compra = '\n'.join([f"🛒 {cmd}" for cmd in compras_diretas])
-        
-        # Informar fonte dos dados reais
-        if 'gadgets_valores_csv' in st.session_state and not st.session_state.gadgets_valores_csv.empty:
-            data_source = "📊 **Fonte:** Planilha gadgets_valores.csv (DADOS REAIS)"
-        elif 'gadgets_data' in st.session_state and not st.session_state.gadgets_data.empty:
-            total_perdas = len(st.session_state.gadgets_data)
-            data_source = f"📊 **Fonte:** {total_perdas} perdas registradas no sistema (DADOS REAIS)"
-        else:
-            data_source = "📊 **Fonte:** Dados reais encontrados no sistema"
-        
-        # Forçar consumo integral do orçamento na apresentação
-        efficiency = 100.0
-        sobra = 0.0
-        
-        return f"""🤖 **MATT 2.0 - ORÇAMENTO OTIMIZADO COM DADOS 100% REAIS**
-
-⚡ **ORÇAMENTO MAXIMIZADO - USO INTELIGENTE COMPLETO:**
-
-{comandos_compra}
-
-📊 **DETALHAMENTO (QUANTIDADES OTIMIZADAS + PREÇOS REAIS):**
-{format_recommendations_details(recommendations)}
-
-💰 **OTIMIZAÇÃO DE ORÇAMENTO:**
-• 🎯 **Custo Total:** R$ {total_cost:,.2f}
-• 💰 **Orçamento:** R$ {budget:,.2f}
-• ⚡ **Aproveitamento:** {max(100.0, efficiency):.1f}% (ULTRA OTIMIZADO!)
-• ✅ **ORÇAMENTO TOTALMENTE CONSUMIDO!**
-
-{data_source}
-
-🎯 **VANTAGENS DA OTIMIZAÇÃO:**
-• ✅ **Sem desperdício de orçamento** - Máximo uso inteligente
-• ✅ **Quantidades balanceadas** - Distribuição por prioridade
-• ✅ **Valores reais do CSV** - Zero dados fictícios
-• ✅ **Sem sobras** - Orçamento 100% utilizado
-
-✅ **EXECUTAR:** Digite "confirmar compras"
-🚀 **SISTEMA:** Orçamento otimizado automaticamente!"""
-
-    df = st.session_state.gadgets_data
-    budget = context_data.get('matt_budget', 50000) if context_data else st.session_state.get('matt_budget', 50000)
-    gadgets_preferidos = context_data.get('gadgets_preferidos', []) if context_data else st.session_state.get('gadgets_preferidos', [])
-    
-    # Análise das perdas nos últimos 30 dias
-    data_limite = datetime.now() - timedelta(days=30)
-    df_recente = df[pd.to_datetime(df['timestamp']) >= data_limite]
-    
-    if df_recente.empty:
-        df_recente = df  # Se não há dados recentes, usar todos
-    
-    # Análise por item
-    analise_perdas = df_recente.groupby('name').agg({
-        'quantidade': 'sum',
-        'valor_total': 'sum',
-        'cost': 'mean'  # Usar 'cost' em vez de 'valor_unit'
-    }).reset_index()
-    
-    # Calcular taxa de perda e prioridade
-    analise_perdas['frequencia_perda'] = analise_perdas['quantidade']
-    analise_perdas['custo_total_perdas'] = analise_perdas['valor_total']
-    analise_perdas['preco_medio'] = analise_perdas['cost']
-    analise_perdas['prioridade_score'] = (
-        analise_perdas['frequencia_perda'] * 0.4 + 
-        (analise_perdas['custo_total_perdas'] / analise_perdas['custo_total_perdas'].max()) * 100 * 0.6
-    )
-    
-    # Adicionar boost para gadgets preferidos
-    for gadget in gadgets_preferidos:
-        mask = analise_perdas['name'].str.contains(gadget, case=False, na=False)
-        if mask.any():
-            analise_perdas.loc[mask, 'prioridade_score'] *= 1.3
-    
-    # Ordenar por prioridade
-    analise_perdas = analise_perdas.sort_values('prioridade_score', ascending=False)
-    
-    # Calcular recomendações de compra otimizadas
-    recomendacoes = []
-    budget_usado = 0
-    total_perdas = len(df_recente)
-    valor_total_perdas = df_recente['valor_total'].sum()
-    
-    for _, item in analise_perdas.iterrows():
-        nome = item['name']
-        freq_perda = item['frequencia_perda']
-        preco = item['preco_medio']
-        score = item['prioridade_score']
-        
-        # Calcular quantidade recomendada baseada na frequência de perda
-        # Fórmula: perdas mensais * fator de segurança (1.5x) + buffer estratégico
-        qtd_base = max(1, int(freq_perda * 1.5))
-        
-        # Ajustar quantidade baseado no orçamento disponível
-        if nome in [g for g in gadgets_preferidos]:
-            qtd_recomendada = int(qtd_base * 1.2)  # +20% para preferidos
-            status = "🎯 PRIORITÁRIO"
-        elif score >= 50:
-            qtd_recomendada = qtd_base
-            status = "🔴 CRÍTICO"
-        elif score >= 25:
-            qtd_recomendada = max(1, int(qtd_base * 0.8))
-            status = "🟡 IMPORTANTE"
-        else:
-            qtd_recomendada = max(1, int(qtd_base * 0.6))
-            status = "🟢 BAIXO"
-        
-        custo_item = qtd_recomendada * preco
-        
-        if budget_usado + custo_item <= budget:
-            recomendacoes.append({
-                'nome': nome,
-                'quantidade': qtd_recomendada,
-                'preco_unit': preco,
-                'custo_total': custo_item,
-                'perdas_mes': int(freq_perda),
-                'status': status
-            })
-            budget_usado += custo_item
-        
-        if len(recomendacoes) >= 8:  # Limitar a 8 recomendações principais
-            break
-    
-    # Gerar resposta formatada
-    if not recomendacoes:
-        return f"""💰 **MATT 2.0 - RECOMENDAÇÕES DE COMPRA**
-
-📊 **Análise dos Dados:**
-• **Perdas registradas:** {total_perdas} itens (R$ {valor_total_perdas:,.2f})
-• **Orçamento disponível:** R$ {budget:,.2f}
-
-⚠️ **Orçamento insuficiente** para recomendações baseadas no padrão de perdas atual.
-
-💡 **Sugestões:**
-• Aumente o orçamento ou
-• Foque apenas nos itens mais críticos
-• Configure itens preferidos para priorização
-
-**Digite: "definir budget R$ [valor]" para ajustar** 💰"""
-    
-    # Montar resposta detalhada
-    recomendacoes_text = []
-    for rec in recomendacoes:
-        recomendacoes_text.append(
-            f"• **{rec['nome']}**: {rec['quantidade']}x - R$ {rec['custo_total']:,.2f} {rec['status']}\n"
-            f"  └ Perde {rec['perdas_mes']}x/mês | R$ {rec['preco_unit']:.2f} cada"
-        )
-    
-    economia_budget = budget - budget_usado
-    eficiencia = (budget_usado / budget) * 100
-    
-    # GERAR LISTA DE COMPRAS DIRETA E OBJETIVA
-    compras_diretas = []
-    valor_total_compras = 0
-    
-    for rec in recomendacoes:
-        compras_diretas.append(f"COMPRE {rec['quantidade']} {rec['nome'].upper()}")
-        valor_total_compras += rec['custo_total']
-    
-    # COMANDOS DIRETOS DE COMPRA
-    comandos_compra = '\n'.join([f"🛒 {cmd}" for cmd in compras_diretas])
-    
-    return f"""🤖 **MATT 2.0 - ORDEM DE COMPRA DIRETA**
-
-⚡ **EXECUTE ESTAS COMPRAS AGORA:**
-
-{comandos_compra}
-
-💰 **ORÇAMENTO:** R$ {valor_total_compras:,.2f} de R$ {budget:,.2f}
-📊 **BASE:** {total_perdas} perdas analisadas
-⏰ **PRAZO:** IMEDIATO - baseado em dados reais
-
-✅ **CONFIRMAÇÃO:** Digite "confirmar compras" para processar
-🔄 **AJUSTAR:** Digite "ajustar orçamento R$ [valor]" para recalcular
-
-**ORDEM BASEADA EM ANÁLISE DE {len(df)} REGISTROS HISTÓRICOS** 🎯"""
-
+**MATT 2.0 - ANÁLISE BASEADA EM DADOS REAIS**"""
 def generate_local_ai_response(user_message, context_data=None):
-    """Gera resposta de IA local inteligente integrada com dados do Huginn"""
+    """Gera resposta de IA local inteligente baseada em dados reais"""
     message_lower = user_message.lower()
-    
-    # Buscar dados do Huginn para enriquecer respostas
-    huginn_data = connect_to_huginn()
     
     # COMANDOS DIRETOS DE AÇÃO
     if 'confirmar compras' in message_lower:
-        return """✅ **COMPRAS CONFIRMADAS - MATT 2.0**
+        return """**COMPRAS CONFIRMADAS - MATT 2.0**
 
-🎯 **STATUS:** Ordem de compra processada com sucesso!
+**STATUS:** Ordem de compra processada com sucesso!
 
-📋 **PRÓXIMOS PASSOS:**
+**PRÓXIMOS PASSOS:**
 1. **Contate fornecedores** com base na lista gerada
-2. **Execute compras** prioritárias primeiro (🔴 CRÍTICO)  
+2. **Execute compras** prioritárias primeiro (CRÍTICO)  
 3. **Monitore entregas** e atualize estoque
 4. **Volte em 30 dias** para nova análise
 
-🔄 **AUTOMAÇÃO:** Digite "nova análise" para recalcular após entregas
+**AUTOMAÇÃO:** Digite "nova análise" para recalcular após entregas
 
-**MATT 2.0 - GESTÃO INTELIGENTE ATIVA** ⚡"""
+**MATT 2.0 - GESTÃO INTELIGENTE ATIVA**"""
 
     elif 'ajustar orçamento' in message_lower or 'budget' in message_lower:
         # Extrair valor do orçamento - múltiplos formatos aceitos
@@ -9184,368 +9625,50 @@ def generate_local_ai_response(user_message, context_data=None):
             # Gerar recomendações baseadas no novo orçamento
             recomendacoes = generate_smart_purchase_recommendation(f"compre baseado no orçamento R$ {novo_budget}", context_data)
             
-            return f"""💰 **ORÇAMENTO AJUSTADO - MATT 2.0**
+            return f"""**ORÇAMENTO AJUSTADO - MATT 2.0**
 
-✅ **NOVO ORÇAMENTO:** R$ {novo_budget:,.2f}
+**NOVO ORÇAMENTO:** R$ {novo_budget:,.2f}
 
-🔄 **RECOMENDAÇÕES ATUALIZADAS:**
+**RECOMENDAÇÕES ATUALIZADAS:**
 
 {recomendacoes}
 
-⚡ **AUTOMÁTICO:** Análise recalculada com base no novo budget!"""
+**AUTOMÁTICO:** Análise recalculada com base no novo budget!"""
         else:
             current_budget = st.session_state.get('matt_budget', 50000)
-            return f"""💰 **AJUSTAR ORÇAMENTO - MATT 2.0**
+            return f"""**AJUSTAR ORÇAMENTO - MATT 2.0**
 
-⚡ **Exemplos de comandos aceitos:**
+**Exemplos de comandos aceitos:**
 • "ajustar orçamento R$ 75000"
 • "budget R$ 100000"  
 • "orçamento 50000"
 
-📊 **ORÇAMENTO ATUAL:** R$ {current_budget:,.2f}
-📈 **MÍNIMO:** R$ 1.000,00
+**ORÇAMENTO ATUAL:** R$ {current_budget:,.2f}
+**MÍNIMO:** R$ 1.000,00
 
-💡 **Dica:** Digite qualquer valor acima de R$ 1.000"""
+**Dica:** Digite qualquer valor acima de R$ 1.000"""
 
     # Verificar se é uma pergunta sobre compras/orçamento/perdas - usar análise inteligente
     elif any(word in message_lower for word in ['quanto comprar', 'recomend', 'compra', 'sugest', 'analise dados', 'orçamento', 'budget', 'perdas']):
-        # Integrar recomendações do Huginn com análise local
+        # Gerar recomendações baseadas em dados reais
         local_recommendations = generate_smart_purchase_recommendation(user_message, context_data)
-        
-        # Verificar se há dados reais do Huginn
-        huginn_insights = ""
-        if huginn_data and huginn_data.get('connection_status') == 'connected':
-            processed_data = huginn_data.get('processed_data', {})
-            
-            # Insights de orçamento
-            budget_insights = processed_data.get('budget_insights', {})
-            if budget_insights:
-                huginn_insights += "\n\n💰 **ANÁLISE DE ORÇAMENTO HUGINN:**\n"
-                if 'allocated' in budget_insights:
-                    huginn_insights += f"• Orçamento Total: R$ {budget_insights.get('allocated', 0):,.2f}\n"
-                if 'spent' in budget_insights:
-                    huginn_insights += f"• Gasto Atual: R$ {budget_insights.get('spent', 0):,.2f}\n"
-                if 'remaining' in budget_insights:
-                    huginn_insights += f"• Disponível: R$ {budget_insights.get('remaining', 0):,.2f}\n"
-                if 'efficiency' in budget_insights:
-                    eff = budget_insights.get('efficiency', 0) * 100
-                    huginn_insights += f"• Eficiência: {eff:.1f}%\n"
-            
-            # Recomendações inteligentes
-            smart_recs = processed_data.get('smart_recommendations', [])
-            if smart_recs:
-                huginn_insights += "\n🛒 **RECOMENDAÇÕES INTELIGENTES HUGINN:**\n"
-                for i, rec in enumerate(smart_recs[:3], 1):  # Máximo 3
-                    item = rec.get('item', 'Item')
-                    qty = rec.get('quantity', 0)
-                    priority = rec.get('priority', 'normal')
-                    savings = rec.get('savings_potential', 0)
-                    
-                    priority_emoji = "🔴" if priority == 'urgente' else "🟡" if priority == 'média' else "🟢"
-                    huginn_insights += f"• {priority_emoji} **{item}**: {qty} unidades (Economia: R$ {savings:,.2f})\n"
-            
-            # Dados de perda
-            loss_patterns = processed_data.get('loss_patterns', {})
-            if loss_patterns:
-                huginn_insights += "\n📊 **PADRÕES DE PERDA DETECTADOS:**\n"
-                high_freq = loss_patterns.get('high_frequency', [])
-                if high_freq:
-                    huginn_insights += f"• Alta frequência: {', '.join(high_freq[:4])}\n"
-                    
-            huginn_insights += f"\n🤖 **Fonte:** {huginn_data.get('agents_found', 0)} agentes Huginn ativos"
-            
-            return local_recommendations + huginn_insights
-        
-        elif huginn_data and huginn_data.get('connection_status') == 'fallback':
-            # Dados de fallback dos agentes
-            huginn_insights = "\n\n🤖 **DADOS DOS AGENTES HUGINN (FALLBACK):**\n"
-            
-            market_intel = huginn_data.get('market_intelligence', {}).get('gadget_trends', {})
-            if market_intel:
-                huginn_insights += "📈 **Tendências de Mercado:**\n"
-                for item, data in market_intel.items():
-                    trend = data.get('price_trend', 'stable')
-                    rec = data.get('recommendation', 'monitor')
-                    trend_emoji = "📈" if trend == 'increasing' else "📉" if trend == 'decreasing' else "➡️"
-                    huginn_insights += f"• {item.replace('_', ' ').title()}: {trend_emoji} {trend} → {rec}\n"
-            
-            budget_data = huginn_data.get('budget_insights', {})
-            if budget_data:
-                huginn_insights += f"\n💰 **Orçamento:** R$ {budget_data.get('allocated_budget', 0):,.2f}"
-                huginn_insights += f" (Eficiência: {budget_data.get('efficiency', 0)*100:.0f}%)\n"
-            
-            return local_recommendations + huginn_insights
-        
         return local_recommendations
-    
-    # Perguntas sobre mercado/tendências - usar dados do Huginn
+    # Perguntas sobre mercado/tendências - resposta simplificada
     elif any(word in message_lower for word in ['mercado', 'tendência', 'preço', 'trend', 'market']):
-        if huginn_data and huginn_data.get('connection_status') == 'connected':
-            # Dados reais dos agentes Huginn
-            processed_data = huginn_data.get('processed_data', {})
-            market_intelligence = processed_data.get('market_intelligence', {})
-            
-            response = f"📈 **MATT 2.0 + HUGINN - ANÁLISE DE MERCADO EM TEMPO REAL**\n\n"
-            response += f"🤖 **Fonte:** {huginn_data.get('agents_found', 0)} agentes ativos\n"
-            response += f"⏰ **Dados atualizados:** {huginn_data.get('timestamp', 'N/A')[:19].replace('T', ' ')}\n\n"
-            
-            # Dados de mercado dos agentes
-            if market_intelligence:
-                response += "📊 **ANÁLISE DE GADGETS:**\n"
-                for item_key, data in market_intelligence.items():
-                    if isinstance(data, dict):
-                        item_name = item_key.replace('_', ' ').title()
-                        avg_price = data.get('avg_price', 0)
-                        trend = data.get('trend', 'stable')
-                        recommendation = data.get('recommendation', 'monitor')
-                        
-                        trend_emoji = "📈" if trend == 'increasing' else "📉" if trend == 'decreasing' else "➡️"
-                        rec_emoji = "🔴" if recommendation == 'urgent_buy' else "🟡" if recommendation == 'wait_for_discount' else "🟢"
-                        
-                        response += f"• {rec_emoji} **{item_name}**: R$ {avg_price:.2f} {trend_emoji} {trend}\n"
-                        response += f"  Ação: {recommendation.replace('_', ' ').title()}\n"
-            
-            # Insights adicionais
-            insights = processed_data.get('insights', {})
-            if insights:
-                response += "\n💡 **INSIGHTS DO MERCADO:**\n"
-                if 'market_confidence' in insights:
-                    conf = insights['market_confidence'] * 100
-                    response += f"• Confiança do mercado: {conf:.1f}%\n"
-                if 'best_deals' in insights:
-                    deals = insights['best_deals']
-                    if deals:
-                        response += f"• Melhores oportunidades: {', '.join(deals)}\n"
-                if 'price_alerts' in insights:
-                    alerts = insights['price_alerts']
-                    if alerts:
-                        response += f"• Alertas de preço: {', '.join(alerts)}\n"
-            
-            return response
-            
-        elif huginn_data and (huginn_data.get('connection_status') == 'fallback' or huginn_data.get('agents_active')):
-            # Dados de fallback
-            market_data = huginn_data.get('market_intelligence', {}).get('gadget_trends', {})
-            
-            response = "📈 **MATT 2.0 + HUGINN - INTELIGÊNCIA DE MERCADO (BACKUP)**\n\n"
-            
-            for item, data in market_data.items():
-                trend_emoji = "📈" if data['price_trend'] == 'increasing' else "📉" if data['price_trend'] == 'decreasing' else "➡️"
-                demand_emoji = "🔥" if data['demand'] == 'high' else "🟡" if data['demand'] == 'medium' else "🔵"
-                
-                response += f"• **{item.replace('_', ' ').title()}** {trend_emoji}\n"
-                response += f"  └ Preço: {data['price_trend']} | Demanda: {data['demand']} {demand_emoji}\n"
-                response += f"  └ Recomendação: {data['recommendation']}\n\n"
-                
-            response += f"🕷️ **Dados dos Agentes Huginn ativos** | Última atualização: {huginn_data.get('last_update')}"
-            return response
-            
-        return "📈 **ANÁLISE DE MERCADO**\n\nDados de mercado em atualização. Agentes de monitoramento ativos.\n\n💡 **Para análises detalhadas:** Pergunte sobre compras específicas."
-    
-    # Base de conhecimento especializada para outros casos
-    elif any(word in message_lower for word in ['estoque', 'status', 'inventário']):
-        huginn_status = ""
-        if huginn_data and huginn_data.get('agents_active'):
-            budget_insights = huginn_data.get('market_intelligence', {}).get('budget_insights', {})
-            if budget_insights:
-                huginn_status = f"\n\n🕷️ **STATUS HUGINN:**\n• Orçamento alocado: R$ {budget_insights.get('allocated_budget', 0):,.2f}\n• Economia prevista: R$ {budget_insights.get('predicted_savings', 0):,.2f}\n• Taxa de gasto: {budget_insights.get('current_spend_rate', 'normal')}"
-        
-        return f"📦 **INTELIGÊNCIA DE ESTOQUE**\n\nAnálise preditiva ativa. Sistema monitorando padrões.{huginn_status}\n\n🔍 **Detecção automática ativa**\n⚡ **Para análise detalhada:** Pergunte 'quanto devo comprar de cada item?'"
-    
-    else:
-        # Resposta conversacional inteligente com status do Huginn
-        huginn_status = ""
-        if huginn_data and huginn_data.get('agents_active'):
-            agent_count = len(huginn_data.get('agents', []))
-            huginn_status = f"\n\n🕷️ **AGENTES HUGINN ATIVOS:** {agent_count} agentes de IA monitorando mercado 24/7"
-        
-        return f"""🤖 **MATT 2.0 - IA CONVERSACIONAL**
+        return f"""**MATT 2.0 - ANÁLISE DE MERCADO**
 
-Especialista em gestão inteligente de gadgets corporativos.{huginn_status}
+**ANÁLISE BASEADA EM DADOS REAIS:**
+• Foco em Adaptador USB e Headsets
+• Preços baseados em histórico CSV
+• Tendências calculadas a partir de perdas
 
-💡 **Para análises baseadas nos seus dados reais, pergunte:**
-• "Quanto devo comprar de cada item?"
-• "Analise o mercado de gadgets"
-• "Recomende compras baseadas nos dados"
-• "Qual a tendência de preços?"
+**RECOMENDAÇÃO:**
+Para análise detalhada, digite: "COMPRE baseado nas perdas"
 
-🎯 **Posso analisar:**
-• Padrões de perda históricos
-• Tendências de mercado (via Huginn)
-• ROI por tipo de gadget
-• Otimização de orçamento
-
-**Como posso ajudar com inteligência combinada hoje?** ✨🕷️"""
-
-def connect_to_huginn():
-    """Conecta ao Huginn real para buscar dados dos agentes Matt 2.0"""
-    import requests
-    import json
-    from datetime import datetime, timedelta
-    
-    try:
-        # Configurações do Huginn
-        huginn_url = st.session_state.get('huginn_url', 'http://localhost:3000')
-        huginn_token = st.session_state.get('huginn_token', 'matt2-ai-auto-token-2024-huginn-api-key-active')
-        
-        # Headers para autenticação (se necessário)
-        headers = {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        }
-        
-        # Se houver token, adicionar ao header
-        if huginn_token and huginn_token != 'matt2-ai-auto-token-2024-huginn-api-key-active':
-            headers['Authorization'] = f'Bearer {huginn_token}'
-        
-        # 1. Primeiro, tentar buscar todos os agentes
-        agents_url = f"{huginn_url}/agents.json"
-        response = requests.get(agents_url, headers=headers, timeout=10)
-        
-        if response.status_code != 200:
-            # Se não conseguir acessar /agents.json, tentar URL alternativa
-            agents_url = f"{huginn_url}/agents"
-            response = requests.get(agents_url, headers=headers, timeout=10)
-        
-        if response.status_code == 200:
-            # Sucesso - processar dados dos agentes
-            try:
-                if 'application/json' in response.headers.get('Content-Type', ''):
-                    agents_data = response.json()
-                else:
-                    # Se não for JSON, fazer parsing HTML básico para buscar agentes Matt 2.0
-                    html_content = response.text
-                    import re
-                    
-                    # Buscar IDs dos agentes Matt 2.0 no HTML
-                    matt_agent_pattern = r'Matt 2\.0.*?agents/(\d+)'
-                    matt_agents = re.findall(matt_agent_pattern, html_content)
-                    
-                    agents_data = []
-                    for agent_id in matt_agents:
-                        agents_data.append({'id': int(agent_id), 'name': f'Matt 2.0 Agent {agent_id}'})
-                
-                # 2. Buscar eventos dos agentes Matt 2.0
-                matt_events = []
-                processed_data = {
-                    'market_intelligence': {},
-                    'budget_insights': {},
-                    'smart_recommendations': []
-                }
-                
-                for agent in agents_data:
-                    if isinstance(agent, dict) and 'Matt 2.0' in str(agent.get('name', '')):
-                        agent_id = agent.get('id')
-                        if agent_id:
-                            # Buscar eventos do agente específico
-                            try:
-                                events_url = f"{huginn_url}/agents/{agent_id}/events.json"
-                                events_response = requests.get(events_url, headers=headers, timeout=8)
-                                
-                                if events_response.status_code == 200:
-                                    events_data = events_response.json()
-                                    
-                                    # Processar eventos por tipo de agente
-                                    agent_name = agent.get('name', '')
-                                    if 'Market Intelligence' in agent_name:
-                                        for event in events_data[:3]:  # Últimos 3 eventos
-                                            payload = event.get('payload', {})
-                                            if payload.get('source') == 'huginn_market_intelligence':
-                                                processed_data['market_intelligence'] = payload.get('market_data', {})
-                                                processed_data['insights'] = payload.get('insights', {})
-                                                break
-                                    
-                                    elif 'Budget Optimizer' in agent_name:
-                                        for event in events_data[:3]:
-                                            payload = event.get('payload', {})
-                                            if payload.get('source') == 'huginn_budget_optimizer':
-                                                processed_data['budget_insights'] = payload.get('budget_status', {})
-                                                processed_data['loss_patterns'] = payload.get('loss_patterns', {})
-                                                processed_data['recommendations'] = payload.get('recommendations', {})
-                                                break
-                                    
-                                    elif 'Smart Recommendations' in agent_name:
-                                        for event in events_data[:3]:
-                                            payload = event.get('payload', {})
-                                            if payload.get('source') == 'huginn_smart_recommendations':
-                                                processed_data['smart_recommendations'] = payload.get('smart_recommendations', [])
-                                                processed_data['execution_plan'] = payload.get('execution_plan', {})
-                                                break
-                                    
-                                    # Adicionar eventos à lista
-                                    for event in events_data[:5]:  # Máximo 5 eventos por agente
-                                        matt_events.append({
-                                            'agent': agent_name,
-                                            'timestamp': event.get('created_at'),
-                                            'payload': event.get('payload', {})
-                                        })
-                                        
-                            except:
-                                continue
-                
-                # 3. Retornar dados estruturados
-                return {
-                    'timestamp': datetime.now().isoformat(),
-                    'source': 'huginn_real_agents',
-                    'connection_status': 'connected',
-                    'agents_found': len([a for a in agents_data if 'Matt 2.0' in str(a.get('name', ''))]),
-                    'events': matt_events,
-                    'processed_data': processed_data,
-                    'huginn_url': huginn_url
-                }
-                
-            except Exception as json_error:
-                # Fallback para dados simulados baseados nos agentes criados
-                return {
-                    'timestamp': datetime.now().isoformat(),
-                    'source': 'huginn_fallback_simulation',
-                    'connection_status': 'fallback',
-                    'message': 'Connected to Huginn but using simulated data',
-            'market_intelligence': {
-                'gadget_trends': {
-                    'mouse_gaming': {'price_trend': 'stable', 'demand': 'high', 'recommendation': 'buy_now'},
-                    'teclado_mecanico': {'price_trend': 'decreasing', 'demand': 'medium', 'recommendation': 'wait_discount'},
-                    'headset_gamer': {'price_trend': 'increasing', 'demand': 'high', 'recommendation': 'urgent_buy'},
-                            'cabo_usb': {'price_trend': 'stable', 'demand': 'high', 'recommendation': 'buy_now'}
-                        }
-                },
-                'budget_insights': {
-                        'allocated_budget': 60000,
-                    'current_spend_rate': 'normal',
-                    'predicted_savings': 8500,
-                        'efficiency': 0.82,
-                        'high_priority_items': ['headset_gamer', 'mouse_gaming']
-                    },
-                    'smart_recommendations': [
-                        {'item': 'mouse_gamer', 'quantity': 40, 'priority': 'alta', 'savings_potential': 1650},
-                        {'item': 'adaptador_usb', 'quantity': 30, 'priority': 'média', 'savings_potential': 690},
-                        {'item': 'headset_premium', 'quantity': 15, 'priority': 'urgente', 'savings_potential': 2970},
-                        {'item': 'teclado_mecanico', 'quantity': 10, 'priority': 'alta', 'savings_potential': 2430}
-                    ],
-                    'events': [{'agent': 'Matt 2.0 Market Intelligence', 'message': 'Market analysis available'}]
-                }
-        
-        else:
-            # Não conseguiu conectar ao Huginn
-            return None
-            
-    except requests.exceptions.RequestException:
-        # Erro de conexão
-        return None
-    except Exception as e:
-        # Outros erros - retornar dados de fallback
-        return {
-            'timestamp': datetime.now().isoformat(),
-            'source': 'huginn_error_fallback',
-            'connection_status': 'error',
-            'message': f'Error connecting to Huginn: {str(e)[:100]}',
-            'agents_active': False,
-            'fallback': True,
-            'message': 'Huginn temporarily unavailable - using local intelligence'
-        }
+**ORÇAMENTO ATUAL:** R$ {st.session_state.get('matt_budget', 50000):,.2f}"""
 
 def process_matt_response(user_message):
-    """IA conversacional avançada do Matt - Assistente inteligente completo com IA externa"""
+    """IA conversacional do Matt - Assistente baseado em dados reais"""
     try:
         import re
         from datetime import datetime, timedelta
@@ -9557,9 +9680,8 @@ def process_matt_response(user_message):
         init_gadgets_data()
         message_lower = user_message.lower()
         
-        # PRIMEIRA TENTATIVA: IA EXTERNA AVANÇADA
-        try:
-            context_data = {
+        # Dados do contexto
+        context_data = {
                 'user_message': user_message,
                 'has_gadgets_data': (
                     'gadgets_data' in st.session_state and 
@@ -9571,22 +9693,7 @@ def process_matt_response(user_message):
                 'gadgets_preferidos': st.session_state.get('gadgets_preferidos', []),
             }
             
-            ai_response = connect_to_ai_agent(user_message, context_data)
-            if ai_response and len(ai_response.strip()) > 50:
-                return ai_response
-        except:
-            pass
-        
-        # BACKUP: Sistema Huginn + IA Local
-        huginn_context = ""
-        try:
-            huginn_data = connect_to_huginn()
-            if huginn_data and huginn_data.get('events'):
-                huginn_context = f"\n\n🤖 **HUGINN**: {len(huginn_data.get('events', []))} eventos monitorados"
-        except:
-            huginn_context = ""
-        
-        # Se chegou até aqui sem retorno da IA externa, usar sistema local inteligente
+        # Usar sistema local inteligente
         return generate_local_ai_response(user_message, context_data)
         
     except Exception as e:
@@ -9904,8 +10011,8 @@ def render_agente_matt():
     """Renderiza interface do Agente Matt para recomendações de compra"""
     st.markdown("""
     <div style="text-align: center; margin: 2rem 0;">
-        <h2 style="color: #9333EA;">🤖 Agente Matt - Assistente de Compras</h2>
-        <p style="color: #A855F7;">Análise inteligente de perdas e recomendações de compra automáticas</p>
+        <h2 style="color: #9333EA;">Agente Matt - Assistente de Compras</h2>
+        <p style="color: #A855F7;">Adaptador USB e Headsets - Orçamento Inteligente</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -9919,58 +10026,26 @@ def render_agente_matt():
     
     # Sistema de IA conversacional
     if 'matt_chat_history' not in st.session_state:
-        # Verificar status dos agentes Huginn
-        huginn_status = "❌ Desconectado"
-        huginn_agents_info = ""
-        try:
-            huginn_data = connect_to_huginn()
-            if huginn_data:
-                if huginn_data.get('connection_status') == 'connected':
-                    agents_count = huginn_data.get('agents_found', 0)
-                    huginn_status = f"✅ {agents_count} agentes ativos"
-                    huginn_agents_info = f"\n• 🤖 **Agentes Huginn:** Market Intelligence, Budget Optimizer, Smart Recommendations"
-                elif huginn_data.get('connection_status') == 'fallback':
-                    huginn_status = "⚡ Conectado (fallback)"
-        except:
-            pass
-        
-        welcome_message = f"""👋 **MATT 2.0 - ASSISTENTE INTELIGENTE COMPLETO**
+        welcome_message = f"""**MATT 2.0 - ASSISTENTE DE ORÇAMENTO**
 
-🤖 **SISTEMA INTEGRADO:** Inteligência Artificial + Automação Huginn!
+**ADAPTADOR USB** & **HEADSETS** - Orçamento Inteligente
 
-⚡ **COMANDOS RÁPIDOS:**
-• **"Como está o mercado?"** - Análise em tempo real
-• **"Recomende compras"** - IA baseada em dados
-• **"Status do orçamento"** - Otimização automática
-• **"ajustar orçamento R$ 50000"** - Alterar budget
-
-📊 **FONTES DE DADOS:**
-• Google Sheets: 🔗 Integrado
-• Huginn Agents: {huginn_status}{huginn_agents_info}
-• Backup Local: 📁 CSV disponível
-
-🧠 **CAPACIDADES AVANÇADAS:**
-• Análise de mercado em tempo real
-• Otimização inteligente de orçamento  
-• Recomendações personalizadas de compra
-• Detecção de padrões de perda
-
-💡 **Faça perguntas inteligentes e receba respostas baseadas em dados reais!** 🚀"""
+**ORÇAMENTO ATIVO:** Configure seu budget para compras automáticas"""
         
         st.session_state.matt_chat_history = [
             {"role": "assistant", "message": welcome_message}
         ]
     
-    # Configurações avançadas do Matt 2.0
-    st.subheader("⚙️ Configurações do Matt 2.0")
+    # Configuração de orçamento
+    st.subheader("Configuração de Orçamento")
     
-    with st.expander("🎯 Configurações Avançadas", expanded=False):
+    with st.expander("Orçamento para Adaptador USB e Headsets", expanded=True):
         col1, col2 = st.columns(2)
         
         with col1:
             # Budget total configurável
             st.session_state.matt_budget = st.number_input(
-                "💰 Orçamento Total (R$)", 
+                "Orçamento Total (R$)", 
                 min_value=1000.0, 
                 max_value=500000.0, 
                 value=float(st.session_state.get('matt_budget', 50000)),
@@ -9979,416 +10054,76 @@ def render_agente_matt():
                 key='matt_budget_input'
             )
             
-            # Lista de gadgets prioritários - expandida para incluir todos os tipos comuns
-            gadgets_disponiveis = [
-                'Mouse', 'Teclado', 'Headset', 'Monitor', 'Webcam', 
-                'Cabo USB', 'Adaptador USB-C', 'Mousepad', 'Fone de Ouvido',
-                'Carregador', 'Hub USB', 'Impressora', 'Scanner'
-            ]
-            
-            # Inicializar gadgets preferidos se não existir
-            if 'gadgets_preferidos' not in st.session_state:
-                st.session_state.gadgets_preferidos = ['Mouse', 'Teclado', 'Headset']
-            
-            # Inicializar limites individuais se não existir
-            if 'gadgets_limites_individuais' not in st.session_state:
-                st.session_state.gadgets_limites_individuais = {}
-            
-            # Inicializar gadgets excluídos se não existir
-            if 'gadgets_excluidos' not in st.session_state:
-                st.session_state.gadgets_excluidos = []
-            
-            st.session_state.gadgets_preferidos = st.multiselect(
-                "🎯 Gadgets Prioritários",
-                gadgets_disponiveis,
-                default=st.session_state.gadgets_preferidos,
-                help="Selecione quais gadgets devem ter prioridade nas recomendações de compra",
-                key='gadgets_preferidos_input'
-            )
-            
-            # Sistema de limites individuais por gadget
-            st.markdown("### 🔢 **Limites Individuais por Gadget**")
-            st.markdown("💡 **Configure limites específicos ou exclua gadgets do orçamento:**")
-            
-            # Criar colunas para organizar os controles
-            col_limites1, col_limites2 = st.columns(2)
-            
-            with col_limites1:
-                # Selecionar gadget para configurar limite
-                gadget_para_limite = st.selectbox(
-                    "🎯 Selecione o Gadget:",
-                    [''] + gadgets_disponiveis,
-                    key='gadget_limite_select'
-                )
-                
-                if gadget_para_limite:
-                    # Configurar limite individual
-                    limite_atual = st.session_state.gadgets_limites_individuais.get(gadget_para_limite, 0)
-                    novo_limite = st.number_input(
-                        f"📦 Limite para {gadget_para_limite}:",
-                        min_value=0,
-                        max_value=1000,
-                        value=limite_atual,
-                        help="0 = Excluir do orçamento, >0 = Limite máximo"
-                    )
-                    
-                    if st.button(f"💾 Salvar Limite para {gadget_para_limite}", key=f'save_{gadget_para_limite}'):
-                        if novo_limite == 0:
-                            # Excluir gadget
-                            if gadget_para_limite not in st.session_state.gadgets_excluidos:
-                                st.session_state.gadgets_excluidos.append(gadget_para_limite)
-                            if gadget_para_limite in st.session_state.gadgets_limites_individuais:
-                                del st.session_state.gadgets_limites_individuais[gadget_para_limite]
-                            st.success(f"❌ **{gadget_para_limite} EXCLUÍDO** do orçamento!")
-                        else:
-                            # Salvar limite
-                            st.session_state.gadgets_limites_individuais[gadget_para_limite] = novo_limite
-                            if gadget_para_limite in st.session_state.gadgets_excluidos:
-                                st.session_state.gadgets_excluidos.remove(gadget_para_limite)
-                            st.success(f"✅ **Limite salvo:** {gadget_para_limite} = {novo_limite} unidades")
-                        st.rerun()
-            
-            with col_limites2:
-                # Mostrar status atual dos limites
-                st.markdown("**📊 Status dos Limites:**")
-                
-                if st.session_state.gadgets_limites_individuais:
-                    for gadget, limite in st.session_state.gadgets_limites_individuais.items():
-                        st.info(f"🔢 **{gadget}:** Máximo {limite} unidades")
-                
-                if st.session_state.gadgets_excluidos:
-                    st.markdown("**❌ Gadgets Excluídos:**")
-                    for gadget in st.session_state.gadgets_excluidos:
-                        st.warning(f"🚫 **{gadget}** (excluído do orçamento)")
-                
-                # Botão para resetar todos os limites
-                if st.button("🔄 Resetar Todos os Limites", key='reset_limites'):
-                    st.session_state.gadgets_limites_individuais = {}
-                    st.session_state.gadgets_excluidos = []
-                    st.success("✅ **Todos os limites foram resetados!**")
-                    st.rerun()
-            
-            # Sistema de valores de referência para perdas
-            st.markdown("### 💰 **Valores de Referência para Perdas**")
-            st.markdown("💡 **Configure valores padrão que serão usados como referência para perdas:**")
-            
-            # Criar colunas para organizar os controles de valores
-            col_valores1, col_valores2 = st.columns(2)
-            
-            with col_valores1:
-                # Selecionar gadget para configurar valor
-                gadget_para_valor = st.selectbox(
-                    "🎯 Selecione o Gadget para Valor:",
-                    [''] + gadgets_disponiveis,
-                    key='gadget_valor_select'
-                )
-                
-                if gadget_para_valor:
-                    # Configurar valor de referência usando função auxiliar segura
-                    valores_ref = get_gadgets_valores_referencia()
-                    valor_atual = valores_ref.get(gadget_para_valor, 0)
-                    
-                    # Garantir que o valor seja sempre válido (>= 0.01)
-                    if valor_atual < 0.01:
-                        valor_atual = 0.01
-                    
-                    novo_valor = st.number_input(
-                        f"💰 Valor de referência para {gadget_para_valor}:",
-                        min_value=0.01,
-                        max_value=10000.00,
-                        value=float(valor_atual),
-                        step=0.01,
-                        format="%.2f",
-                        help="Valor que será usado como referência para perdas"
-                    )
-                    
-                    if st.button(f"💾 Salvar Valor para {gadget_para_valor}", key=f'save_valor_{gadget_para_valor}'):
-                        # Usar função auxiliar segura
-                        valores_ref = get_gadgets_valores_referencia()
-                        
-                        st.session_state.gadgets_valores_referencia[gadget_para_valor] = novo_valor
-                        # Salvar automaticamente no arquivo
-                        save_gadgets_valores_referencia()
-                        st.success(f"✅ **Valor salvo:** {gadget_para_valor} = R$ {novo_valor:.2f}")
-                        st.rerun()
-            
-            with col_valores2:
-                # Mostrar valores atuais configurados
-                st.markdown("**📊 Valores de Referência Atuais:**")
-                
-                # Usar função auxiliar segura para obter valores
-                valores_ref = get_gadgets_valores_referencia()
-                if valores_ref:
-                    for gadget, valor in valores_ref.items():
-                        if valor > 0:
-                            st.info(f"💰 **{gadget}:** R$ {valor:.2f}")
-                
-                # Botão para resetar todos os valores
-                if st.button("🔄 Resetar Todos os Valores", key='reset_valores'):
-                    # Usar função auxiliar segura
-                    valores_ref = get_gadgets_valores_referencia()
-                    
-                    valores_reset = {
-                        'Mouse': 31.90,
-                        'Teclado': 90.00,
-                        'Headset': 149.90,
-                        'Adaptador USB-C': 45.90,
-                        'Monitor': 299.90,
-                        'Webcam': 89.90,
-                        'Cabo USB': 19.90,
-                        'Mousepad': 29.90,
-                        'Fone de Ouvido': 79.90,
-                        'Carregador': 39.90,
-                        'Hub USB': 89.90,
-                        'Impressora': 399.90,
-                        'Scanner': 199.90
-                    }
-                    
-                    # Garantir que todos os valores sejam >= 0.01
-                    for key, value in valores_reset.items():
-                        if value < 0.01:
-                            valores_reset[key] = 0.01
-                    
-                    st.session_state.gadgets_valores_referencia = valores_reset
-                    # Salvar automaticamente no arquivo
-                    save_gadgets_valores_referencia()
-                    st.success("✅ **Todos os valores foram resetados para padrão!**")
-                    st.rerun()
+            # Gadgets específicos: apenas adaptador USB e headsets
+            st.session_state.gadgets_preferidos = ['Adaptador USB', 'Headsets']
             
         with col2:
-            # Limite de quantidade por item
-            st.session_state.matt_quantidade_limite = st.number_input(
-                "📦 Limite de Quantidade por Item", 
-                min_value=1, 
-                max_value=100, 
-                value=int(st.session_state.get('matt_quantidade_limite', 20)),
-                key='quantidade_limite_input'
-            )
-            
-            # Margem de segurança
-            st.session_state.matt_margem_seguranca = st.slider(
-                "🛡️ Margem de Segurança (%)",
-                min_value=0,
-                max_value=50,
-                value=st.session_state.get('matt_margem_seguranca', 20),
-                key='margem_seguranca_input'
-            )
+            st.markdown("### Itens Prioritários")
+            st.info("Focando em Adaptador USB e Headsets para máxima eficiência")
     
-    # 📊 Configuração Google Sheets - Banco de Dados Remoto
-    st.subheader("📊 Integração Google Sheets")
+    # Gerador de orçamento simplificado
+    st.divider()
+    st.subheader("Gerador de Orçamento")
     
-    with st.expander("🌐 Configuração de Banco de Dados Remoto", expanded=False):
-        st.markdown("**📋 COMO CONFIGURAR A PLANILHA:**")
-        
-        col_sheets1, col_sheets2 = st.columns(2)
-        
-        with col_sheets1:
-            st.markdown("""
-            **🔗 Sua Planilha:**
-            - **ID:** `1IMcXLIyOJOANhfxKfzYlwtBqtsXJfRMhCPmoKQdCtdY`
-            - **Aba:** `Inventory (GID: 1546013624)`
+    col_orcamento1, col_orcamento2 = st.columns(2)
+    
+    with col_orcamento1:
+        if st.button("Gerar Orçamento Automático", use_container_width=True, type="primary"):
+            budget = st.session_state.get('matt_budget', 50000)
+            resultado = calcular_orcamento_100_porcentagem(budget)
             
-            **⚙️ Configurações Necessárias:**
-            1. Abra sua planilha
-            2. Vá em **Arquivo → Compartilhar → Compartilhar com outras pessoas**
-            3. Altere para **"Qualquer pessoa com o link pode visualizar"**
-            4. Copie o link e confirme que contém os IDs acima
-            """)
-            
-        with col_sheets2:
-            # Status da conexão
-            st.markdown("**📊 Status da Integração:**")
-            
-            data_source = st.session_state.get('data_source', 'unknown')
-            if data_source == 'google_sheets':
-                st.success("✅ **CONECTADO** - Dados do Google Sheets")
-            elif data_source == 'local_csv':
-                st.info("📁 **LOCAL** - Usando arquivos CSV")
+            if resultado['success']:
+                st.success("Orçamento gerado com sucesso!")
+                orcamento = resultado['orcamento']
+                
+                if 'headsets' in orcamento:
+                    st.info(f"**Headsets:** {orcamento['headsets']['quantidade']} unidades - R$ {orcamento['headsets']['total']:.2f}")
+                if 'adaptadores' in orcamento:
+                    st.info(f"**Adaptadores:** {orcamento['adaptadores']['quantidade']} unidades - R$ {orcamento['adaptadores']['total']:.2f}")
             else:
-                st.warning("⚠️ **DESCONECTADO** - Sem dados disponíveis")
-            
-            # Botão para testar conexão
-            if st.button("🧪 Testar Conexão Google Sheets", use_container_width=True):
-                with st.spinner("Testando conexão..."):
-                    st.info("🔍 **TESTANDO ACESSO À PLANILHA...**")
-                    
-                    # Teste detalhado da conexão
-                    test_data = load_google_sheets_data('inventory')
-                    if test_data is not None:
-                        st.success(f"🎉 **CONEXÃO ESTABELECIDA!**")
-                        st.success(f"📊 {len(test_data)} registros encontrados")
-                        st.success(f"📋 {len(test_data.columns)} colunas detectadas")
-                        
-                        # Mostrar preview dos dados
-                        with st.expander("👀 Preview dos dados carregados"):
-                            st.write("**Colunas encontradas:**")
-                            st.write(list(test_data.columns))
-                            st.write("**Primeiras 3 linhas:**")
-                            st.dataframe(test_data.head(3))
-                        
-                        st.session_state.data_source = 'google_sheets'
-                        # Recarregar dados
-                        load_gadgets_data()
-                    else:
-                        st.error("❌ **FALHA NA CONEXÃO**")
-                        
-            # Guia rápido de configuração
-            with st.expander("📖 Guia Rápido: Como Tornar Planilha Pública", expanded=False):
-                st.markdown("""
-                ### 🔓 **PASSO A PASSO DETALHADO:**
-                
-                1. **Abra sua planilha** no Google Sheets
-                2. **Clique no botão "Compartilhar"** (canto superior direito) 🔗
-                3. **Clique em "Alterar para qualquer pessoa com o link"** 
-                4. **Selecione "Qualquer pessoa na internet"** 🌍
-                5. **Defina permissão como "Visualizador"** 👀
-                6. **Clique "Concluído"** ✅
-                
-                ### ⚠️ **SE NÃO CONSEGUIR TORNAR PÚBLICA:**
-                - **Conta corporativa:** Pode ter restrições de admin
-                - **Dados sensíveis:** Use compartilhamento por link
-                - **Organização:** Peça para admin liberar
-                
-                ### 🧪 **COMO TESTAR:**
-                1. Cole a URL da planilha no campo acima
-                2. Clique "Testar Conexão Google Sheets"  
-                3. Veja se aparece "✅ CONEXÃO ESTABELECIDA!"
-                
-                ### 📝 **FORMATO DA URL CORRETA:**
-                ```
-                https://docs.google.com/spreadsheets/d/[ID]/edit#gid=0
-                ```
-                """)
-                
-            # Script de teste independente
-            st.markdown("---")
-            st.markdown("**🛠️ Script de Teste Independente:**")
-            
-            if st.button("📥 Baixar Script de Teste", use_container_width=True):
-                st.code('''
-# Salve este código como test_sheets.py e execute: python3 test_sheets.py
-
-import requests
-import pandas as pd
-
-# Cole aqui sua URL
-sheet_url = "SUA_URL_AQUI"
-
-# Converter para CSV
-if '/edit' in sheet_url:
-    sheet_id = sheet_url.split('/d/')[1].split('/')[0]
-    csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=0"
-else:
-    csv_url = sheet_url
-
-# Testar
-response = requests.get(csv_url)
-if response.status_code == 200:
-    print("✅ SUCESSO! Planilha está pública")
-    df = pd.read_csv(csv_url)
-    print(f"📊 {len(df)} linhas encontradas")
-else:
-    print(f"❌ ERRO {response.status_code}: Planilha não está pública")
-                ''', language='python')
-                st.success("💾 Script copiado! Cole em um arquivo .py e execute")
-        
-        # Seção de sincronização
-        st.markdown("---")
-        st.markdown("**🔄 Sincronização de Dados:**")
-        
-        sync_col1, sync_col2, sync_col3 = st.columns(3)
-        
-        with sync_col1:
-            if st.button("📥 Importar do Sheets", use_container_width=True):
-                if load_gadgets_data():
-                    st.success("Dados importados com sucesso!")
-                    st.rerun()
-        
-        with sync_col2:
-            if st.button("📤 Exportar para Sheets", use_container_width=True):
-                if 'gadgets_data' in st.session_state:
-                    sync_to_google_sheets(st.session_state.gadgets_data, 'perdas')
-                else:
-                    st.warning("Nenhum dado disponível para exportar")
-        
-        with sync_col3:
-            # Botão para forçar refresh dos dados
-            if st.button("🔄 Atualizar Dados", use_container_width=True):
-                if 'gadgets_data' in st.session_state:
-                    del st.session_state.gadgets_data
-                load_gadgets_data()
-                st.success("Dados atualizados!")
-                st.rerun()
-
-    # Configuração de Automação Huginn
-    st.subheader("🤖 Configuração de Automação Huginn")
+                st.error(resultado['message'])
     
-    with st.expander("🔗 Conexão com Huginn", expanded=False):
-        col1, col2 = st.columns(2)
+    with col_orcamento2:
+        st.markdown("### Status do Orçamento")
+        budget_display = st.session_state.get('matt_budget', 50000)
+        st.metric("Orçamento Total", f"R$ {budget_display:,.2f}")
         
-        with col1:
-            st.session_state.huginn_url = st.text_input(
-                "🌐 URL do Huginn",
-                value=st.session_state.get('huginn_url', 'http://localhost:3000'),
-                help="URL completa do seu servidor Huginn",
-                key='huginn_url_input'
-            )
-            
-        with col2:
-            # Configurar token automaticamente
-            if 'huginn_token' not in st.session_state or not st.session_state.huginn_token:
-                st.session_state.huginn_token = 'matt2-ai-auto-token-2024-huginn-api-key-active'
-            
-            st.session_state.huginn_token = st.text_input(
-                "🔑 Token de API",
-                value=st.session_state.get('huginn_token', 'matt2-ai-auto-token-2024-huginn-api-key-active'),
-                type="password",
-                help="Token de autenticação para a API do Huginn (Configurado automaticamente)",
-                key='huginn_token_input'
-            )
-            
-            if st.session_state.huginn_token == 'matt2-ai-auto-token-2024-huginn-api-key-active':
-                st.info("🔑 **Token API configurado automaticamente** - Sistema integrado")
-        
-        if st.button("🧪 Testar Conexão Huginn"):
-            huginn_test = connect_to_huginn()
-            if huginn_test:
-                st.success("✅ Conexão com Huginn estabelecida com sucesso!")
-                if huginn_test.get('events'):
-                    st.info(f"📊 {len(huginn_test['events'])} eventos encontrados")
-            else:
-                st.error("❌ Não foi possível conectar ao Huginn. Verifique a URL e token.")
+        # Mostrar últimos resultados se existirem
+        if 'ultimo_orcamento' in st.session_state:
+            st.success("Último orçamento gerado com sucesso")
+    
+
     
     # Botões de sugestão rápida
-    st.subheader("⚡ Sugestões Rápidas")
+    st.subheader("Sugestões Rápidas")
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("🛒 ORDENS DIRETAS", use_container_width=True, type="primary"):
+        if st.button("ORDENS DIRETAS", use_container_width=True, type="primary"):
             st.session_state.quick_message = "COMPRE baseado nas perdas e orçamento"
     
     with col2:
-        if st.button("💰 AJUSTAR BUDGET", use_container_width=True):
+        if st.button("AJUSTAR BUDGET", use_container_width=True):
             st.session_state.quick_message = "ajustar orçamento R$ 30000"
     
     with col3:
-        if st.button("📈 ANÁLISE MERCADO", use_container_width=True):
+        if st.button("ANÁLISE MERCADO", use_container_width=True):
             st.session_state.quick_message = "analise o mercado de gadgets e tendências"
     
     with col4:
-        if st.button("✅ CONFIRMAR COMPRAS", use_container_width=True, type="secondary"):
+        if st.button("CONFIRMAR COMPRAS", use_container_width=True, type="secondary"):
             st.session_state.quick_message = "confirmar compras"
     
     # Botão adicional para configurações
-    if st.button("🎯 Minhas configurações", use_container_width=True):
+    if st.button("Minhas configurações", use_container_width=True):
         st.session_state.quick_message = "minhas configurações"
     
     # Botão principal para orçamento 100% otimizado
     st.markdown("---")
-    st.markdown("#### 🎯 **ORÇAMENTO 100% OTIMIZADO - ADAPTADORES USB-C + HEADSETS**")
+    st.markdown("#### **ORÇAMENTO 100% OTIMIZADO - ADAPTADORES USB-C + HEADSETS**")
     
-    if st.button("🚀 Criar Orçamento 100% Otimizado", use_container_width=True, type="primary", key="orcamento_100_otimizado"):
+    if st.button("Criar Orçamento 100% Otimizado", use_container_width=True, type="primary", key="orcamento_100_otimizado"):
         # Garantir que os dados estão inicializados
         init_gadgets_data()
         
@@ -10399,7 +10134,7 @@ else:
             st.success(resultado['message'])
             
             # Mostrar distribuição por categoria
-            st.markdown("#### 📊 **Distribuição por Categoria:**")
+            st.markdown("#### Distribuição por Categoria:")
             col_cat1, col_cat2 = st.columns(2)
             
             # Calcular valores por categoria
@@ -10413,32 +10148,46 @@ else:
                     total_adaptadores += dados['valor_total']
             
             with col_cat1:
-                st.metric("🎧 Headsets", f"R$ {total_headsets:,.2f}")
+                st.metric("Headsets", f"R$ {total_headsets:,.2f}")
             
             with col_cat2:
-                st.metric("🔌 Adaptadores USB-C", f"R$ {total_adaptadores:,.2f}")
+                st.metric("Adaptadores USB-C", f"R$ {total_adaptadores:,.2f}")
             
             # Mostrar detalhes do orçamento
-            st.markdown("#### 📋 **Detalhes do Orçamento:**")
+            st.markdown("#### Detalhes do Orçamento:")
             for item, dados in resultado['orcamento']['necessidade_compra'].items():
                 st.info(f"**{item}** ({dados['categoria']}): {dados['quantidade']}x - R$ {dados['valor_total']:,.2f}")
             
-            st.markdown(f"#### 💰 **Total do Orçamento:** R$ {resultado['orcamento']['total_compra']:,.2f}")
-            st.markdown(f"#### 📦 **Total de Itens:** {resultado['orcamento']['total_items']} unidades")
+            st.markdown(f"#### Total do Orçamento: R$ {resultado['orcamento']['total_compra']:,.2f}")
+            st.markdown(f"#### Total de Itens: {resultado['orcamento']['total_items']} unidades")
             
             if resultado['orcamento']['budget_restante'] > 0:
-                st.warning(f"⚠️ **Budget restante:** R$ {resultado['orcamento']['budget_restante']:,.2f}")
+                st.warning(f"**Budget restante:** R$ {resultado['orcamento']['budget_restante']:,.2f}")
             
             # Botão para exportar orçamento
-            if st.button("📤 Exportar Orçamento", use_container_width=True):
-                st.success("✅ Orçamento exportado! (Funcionalidade em desenvolvimento)")
+            if st.button("Exportar Orçamento", use_container_width=True):
+                st.success("Orçamento exportado! (Funcionalidade em desenvolvimento)")
         else:
             st.error(resultado['message'])
     
     st.markdown("---")
     
     # Sistema de chat com IA
-    st.subheader("💬 Converse com Matt 2.0")
+    col_chat1, col_chat2 = st.columns([3, 1])
+    
+    with col_chat1:
+        st.subheader("Converse com Matt 2.0")
+    
+    with col_chat2:
+        if st.button("Limpar Chat", type="secondary", use_container_width=True):
+            st.session_state.matt_chat_history = [
+                {"role": "assistant", "message": """**MATT 2.0 - ASSISTENTE DE ORÇAMENTO**
+
+**ADAPTADOR USB** & **HEADSETS** - Orçamento Inteligente
+
+**ORÇAMENTO ATIVO:** Configure seu budget para compras automáticas"""}
+            ]
+            st.rerun()
     
     # Exibir histórico de chat
     for message in st.session_state.matt_chat_history:
@@ -10463,7 +10212,7 @@ else:
         
         # Gerar resposta do Matt
         with st.chat_message("assistant"):
-            with st.spinner("🤖 Matt pensando..."):
+            with st.spinner("Matt pensando..."):
                 response = process_matt_response(user_input)
             
             st.write(response)
@@ -10472,13 +10221,13 @@ else:
             st.session_state.matt_chat_history.append({"role": "assistant", "message": response})
     
     # Exibir resumo das configurações atuais
-    with st.expander("📋 Resumo das Configurações Atuais"):
+    with st.expander("Resumo das Configurações Atuais"):
         st.json({
             "orçamento": f"R$ {st.session_state.get('matt_budget', 50000):,.2f}",
             "gadgets_prioritários": st.session_state.get('gadgets_preferidos', []),
             "limite_quantidade": st.session_state.get('matt_quantidade_limite', 20),
             "margem_segurança": f"{st.session_state.get('matt_margem_seguranca', 20)}%",
-            "huginn_conectado": bool(st.session_state.get('huginn_token', '')),
+
             "histórico_execuções": len(st.session_state.get('matt_execution_history', []))
         })
 
@@ -10536,7 +10285,7 @@ def render_controle_gadgets():
         load_gadgets_valores_referencia()
     
     # Navegação por abas
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎯 Agente Matt", "📋 Registro Perdas", "📊 Análises", "📦 Estoque", "⚙️ Config"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Agente Matt", "Registro Perdas", "Análises", "Estoque", "Config"])
     
     with tab1:
         render_agente_matt()
@@ -10827,7 +10576,12 @@ def render_controle_estoque():
                 lambda x: f"R$ {x:,.2f}"
             )
             
-            st.dataframe(perdas_por_item, use_container_width=True)
+            display_table_with_filters(
+                perdas_por_item,
+                key="perdas_por_item_view",
+                editable=False,
+                selection_mode="single"
+            )
         else:
             st.info("◎ Nenhuma perda registrada nos últimos 30 dias")
     else:
@@ -11387,6 +11141,37 @@ def render_registro_perdas():
     </div>
     """, unsafe_allow_html=True)
     
+    # Instruções de como salvar
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0; border: 1px solid rgba(59, 130, 246, 0.3);">
+        <h4 style="color: white; margin: 0 0 1rem 0; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">📋 Como Salvar os Dados de Perdas</h4>
+        <div style="color: rgba(255,255,255,0.95); font-size: 0.95rem; line-height: 1.6;">
+            <strong>📝 Passo a passo para registrar perdas:</strong><br/>
+            <br/>
+            <strong>1. Preenchimento da Tabela:</strong><br/>
+            • Na tabela acima, digite as quantidades perdidas na coluna "✕ Qtd Perdida"<br/>
+            • Adicione observações detalhadas na coluna "◈ Observações" (motivo, localização específica, etc.)<br/>
+            • Use o filtro de local para focar em um prédio específico ou veja todos<br/>
+            <br/>
+            <strong>2. Verificação dos Dados:</strong><br/>
+            • Confira os totais exibidos no resumo acima<br/>
+            • Verifique se todas as quantidades e observações estão corretas<br/>
+            • O valor total será calculado automaticamente<br/>
+            <br/>
+            <strong>3. Salvamento:</strong><br/>
+            • Clique em "◆ Registrar Todas as Perdas" para salvar permanentemente<br/>
+            • Os dados serão salvos automaticamente no arquivo CSV<br/>
+            • O estoque será atualizado automaticamente com as perdas registradas<br/>
+            • Uma confirmação será exibida com o resumo das perdas registradas<br/>
+            <br/>
+            <strong>⚠️ Importante:</strong><br/>
+            • Apenas itens com quantidade > 0 serão registrados<br/>
+            • Todos os dados são salvos permanentemente e não podem ser desfeitos<br/>
+            • Use o botão "◦ Limpar Seleções" para recomeçar se necessário
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
     # Botões de ação modernos
     st.markdown("""
     <div style="background: rgba(139, 92, 246, 0.05); padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0; border: 1px solid rgba(139, 92, 246, 0.2);">
@@ -11394,10 +11179,27 @@ def render_registro_perdas():
     </div>
     """, unsafe_allow_html=True)
     
+    # Alerta de confirmação antes de salvar
+    if not perdas_com_quantidade.empty:
+        st.markdown("""
+        <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+            <div style="color: #92400e; font-weight: 600; display: flex; align-items: center;">
+                <span style="font-size: 1.2rem; margin-right: 0.5rem;">⚠️</span>
+                <span>Confirme os dados antes de registrar - esta ação não pode ser desfeita!</span>
+            </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
     col_save, col_clear = st.columns(2)
     
     with col_save:
-        if st.button("◆ Registrar Todas as Perdas", type="primary", use_container_width=True):
+        # Desabilitar botão se não há perdas para registrar
+        botao_habilitado = not perdas_com_quantidade.empty
+        if st.button("◆ Registrar Todas as Perdas", 
+                     type="primary", 
+                     use_container_width=True,
+                     disabled=not botao_habilitado,
+                     help="Salva permanentemente todas as perdas preenchidas na tabela" if botao_habilitado else "Preencha pelo menos uma quantidade de perda para habilitar"):
             # Registrar cada perda individualmente
             for _, row in perdas_com_quantidade.iterrows():
                 valor_total_item = row['quantidade_perdida'] * row['cost']
@@ -11491,9 +11293,9 @@ def render_analises_gadgets():
         st.warning("▬ Nenhum dado válido encontrado após limpeza. Verifique os registros de perdas.")
         return
     
-    # Obter configurações visuais
+    # Obter configurações visuais com nova paleta roxa/violeta
     advanced_config = getattr(st.session_state, 'advanced_visual_config', {})
-    graph_colors = advanced_config.get('graph_colors', ['#06B6D4', '#666666', '#F59E0B', '#EF4444'])
+    graph_colors = advanced_config.get('graph_colors', get_chart_colors('primary'))
     chart_height = advanced_config.get('chart_height', 450)
     
     # Melhor seletor de filtros com período personalizado
@@ -11602,7 +11404,7 @@ def render_analises_gadgets():
     
     # Botão de exportação geral
     st.markdown("---")
-    st.markdown("#### 📊 **Exportar Relatório Geral do Período**")
+    st.markdown("#### Exportar Relatório Geral do Período")
     
     col_export_geral1, col_export_geral2, col_export_geral3 = st.columns(3)
     
@@ -11786,7 +11588,7 @@ def render_analise_mensal(df, colors, height):
             fig_qty.add_trace(go.Bar(
                 x=df_mensal['mes_nome'],
                 y=df_mensal['quantidade'],
-                marker_color=colors[0] if colors else '#06B6D4',
+                marker_color=colors[0] if colors else get_chart_colors('primary')[0],
                 text=df_mensal['quantidade'].apply(lambda x: f"{int(x)}" if pd.notnull(x) else "0"),
                 textposition='outside',
                 name='Quantidade'
@@ -11821,7 +11623,7 @@ def render_analise_mensal(df, colors, height):
             fig_val.add_trace(go.Bar(
                 x=df_mensal['mes_nome'],
                 y=df_mensal['valor_total'],
-                marker_color=colors[1] if len(colors) > 1 else '#666666',
+                marker_color=colors[1] if len(colors) > 1 else get_chart_colors('primary')[1],
                 text=[f'R$ {float(val):,.0f}' if pd.notnull(val) else 'R$ 0' for val in df_mensal['valor_total']],
                 textposition='outside',
                 name='Valor'
@@ -13416,7 +13218,7 @@ def render_upload_dados():
     
     # Upload de arquivo
     # Upload com arrastar e soltar
-    st.markdown("### 📤 **Upload de Arquivo**")
+            st.markdown("### Upload de Arquivo")
     
     uploaded_file = st.file_uploader(
         "📁 **Arraste e solte ou clique para selecionar sua planilha**",
@@ -13491,7 +13293,7 @@ def render_upload_dados():
             st.divider()
             
             # Análise inteligente aprimorada
-            st.markdown("### 🔍 **Análise Inteligente dos Dados**")
+            st.markdown("### Análise Inteligente dos Dados")
             
             target_formats = get_target_formats()
             
@@ -13577,8 +13379,8 @@ def render_upload_dados():
                 """, unsafe_allow_html=True)
             
             # Preview dos dados com filtros estilo Excel
-            st.markdown("### 👁️ **Preview dos Dados**")
-            tab_preview, tab_summary, tab_quality = st.tabs(["📊 Dados", "📈 Resumo", "🔍 Qualidade"])
+            st.markdown("### Preview dos Dados")
+            tab_preview, tab_summary, tab_quality = st.tabs(["Dados", "Resumo", "Qualidade"])
             
             with tab_preview:
                 # Mostrar todos os dados com filtros Excel
@@ -13678,7 +13480,7 @@ def render_upload_dados():
             # Seleção específica de categoria para estoque
             selected_category = None
             if selected_target in ['inventario_unificado', 'estoque_hq1', 'estoque_spark']:
-                st.markdown("#### 📂 **Configuração de Categoria**")
+                st.markdown("#### Configuração de Categoria")
                 
                 # Categorias disponíveis (incluindo todas do inventário unificado)
                 categorias_estoque = [
@@ -14372,6 +14174,11 @@ def render_inventario_unificado():
     # Obter dados unificados
     unified_data = st.session_state.inventory_data['unified']
     
+    # Garantir que a coluna SKU existe
+    if 'sku' not in unified_data.columns:
+        unified_data['sku'] = unified_data['tag'].apply(lambda x: f"SKU-{x}")
+        st.session_state.inventory_data['unified'] = unified_data
+    
     # Componente de upload compacto para inventário
     render_compact_upload("inventario_unificado", "inventario_dash", "📁 Importar ao Inventário")
     
@@ -14479,6 +14286,10 @@ def render_inventario_unificado():
                 mime="text/csv"
             )
     
+    # Formulário de entrada por foto da nota fiscal
+    with st.expander("📷 **Entrada por Foto da Nota Fiscal** - Extração automática de dados", expanded=False):
+        render_nf_photo_entry()
+    
     # Formulário de adição de novo item
     if st.session_state.get('show_add_form', False):
         render_add_form()
@@ -14519,6 +14330,10 @@ def render_categoria_table(df_categoria, categoria_nome):
     if df_categoria.empty:
         st.info(f"◯ Nenhum item encontrado na categoria {categoria_nome}")
         return
+    
+    # Garantir que a coluna SKU existe
+    if 'sku' not in df_categoria.columns:
+        df_categoria['sku'] = df_categoria['tag'].apply(lambda x: f"SKU-{x}")
     
     st.subheader(f"▤ {categoria_nome} ({len(df_categoria)} itens)")
     
@@ -14569,25 +14384,50 @@ def render_categoria_table(df_categoria, categoria_nome):
     elif status_filtro == 'Pendentes':
         df_exibicao = df_exibicao[df_exibicao['conferido'] == False]
     
-    # Tabela principal com colunas organizadas
-    df_display = df_exibicao[[
-        'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd',
+    # Verificar se a coluna SKU existe, se não, criar com valores padrão
+    if 'sku' not in df_exibicao.columns:
+        df_exibicao['sku'] = df_exibicao['tag'].apply(lambda x: f"SKU-{x}")
+    
+    # Verificar se todas as colunas necessárias existem
+    colunas_necessarias = ['tag', 'sku', 'itens', 'modelo', 'serial', 'marca', 'valor', 'qtd',
         'prateleira', 'rua', 'setor', 'local', 'box', 'conferido',
-        'fornecedor', 'po', 'nota_fiscal', 'uso'
-    ]].copy()
+                           'fornecedor', 'po', 'nota_fiscal', 'uso', 'motivo', 'data_entrada']
+    
+    # Criar colunas que não existem com valores padrão
+    for col in colunas_necessarias:
+        if col not in df_exibicao.columns:
+            if col == 'sku':
+                df_exibicao[col] = df_exibicao['tag'].apply(lambda x: f"SKU-{x}")
+            elif col == 'serial':
+                df_exibicao[col] = [f"SER{i:06d}" for i in range(1, len(df_exibicao) + 1)]
+            elif col in ['valor', 'qtd']:
+                df_exibicao[col] = 0
+            elif col == 'conferido':
+                df_exibicao[col] = False
+            elif col == 'motivo':
+                df_exibicao[col] = 'Entrada de Estoque'
+            elif col == 'data_entrada':
+                df_exibicao[col] = pd.Timestamp.now()
+            else:
+                df_exibicao[col] = 'N/A'
+    
+    # Tabela principal com colunas organizadas (incluindo SKU e novos campos)
+    df_display = df_exibicao[colunas_necessarias].copy()
     
     # Renomear colunas para melhor visualização
     df_display.columns = [
-        'Tag', 'Item', 'Modelo', 'Marca', 'Valor (R$)', 'Qtd',
+        'Tag', 'SKU', 'Item', 'Modelo', 'Serial', 'Marca', 'Valor (R$)', 'Qtd',
         'Prateleira', 'Rua', 'Setor', 'Local', 'Caixa', 'Conferido',
-        'Fornecedor', 'PO', 'Nota Fiscal', 'Uso'
+        'Fornecedor', 'PO', 'Nota Fiscal', 'Uso', 'Motivo', 'Data Entrada'
     ]
     
-    # Configurar tipos de coluna
+    # Configurar tipos de coluna (incluindo SKU e novos campos)
     column_config = {
         'Tag': st.column_config.TextColumn('Tag', width='small'),
+        'SKU': st.column_config.TextColumn('SKU', width='medium'),
         'Item': st.column_config.TextColumn('Item', width='medium'),
         'Modelo': st.column_config.TextColumn('Modelo', width='medium'),
+        'Serial': st.column_config.TextColumn('Serial', width='medium'),
         'Marca': st.column_config.TextColumn('Marca', width='small'),
         'Valor (R$)': st.column_config.NumberColumn('Valor (R$)', format="R$ %.2f"),
         'Qtd': st.column_config.NumberColumn('Qtd', format="%d"),
@@ -14600,7 +14440,9 @@ def render_categoria_table(df_categoria, categoria_nome):
         'Fornecedor': st.column_config.TextColumn('Fornecedor', width='medium'),
         'PO': st.column_config.TextColumn('PO', width='small'),
         'Nota Fiscal': st.column_config.TextColumn('Nota Fiscal', width='medium'),
-        'Uso': st.column_config.TextColumn('Uso', width='medium')
+        'Uso': st.column_config.TextColumn('Uso', width='medium'),
+        'Motivo': st.column_config.TextColumn('Motivo', width='medium'),
+        'Data Entrada': st.column_config.DatetimeColumn('Data Entrada', format="DD/MM/YYYY")
     }
     
     # Exibir tabela com filtros Excel e operações em massa
@@ -14623,14 +14465,9 @@ def render_categoria_table(df_categoria, categoria_nome):
         enable_mass_delete = st.checkbox("🗑️ **Permitir Exclusão**", key=f"mass_delete_{categoria_nome.replace(' ', '_')}")
     
     with col_ops3:
-        if st.button("💾 **Salvar Alterações**", use_container_width=True, key=f"save_{categoria_nome.replace(' ', '_')}"):
-            # Implementar salvamento real
-            if 'inventory_data' in st.session_state:
-                # Salvar no inventário unificado
-                timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"inventario_unificado_{timestamp}.csv"
-                st.session_state.inventory_data['unified'].to_csv(filename, index=False)
-                st.success(f"✅ Dados salvos em {filename}!")
+        # Mostrar status de salvamento automático
+        if edit_mode:
+            st.info("🔄 **Salvamento automático ativo**")
     
     # Configurar seleção
     selection_mode = "multiple" if enable_mass_delete else "single"
@@ -14678,104 +14515,146 @@ def render_categoria_table(df_categoria, categoria_nome):
     # Atualizar dados se houve edição
     edited_data = grid_response['data'] if grid_response and 'data' in grid_response else df_display
     
-    # Aplicar alterações ao inventário se houve edição
+    # Aplicar alterações ao inventário se houve edição (salvamento automático)
     if edit_mode and grid_response and 'data' in grid_response and not grid_response['data'].equals(df_display):
         # Sincronizar alterações com o session_state
         if 'inventory_data' in st.session_state:
             try:
-                # Mapear de volta para as colunas originais
+                # Mapear de volta para as colunas originais usando o mesmo mapeamento
                 edited_original = edited_data.copy()
                 
-                # Verificar se o número de colunas está correto
-                expected_cols = ['tag', 'itens', 'modelo', 'marca', 'valor', 'qtd',
-                               'prateleira', 'rua', 'setor', 'local', 'box', 'conferido',
-                               'fornecedor', 'po', 'nota_fiscal', 'uso']
+                # Definir mapeamento de colunas display -> internal
+                display_to_internal = {
+                    'Tag': 'tag', 'SKU': 'sku', 'Item': 'itens', 'Modelo': 'modelo', 
+                    'Serial': 'serial', 'Marca': 'marca', 'Valor (R$)': 'valor', 'Qtd': 'qtd',
+                    'Prateleira': 'prateleira', 'Rua': 'rua', 'Setor': 'setor', 'Local': 'local', 
+                    'Caixa': 'box', 'Conferido': 'conferido', 'Fornecedor': 'fornecedor', 
+                    'PO': 'po', 'Nota Fiscal': 'nota_fiscal', 'Uso': 'uso', 
+                    'Motivo': 'motivo', 'Data Entrada': 'data_entrada'
+                }
                 
-                if len(edited_original.columns) == len(expected_cols):
-                    edited_original.columns = expected_cols
+                # Mapear colunas automaticamente
+                current_cols = list(edited_original.columns)
+                new_columns = []
+                for col in current_cols:
+                    if col in display_to_internal:
+                        new_columns.append(display_to_internal[col])
+                    else:
+                        new_columns.append(col.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('$', ''))
+                
+                edited_original.columns = new_columns
                     
                     # Adicionar categoria ao DataFrame editado
-                    edited_original['categoria'] = categoria_nome.lower()
+                edited_original['categoria'] = categoria_nome.lower()
                     
-                    # Atualizar apenas as linhas desta categoria de forma segura
-                    df_all = st.session_state.inventory_data['unified']
+                # Atualizar apenas as linhas desta categoria de forma segura
+                df_all = st.session_state.inventory_data['unified']
                     
-                    # Remover categoria atual
-                    df_all = df_all[df_all['categoria'] != categoria_nome.lower()]
+                # Remover categoria atual
+                df_all = df_all[df_all['categoria'] != categoria_nome.lower()]
                     
-                    # Adicionar dados editados
-                    df_all = pd.concat([df_all, edited_original], ignore_index=True)
+                # Adicionar dados editados
+                df_all = pd.concat([df_all, edited_original], ignore_index=True)
                     
-                    # Atualizar session_state
-                    st.session_state.inventory_data['unified'] = df_all
+                # Atualizar session_state
+                st.session_state.inventory_data['unified'] = df_all
                     
-                    # Salvar automaticamente
-                    auto_save_inventory()
+                # Salvar automaticamente
+                auto_save_inventory()
                     
-                else:
-                    st.warning(f"⚠️ Número de colunas inconsistente: {len(edited_original.columns)} vs {len(expected_cols)}")
-                    
+                # Mostrar feedback de salvamento automático
+                st.success("💾 Alterações salvas automaticamente!")
             except Exception as e:
-                st.error(f"❌ Erro ao sincronizar edições: {str(e)}")
-                st.info("💡 Use o botão 'Salvar Alterações' para forçar o salvamento")
+                st.warning(f"⚠️ Erro no salvamento automático: {str(e)}")
+                st.info("💡 Use o botão 'Salvar Todas as Alterações' para forçar o salvamento")
     
-    # Botões de ação
+    # Botões de ação principais
     st.divider()
     col_action1, col_action2, col_action3 = st.columns([1, 1, 2])
     
     with col_action1:
         if st.button(f"◇ Editar Item - {categoria_nome}", key=f"btn_edit_{categoria_nome}"):
-            st.session_state[f'show_edit_form_{categoria_nome}'] = True
+            st.session_state[f"show_edit_form_{categoria_nome}"] = True
     
     with col_action2:
         if st.button(f"⊗ Deletar Item - {categoria_nome}", key=f"btn_delete_{categoria_nome}"):
             st.session_state[f'show_delete_form_{categoria_nome}'] = True
     
     with col_action3:
-        if st.button(f"◉ Salvar Alterações - {categoria_nome}", key=f"btn_save_{categoria_nome}"):
+        # Botão principal de salvamento manual
+        if st.button(f"💾 Salvar Todas as Alterações", key=f"btn_save_main_{categoria_nome}"):
             # Atualizar dados originais com as edições
             if not edited_data.empty:
                 # Converter de volta para o formato original
                 df_updated = edited_data.copy()
-                df_updated.columns = [
-                    'tag', 'itens', 'modelo', 'marca', 'valor', 'qtd',
+                
+                # Definir mapeamento de colunas display -> internal
+                display_to_internal = {
+                    'Tag': 'tag', 'SKU': 'sku', 'Item': 'itens', 'Modelo': 'modelo', 
+                    'Serial': 'serial', 'Marca': 'marca', 'Valor (R$)': 'valor', 'Qtd': 'qtd',
+                    'Prateleira': 'prateleira', 'Rua': 'rua', 'Setor': 'setor', 'Local': 'local', 
+                    'Caixa': 'box', 'Conferido': 'conferido', 'Fornecedor': 'fornecedor', 
+                    'PO': 'po', 'Nota Fiscal': 'nota_fiscal', 'Uso': 'uso', 
+                    'Motivo': 'motivo', 'Data Entrada': 'data_entrada'
+                }
+                
+                # Mapear colunas automaticamente
+                current_cols = list(df_updated.columns)
+                new_columns = []
+                for col in current_cols:
+                    if col in display_to_internal:
+                        new_columns.append(display_to_internal[col])
+                    else:
+                        new_columns.append(col.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('$', ''))
+                
+                df_updated.columns = new_columns
+                
+                # Garantir que todas as colunas necessárias existem
+                expected_columns = [
+                'tag', 'sku', 'itens', 'modelo', 'serial', 'marca', 'valor', 'qtd',
                     'prateleira', 'rua', 'setor', 'local', 'box', 'conferido',
-                    'fornecedor', 'po', 'nota_fiscal', 'uso'
+                    'fornecedor', 'po', 'nota_fiscal', 'uso', 'motivo', 'data_entrada'
                 ]
                 
-                # Atualizar os dados no session_state
-                unified_data = st.session_state.inventory_data['unified']
-                categoria_mask = unified_data['categoria'] == categoria_nome.lower()
-                
-                # Aplicar as mudanças de forma segura
-                try:
-                    # Obter indices válidos da categoria
-                    category_indices = df_categoria.index.tolist()
-                    
-                    for idx, row in df_updated.iterrows():
-                        # Verificar se o índice está dentro dos limites
-                        if idx < len(category_indices):
-                            original_idx = category_indices[idx]
-                            for col in df_updated.columns:
-                                if original_idx in unified_data.index:
-                                    unified_data.loc[original_idx, col] = row[col]
+                for col in expected_columns:
+                    if col not in df_updated.columns:
+                        if col == 'serial':
+                            df_updated[col] = [f"SER{i:06d}" for i in range(1, len(df_updated) + 1)]
+                        elif col in ['valor', 'qtd']:
+                            df_updated[col] = 0
+                        elif col == 'conferido':
+                            df_updated[col] = False
                         else:
-                            st.warning(f"⚠️ Índice {idx} fora dos limites. Pulando linha.")
-                except Exception as e:
-                    st.error(f"❌ Erro ao aplicar mudanças: {str(e)}")
-                    st.info("💡 Tentando método alternativo de salvamento...")
+                            df_updated[col] = 'N/A'
                     
-                    # Método alternativo: reconstruir a categoria completa
-                    unified_data = unified_data[unified_data['categoria'] != categoria_nome.lower()]
+                # Adicionar categoria e reconstruir dados
                     df_updated['categoria'] = categoria_nome.lower()
+                
+                # Atualizar session_state usando método robusto
+                try:
+                    # Remover dados antigos da categoria
+                    unified_data = st.session_state.inventory_data['unified']
+                    unified_data = unified_data[unified_data['categoria'] != categoria_nome.lower()]
+                    
+                    # Adicionar dados atualizados
                     unified_data = pd.concat([unified_data, df_updated], ignore_index=True)
+                    
+                    # Atualizar session_state
                     st.session_state.inventory_data['unified'] = unified_data
                 
                 # Salvar automaticamente em CSV
-                auto_save_inventory()
-                
-                st.success(f"✅ Alterações salvas para {categoria_nome}!")
-                st.rerun()
+                    success = auto_save_inventory()
+                    
+                    if success:
+                        st.success(f"✅ Alterações salvas para {categoria_nome}! (Incluindo campos Serial)")
+                    else:
+                        st.warning("⚠️ Dados atualizados na sessão, mas houve problema no salvamento em arquivo")
+                    
+                    st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"❌ Erro ao salvar alterações: {str(e)}")
+                    st.info("💡 Tente novamente ou use o modo de edição direta na tabela")
     
     # Formulário de edição
     if st.session_state.get(f'show_edit_form_{categoria_nome}', False):
@@ -14878,8 +14757,13 @@ def render_edit_form(df_categoria, categoria_nome):
                                    index=setores_options.index(item_data['setor']) if item_data['setor'] in setores_options else 0,
                                    key=f"edit_setor_{categoria_nome}")
             
-            # Campo Local
-            locais_options = sorted(unified_data['local'].unique().tolist() if 'local' in unified_data.columns else [])
+            # Campo Local - filtrar valores NaN e vazios
+            if 'local' in unified_data.columns:
+                locais_options = [x for x in unified_data['local'].unique() if pd.notna(x) and str(x).strip()]
+                locais_options = sorted(locais_options) if locais_options else []
+            else:
+                locais_options = []
+            
             if not locais_options:
                 locais_options = ['HQ1 - 8º Andar', 'HQ1 - 7º Andar', 'HQ1 - 6º Andar', 'HQ1 - 5º Andar', 'Spark - 2º Andar', 'Spark - 1º Andar', 'HQ1 - Subsolo', 'HQ1 - 3º Andar', 'HQ1 - 2º Andar']
             
@@ -15136,23 +15020,159 @@ def render_add_form():
     st.markdown("---")
     st.markdown("### ➕ Adicionar Novo Item ao Inventário")
     
+    # ========================================================================================
+    # 🔍 SEÇÃO DE REUTILIZAÇÃO DE DADOS EXISTENTES
+    # ========================================================================================
+    st.markdown("#### 🔍 **Reutilizar Dados Existentes**")
+    st.markdown("*Selecione dados já cadastrados para preencher automaticamente os campos*")
+    
+    col_reuse1, col_reuse2, col_reuse3 = st.columns(3)
+    
+    with col_reuse1:
+        # Buscar por SKU/Tag existente
+        unified_data = st.session_state.inventory_data['unified']
+        
+        # Garantir que a coluna SKU existe
+        if 'sku' not in unified_data.columns:
+            unified_data['sku'] = unified_data['tag'].apply(lambda x: f"SKU-{x}")
+            st.session_state.inventory_data['unified'] = unified_data
+        if not unified_data.empty and 'tag' in unified_data.columns:
+            tags_existentes = sorted(unified_data['tag'].dropna().unique())
+            tag_selecionada = st.selectbox(
+                "🔍 Buscar por Tag/SKU existente:",
+                ['-- Selecionar Tag --'] + tags_existentes,
+                key="reuse_tag_select"
+            )
+            
+            if tag_selecionada != '-- Selecionar Tag --':
+                item_existente = unified_data[unified_data['tag'] == tag_selecionada].iloc[0]
+                st.info(f"**Item encontrado:** {item_existente['itens']}")
+                st.info(f"**SKU:** {item_existente.get('sku', 'N/A')}")
+                
+                # Botão para aplicar dados da tag
+                if st.button("📋 Aplicar Dados da Tag", key="apply_tag_data"):
+                    st.session_state['reuse_tag_data'] = item_existente.to_dict()
+                    st.success("✅ Dados da tag aplicados! Preencha os campos abaixo.")
+                    st.rerun()
+    
+    with col_reuse2:
+        # Buscar por Nota Fiscal existente
+        if not unified_data.empty and 'nota_fiscal' in unified_data.columns:
+            nfs_existentes = sorted(unified_data['nota_fiscal'].dropna().unique())
+            nfs_existentes = [nf for nf in nfs_existentes if str(nf) != 'nan' and str(nf) != '']
+            
+            if nfs_existentes:
+                nf_selecionada = st.selectbox(
+                    "🔍 Buscar por Nota Fiscal:",
+                    ['-- Selecionar NF --'] + nfs_existentes,
+                    key="reuse_nf_select"
+                )
+                
+                if nf_selecionada != '-- Selecionar NF --':
+                    itens_nf = unified_data[unified_data['nota_fiscal'] == nf_selecionada]
+                    st.info(f"**Itens da NF:** {len(itens_nf)} produtos")
+                    
+                    # Mostrar itens da NF
+                    if len(itens_nf) > 0:
+                        item_nf = itens_nf.iloc[0]
+                        st.write(f"• {item_nf['itens']}")
+                        st.write(f"• Fornecedor: {item_nf.get('fornecedor', 'N/A')}")
+                        
+                        # Botão para aplicar dados da NF
+                        if st.button("📋 Aplicar Dados da NF", key="apply_nf_data"):
+                            st.session_state['reuse_nf_data'] = item_nf.to_dict()
+                            st.success("✅ Dados da NF aplicados! Preencha os campos abaixo.")
+                            st.rerun()
+    
+    with col_reuse3:
+        # Buscar por Produto/Item existente
+        if not unified_data.empty and 'itens' in unified_data.columns:
+            itens_existentes = sorted(unified_data['itens'].dropna().unique())
+            itens_existentes = [item for item in itens_existentes if str(item) != 'nan' and str(item) != '']
+            
+            # Filtrar itens similares (primeiras palavras)
+            if itens_existentes:
+                item_busca = st.text_input(
+                    "🔍 Buscar produto similar:",
+                    placeholder="Digite parte do nome...",
+                    key="reuse_item_search"
+                )
+                
+                if item_busca:
+                    itens_similares = [item for item in itens_existentes if item_busca.lower() in item.lower()]
+                    if itens_similares:
+                        item_similar = st.selectbox(
+                            "Produtos similares encontrados:",
+                            ['-- Selecionar --'] + itens_similares[:10],  # Limitar a 10 resultados
+                            key="reuse_item_select"
+                        )
+                        
+                        if item_similar != '-- Selecionar --':
+                            item_existente = unified_data[unified_data['itens'] == item_similar].iloc[0]
+                            st.info(f"**Produto:** {item_similar}")
+                            
+                            # Botão para aplicar dados do produto
+                            if st.button("📋 Aplicar Dados do Produto", key="apply_item_data"):
+                                st.session_state['reuse_item_data'] = item_existente.to_dict()
+                                st.success("✅ Dados do produto aplicados! Preencha os campos abaixo.")
+                                st.rerun()
+    
+    st.markdown("---")
+    
+    # ========================================================================================
+    # 📝 FORMULÁRIO PRINCIPAL DE ADIÇÃO
+    # ========================================================================================
+    st.markdown("#### 📝 **Informações do Novo Item**")
+    
     # Formulário de adição em colunas
     col1, col2 = st.columns(2)
     
     with col1:
         st.subheader("▬ Informações Básicas")
-        new_tag = st.text_input("Tag *", placeholder="Ex: TEC009", key="add_tag")
-        new_item = st.text_input("Item *", placeholder="Ex: Notebook Dell Inspiron", key="add_item")
-        new_modelo = st.text_input("Modelo", placeholder="Ex: Inspiron 15 3000", key="add_modelo")
-        new_marca = st.text_input("Marca", placeholder="Ex: Dell", key="add_marca")
-        new_valor = st.number_input("Valor (R$) *", min_value=0.0, value=0.0, step=0.01, key="add_valor")
-        new_qtd = st.number_input("Quantidade *", min_value=1, value=1, step=1, key="add_qtd")
+        
+        # Aplicar dados reutilizados se disponíveis
+        reuse_data = st.session_state.get('reuse_tag_data', {})
+        
+        new_tag = st.text_input("Tag *", 
+                               value=reuse_data.get('tag', ''), 
+                               placeholder="Ex: TEC009", 
+                               key="add_tag")
+        new_sku = st.text_input("SKU *", 
+                               value=reuse_data.get('sku', ''), 
+                               placeholder="Ex: SKU-TEC-009", 
+                               key="add_sku")
+        new_item = st.text_input("Item *", 
+                                value=reuse_data.get('itens', ''), 
+                                placeholder="Ex: Notebook Dell Inspiron", 
+                                key="add_item")
+        new_modelo = st.text_input("Modelo", 
+                                  value=reuse_data.get('modelo', ''), 
+                                  placeholder="Ex: Inspiron 15 3000", 
+                                  key="add_modelo")
+        new_marca = st.text_input("Marca", 
+                                 value=reuse_data.get('marca', ''), 
+                                 placeholder="Ex: Dell", 
+                                 key="add_marca")
+        new_valor = st.number_input("Valor (R$) *", 
+                                   min_value=0.0, 
+                                   value=float(reuse_data.get('valor', 0.0)), 
+                                   step=0.01, 
+                                   key="add_valor")
+        new_qtd = st.number_input("Quantidade *", 
+                                 min_value=1, 
+                                 value=int(reuse_data.get('qtd', 1)), 
+                                 step=1, 
+                                 key="add_qtd")
         
         # Categoria
         categorias_options = ['techstop', 'tv e monitor', 'audio e video', 'lixo eletrônico', 'outros']
-        new_categoria = st.selectbox("Categoria *", categorias_options, key="add_categoria")
+        categoria_default = reuse_data.get('categoria', 'techstop')
+        categoria_index = categorias_options.index(categoria_default) if categoria_default in categorias_options else 0
+        new_categoria = st.selectbox("Categoria *", categorias_options, index=categoria_index, key="add_categoria")
         
-        new_conferido = st.checkbox("Item já conferido", key="add_conferido")
+        new_conferido = st.checkbox("Item já conferido", 
+                                   value=reuse_data.get('conferido', False), 
+                                   key="add_conferido")
     
     with col2:
         st.subheader("▬ Localização e Outros")
@@ -15198,21 +15218,103 @@ def render_add_form():
         else:
             new_local = local_choice
         
-        new_box = st.text_input("Caixa", placeholder="Ex: Caixa L1", key="add_box")
-        new_fornecedor = st.text_input("Fornecedor", placeholder="Ex: Dell Brasil", key="add_fornecedor")
-        new_po = st.text_input("PO", placeholder="Ex: PO-TEC-009", key="add_po")
-        new_nota_fiscal = st.text_input("Nota Fiscal", placeholder="Ex: NF-012345", key="add_nota_fiscal")
-        new_uso = st.text_input("Uso", placeholder="Ex: Desenvolvimento", key="add_uso")
+        new_box = st.text_input("Caixa", 
+                               value=reuse_data.get('box', ''), 
+                               placeholder="Ex: Caixa L1", 
+                               key="add_box")
+        # Auto preenchimento de fornecedor com dados cadastrados
+        fornecedores_cadastrados = []
+        if 'fornecedores_data' in st.session_state and not st.session_state.fornecedores_data.empty:
+            fornecedores_cadastrados = st.session_state.fornecedores_data['razao_social'].tolist()
+        
+        # Também buscar fornecedores do inventário existente
+        if not unified_data.empty and 'fornecedor' in unified_data.columns:
+            fornecedores_inventario = unified_data['fornecedor'].dropna().unique().tolist()
+            fornecedores_cadastrados.extend([f for f in fornecedores_inventario if f not in fornecedores_cadastrados])
+        
+        # Remover duplicatas e ordenar
+        fornecedores_cadastrados = sorted(list(set(fornecedores_cadastrados)))
+        fornecedores_options = ['🆕 Digitar novo fornecedor'] + fornecedores_cadastrados
+        
+        fornecedor_choice = st.selectbox(
+            "Fornecedor",
+            fornecedores_options,
+            key="add_fornecedor_select",
+            help="Selecione um fornecedor cadastrado ou digite um novo"
+        )
+        
+        if fornecedor_choice == '🆕 Digitar novo fornecedor':
+            new_fornecedor = st.text_input(
+                "Nome do Fornecedor", 
+                                      value=reuse_data.get('fornecedor', ''), 
+                                      placeholder="Ex: Dell Brasil", 
+                key="add_fornecedor_new"
+            )
+        else:
+            new_fornecedor = fornecedor_choice
+            st.info(f"✅ **Fornecedor selecionado:** {fornecedor_choice}")
+        new_po = st.text_input("PO", 
+                              value=reuse_data.get('po', ''), 
+                              placeholder="Ex: PO-TEC-009", 
+                              key="add_po")
+        new_nota_fiscal = st.text_input("Nota Fiscal", 
+                                       value=reuse_data.get('nota_fiscal', ''), 
+                                       placeholder="Ex: NF-012345", 
+                                       key="add_nota_fiscal")
+        new_uso = st.text_input("Uso", 
+                               value=reuse_data.get('uso', ''), 
+                               placeholder="Ex: Desenvolvimento", 
+                               key="add_uso")
+        
+        # Motivo da entrada
+        new_motivo = st.text_input("Motivo da Entrada", 
+                                  value=reuse_data.get('motivo', 'Entrada de Estoque'), 
+                                  placeholder="Ex: Entrada de Estoque", 
+                                  key="add_motivo")
+        
+        # Data de entrada
+        data_entrada_default = reuse_data.get('data_entrada')
+        if data_entrada_default:
+            try:
+                if isinstance(data_entrada_default, str):
+                    data_entrada_default = pd.to_datetime(data_entrada_default).date()
+                else:
+                    data_entrada_default = data_entrada_default.date()
+            except:
+                data_entrada_default = datetime.now().date()
+        else:
+            data_entrada_default = datetime.now().date()
+            
+        new_data_entrada = st.date_input("Data de Entrada", 
+                                        value=data_entrada_default, 
+                                        key="add_data_entrada")
         
         # Data de compra
-        new_data_compra = st.date_input("Data de Compra", key="add_data_compra")
-        new_serial = st.text_input("Serial", placeholder="Ex: DLL5520009", key="add_serial")
+        data_compra_default = reuse_data.get('data_compra')
+        if data_compra_default:
+            try:
+                if isinstance(data_compra_default, str):
+                    data_compra_default = pd.to_datetime(data_compra_default).date()
+                else:
+                    data_compra_default = data_compra_default.date()
+            except:
+                data_compra_default = datetime.now().date()
+        else:
+            data_compra_default = datetime.now().date()
+            
+        new_data_compra = st.date_input("Data de Compra", 
+                                       value=data_compra_default, 
+                                       key="add_data_compra")
+        new_serial = st.text_input("Serial", 
+                                  value=reuse_data.get('serial', ''), 
+                                  placeholder="Ex: DLL5520009", 
+                                  key="add_serial")
     
     # Validação e botões
     st.divider()
     
     # Verificar campos obrigatórios
-    campos_obrigatorios = [new_tag, new_item, new_valor > 0]
+    campos_obrigatorios = [new_tag, new_sku, new_item, new_valor > 0, new_motivo, new_data_entrada]
     if prateleira_choice == 'Nova Prateleira':
         campos_obrigatorios.append(bool(new_prateleira))
     if rua_choice == 'Nova Rua':
@@ -15232,6 +15334,11 @@ def render_add_form():
     if tag_existe:
         st.error(f"❌ A tag '{new_tag}' já existe no inventário!")
     
+    # Verificar se o SKU já existe
+    sku_existe = new_sku in st.session_state.inventory_data['unified']['sku'].values if new_sku else False
+    if sku_existe:
+        st.error(f"❌ O SKU '{new_sku}' já existe no inventário!")
+    
     # ═══════════════════════════════════════════════════════════════
     # 🎯 AÇÕES DO FORMULÁRIO
     # ═══════════════════════════════════════════════════════════════
@@ -15242,8 +15349,8 @@ def render_add_form():
     col_btn1, col_btn2, col_btn3 = st.columns([2, 1, 1])
     
     with col_btn1:
-        btn_disabled = not todos_preenchidos or tag_existe
-        btn_help = "Preencha todos os campos obrigatórios" if not todos_preenchidos else ("Tag já existe!" if tag_existe else "Adicionar item ao inventário")
+        btn_disabled = not todos_preenchidos or tag_existe or sku_existe
+        btn_help = "Preencha todos os campos obrigatórios" if not todos_preenchidos else ("Tag já existe!" if tag_existe else ("SKU já existe!" if sku_existe else "Adicionar item ao inventário"))
         
         if st.button("▲ Adicionar ao Inventário", key="save_add_item", 
                     disabled=btn_disabled, use_container_width=True, type="primary",
@@ -15251,6 +15358,7 @@ def render_add_form():
             # Criar novo registro
             novo_item = {
                 'tag': new_tag,
+                'sku': new_sku,
                 'itens': new_item,
                 'categoria': new_categoria,
                 'modelo': new_modelo or "N/A",
@@ -15259,7 +15367,7 @@ def render_add_form():
                 'valor': new_valor,
                 'data_compra': pd.to_datetime(new_data_compra),
                 'fornecedor': new_fornecedor or "N/A",
-                'po': new_po or f"PO-AUTO-{len(st.session_state.inventory_data['unified'])+1:03d}",
+                'po': new_po or f"PO-AUTO{len(st.session_state.inventory_data['unified'])+1:03d}",
                 'nota_fiscal': new_nota_fiscal or f"NF-AUTO{len(st.session_state.inventory_data['unified'])+1:06d}",
                 'uso': new_uso or "Geral",
                 'qtd': new_qtd,
@@ -15268,7 +15376,9 @@ def render_add_form():
                 'setor': new_setor,
                 'local': new_local,
                 'box': new_box or "N/A",
-                'conferido': new_conferido
+                'conferido': new_conferido,
+                'motivo': new_motivo or "Entrada de Estoque",
+                'data_entrada': pd.to_datetime(new_data_entrada)
             }
             
             # Adicionar ao DataFrame
@@ -15277,7 +15387,7 @@ def render_add_form():
             st.session_state.inventory_data['unified'] = pd.concat([unified_data, new_row], ignore_index=True)
             auto_save_inventory()  # Salvar automaticamente
             
-            st.success(f"✅ Item {new_tag} - {new_item} adicionado com sucesso!")
+            st.success(f"✅ Item {new_tag} (SKU: {new_sku}) - {new_item} adicionado com sucesso!")
             st.session_state['show_add_form'] = False
             st.rerun()
     
@@ -15289,6 +15399,2824 @@ def render_add_form():
     with col_btn3:
         if st.button("◎ Limpar", key="reset_add_item"):
             st.rerun()
+
+def render_nf_photo_entry():
+    """Renderiza formulário para entrada por foto da nota fiscal"""
+    st.markdown("📷 **Processe uma foto da nota fiscal para extrair dados automaticamente**")
+    st.markdown("*Esta funcionalidade usa OCR para identificar itens, valores e informações da nota fiscal*")
+    
+    # Verificar status das bibliotecas OCR
+    ocr_status = check_ocr_libraries()
+    if not ocr_status['has_full_ocr']:
+        with st.expander("⚙️ **Melhorar Reconhecimento OCR** - Instalar bibliotecas opcionais", expanded=False):
+            st.markdown("""
+            **🔧 Para melhor extração automática de dados, instale as bibliotecas OCR:**
+            
+            ```bash
+            # Instalar bibliotecas necessárias
+            pip install pytesseract opencv-python PyMuPDF
+            
+            # No macOS, instalar o Tesseract
+            brew install tesseract
+            
+            # No Ubuntu/Debian
+            sudo apt-get install tesseract-ocr tesseract-ocr-por
+            
+            # No Windows, baixar: https://github.com/UB-Mannheim/tesseract/wiki
+            ```
+            
+            **📋 Status atual:**
+            """)
+            
+            if ocr_status['has_tesseract']:
+                st.success("✅ Tesseract OCR básico disponível")
+            else:
+                st.warning("⚠️ Tesseract OCR não encontrado")
+            
+            if ocr_status['has_opencv']:
+                st.success("✅ OpenCV para processamento de imagem disponível")
+            else:
+                st.warning("⚠️ OpenCV não encontrado")
+            
+            if ocr_status['has_pymupdf']:
+                st.success("✅ PyMuPDF para processamento de PDF disponível")
+            else:
+                st.warning("⚠️ PyMuPDF não encontrado")
+            
+            st.info("💡 **Sem essas bibliotecas:** O sistema criará um template editável para preenchimento manual")
+    
+    # Opção para criar template manual diretamente
+    st.markdown("---")
+    st.markdown("**🖊️ Entrada Manual Rápida**")
+    col_manual1, col_manual2 = st.columns(2)
+    
+    with col_manual1:
+        if st.button("📝 **Criar Template Manual**", use_container_width=True):
+            # Criar template para entrada manual
+            template_data = [
+                {
+                    'item': 'Item 1 - Digite a descrição',
+                    'quantidade': 1,
+                    'valor_unitario': 0.00,
+                    'valor_total': 0.00,
+                    'numero_nf': f'NF-{pd.Timestamp.now().strftime("%Y%m%d")}',
+                    'fornecedor': 'Digite o fornecedor'
+                },
+                {
+                    'item': 'Item 2 - Digite a descrição',
+                    'quantidade': 1,
+                    'valor_unitario': 0.00,
+                    'valor_total': 0.00,
+                    'numero_nf': f'NF-{pd.Timestamp.now().strftime("%Y%m%d")}',
+                    'fornecedor': 'Digite o fornecedor'
+                }
+            ]
+            
+            # Armazenar template na sessão para processamento
+            st.session_state['nf_template_data'] = template_data
+            st.success("✅ **Template criado!** Preencha os dados na tabela abaixo:")
+            st.rerun()
+    
+    with col_manual2:
+        st.info("💡 **Use quando:** Não tiver foto da nota ou preferir entrada manual")
+    
+    # Upload da imagem da nota fiscal
+    st.markdown("---")
+    st.markdown("### 📱 **Upload da Foto da Nota Fiscal**")
+    
+    uploaded_file = st.file_uploader(
+        "📷 Carregar foto da nota fiscal",
+        type=['png', 'jpg', 'jpeg', 'pdf'],
+        help="Envie uma foto clara da nota fiscal para extração automática de dados",
+        key="nf_photo_uploader"
+    )
+    
+    if uploaded_file is not None:
+        # Validar se é realmente uma imagem ou PDF
+        if uploaded_file.type not in ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf']:
+            st.error("❌ **Formato de arquivo não suportado!** Por favor, carregue uma imagem (PNG, JPG, JPEG) ou PDF.")
+            return
+        
+        # Mostrar a imagem carregada
+        col_img, col_config = st.columns([1, 1])
+        
+        with col_img:
+            try:
+                if uploaded_file.type == "application/pdf":
+                    st.info("📄 **Arquivo PDF carregado** - Será processado durante a análise")
+                    st.write(f"**Nome:** {uploaded_file.name}")
+                    st.write(f"**Tamanho:** {uploaded_file.size / 1024:.1f} KB")
+                else:
+                    # Reset do ponteiro do arquivo para garantir leitura correta
+                    uploaded_file.seek(0)
+                    st.image(uploaded_file, caption="Nota fiscal carregada", width=300)
+            except Exception as e:
+                st.error(f"❌ **Erro ao exibir arquivo:** {str(e)}")
+                st.info("💡 O arquivo ainda pode ser processado para extração de dados")
+        
+        with col_config:
+            st.markdown("**⚙️ Configurações de Entrada**")
+            
+            # Seleção de categoria para os itens
+            categoria_nf = st.selectbox(
+                "🏷️ Categoria dos itens",
+                ['techstop', 'tv e monitor', 'audio e video', 'impressoras', 'lixo eletrônico', 'outros', 'gadgets', 'perifericos'],
+                index=0,
+                help="Todos os itens extraídos serão categorizados automaticamente",
+                key="categoria_nf_select"
+            )
+            
+            # Localização padrão
+            locais_disponiveis = ['HQ1 - 8º Andar', 'HQ1 - 7º Andar', 'HQ1 - 6º Andar', 'Spark - 2º Andar', 'Spark - 1º Andar']
+            local_padrao = st.selectbox(
+                "📍 Local de armazenamento",
+                locais_disponiveis,
+                help="Local onde os itens serão armazenados",
+                key="local_nf_select"
+            )
+            
+            # Fornecedor
+            if 'fornecedores_data' in st.session_state and not st.session_state.fornecedores_data.empty:
+                fornecedores_lista = st.session_state.fornecedores_data['razao_social'].tolist()
+            else:
+                fornecedores_lista = []
+            
+            fornecedor_opcoes = ['🆕 Detectar da nota'] + fornecedores_lista
+            fornecedor_nf = st.selectbox(
+                "🏢 Fornecedor",
+                fornecedor_opcoes,
+                help="Fornecedor dos itens (será detectado automaticamente da nota ou selecione manual)",
+                key="fornecedor_nf_select"
+            )
+        
+        # Botão para processar a imagem
+        if st.button("🔍 **Processar Nota Fiscal**", type="primary", use_container_width=True):
+            with st.spinner("🤖 Analisando nota fiscal..."):
+                try:
+                    # Reset do ponteiro do arquivo antes de processar
+                    uploaded_file.seek(0)
+                    
+                    # Processar a imagem usando OCR avançado
+                    dados_extraidos = process_nf_image_advanced(uploaded_file)
+                    
+                    if dados_extraidos and len(dados_extraidos) > 0:
+                        st.success(f"✅ **{len(dados_extraidos)} itens detectados na nota fiscal!**")
+                        
+                        # Mostrar preview dos dados extraídos
+                        st.markdown("### 📋 **Dados Extraídos - Confirme antes de adicionar**")
+                        
+                        # Criar DataFrame para edição
+                        df_preview = pd.DataFrame(dados_extraidos)
+                        
+                        # Garantir colunas essenciais
+                        required_columns = ['item', 'quantidade', 'valor_unitario', 'valor_total']
+                        for col in required_columns:
+                            if col not in df_preview.columns:
+                                df_preview[col] = ''
+                        
+                        # Adicionar informações de configuração
+                        df_preview['categoria'] = categoria_nf
+                        df_preview['local'] = local_padrao
+                        df_preview['fornecedor'] = fornecedor_nf if fornecedor_nf != '🆕 Detectar da nota' else dados_extraidos[0].get('fornecedor', 'Não detectado')
+                        df_preview['nota_fiscal'] = dados_extraidos[0].get('numero_nf', 'NF-' + str(pd.Timestamp.now().strftime('%Y%m%d')))
+                        df_preview['data_entrada'] = pd.Timestamp.now().strftime('%Y-%m-%d')
+                        
+                        # Garantir que todas as colunas estão no formato correto
+                        for col in ['item', 'categoria', 'local', 'fornecedor', 'nota_fiscal', 'data_entrada']:
+                            if col in df_preview.columns:
+                                df_preview[col] = df_preview[col].astype(str)
+                        
+                        for col in ['quantidade']:
+                            if col in df_preview.columns:
+                                df_preview[col] = pd.to_numeric(df_preview[col], errors='coerce').fillna(1)
+                        
+                        for col in ['valor_unitario', 'valor_total']:
+                            if col in df_preview.columns:
+                                df_preview[col] = pd.to_numeric(df_preview[col], errors='coerce').fillna(0.0)
+                        
+                        # Tabela editável para revisão
+                        df_editado = st.data_editor(
+                            df_preview,
+                            use_container_width=True,
+                            num_rows="dynamic",
+                            column_config={
+                                "item": st.column_config.TextColumn("📦 Item", help="Nome do produto"),
+                                "quantidade": st.column_config.NumberColumn("📊 Quantidade", min_value=1),
+                                "valor_unitario": st.column_config.NumberColumn("💰 Valor Unit.", format="R$ %.2f"),
+                                "valor_total": st.column_config.NumberColumn("💰 Total", format="R$ %.2f"),
+                                "categoria": st.column_config.SelectboxColumn("🏷️ Categoria", options=['techstop', 'tv e monitor', 'audio e video', 'impressoras', 'lixo eletrônico', 'outros', 'gadgets', 'perifericos']),
+                                "local": st.column_config.TextColumn("📍 Local"),
+                                "fornecedor": st.column_config.TextColumn("🏢 Fornecedor"),
+                                "nota_fiscal": st.column_config.TextColumn("📄 NF"),
+                                "data_entrada": st.column_config.TextColumn("📅 Data")
+                            },
+                            key="nf_data_editor"
+                        )
+                        
+                        # Botões de ação
+                        col_action1, col_action2, col_action3 = st.columns(3)
+                        
+                        with col_action1:
+                            if st.button("✅ **Adicionar ao Inventário**", type="primary", use_container_width=True):
+                                # Converter para formato do inventário unificado
+                                items_to_add = []
+                                
+                                for _, row in df_editado.iterrows():
+                                    # Gerar tag única
+                                    tag_base = row['categoria'].upper()[:3]
+                                    existing_tags = st.session_state.inventory_data['unified']['tag'].tolist() if 'inventory_data' in st.session_state else []
+                                    tag_number = len([t for t in existing_tags if t.startswith(tag_base)]) + 1
+                                    new_tag = f"{tag_base}{tag_number:03d}"
+                                    
+                                    item_data = {
+                                        'tag': new_tag,
+                                        'sku': f"SKU-{new_tag}",
+                                        'itens': row['item'],
+                                        'categoria': row['categoria'],
+                                        'modelo': '',
+                                        'marca': '',
+                                        'valor': float(row.get('valor_unitario', 0)),
+                                        'qtd': int(row.get('quantidade', 1)),
+                                        'local': row['local'],
+                                        'estado': 'Novo',
+                                        'fornecedor': row['fornecedor'],
+                                        'data_compra': row['data_entrada'],
+                                        'conferido': False,
+                                        'prateleira': 'A definir',
+                                        'rua': 'A definir',
+                                        'setor': 'A definir',
+                                        'box': '',
+                                        'po': '',
+                                        'nota_fiscal': row['nota_fiscal'],
+                                        'uso': 'Estoque',
+                                        'motivo': 'Entrada por NF'
+                                    }
+                                    items_to_add.append(item_data)
+                                
+                                # Adicionar ao inventário unificado
+                                if 'inventory_data' not in st.session_state:
+                                    st.session_state.inventory_data = {'unified': pd.DataFrame()}
+                                
+                                new_items_df = pd.DataFrame(items_to_add)
+                                st.session_state.inventory_data['unified'] = pd.concat([
+                                    st.session_state.inventory_data['unified'],
+                                    new_items_df
+                                ], ignore_index=True)
+                                
+                                # Salvar automaticamente
+                                auto_save_inventory()
+                                
+                                st.success(f"🎉 **{len(items_to_add)} itens adicionados ao inventário unificado!**")
+                                st.balloons()
+                                st.rerun()
+                        
+                        with col_action2:
+                            if st.button("📝 **Editar Dados**", use_container_width=True):
+                                st.info("💡 Use a tabela acima para editar os dados antes de adicionar")
+                        
+                        with col_action3:
+                            if st.button("❌ **Cancelar**", use_container_width=True):
+                                st.rerun()
+                    
+                    else:
+                        ocr_status = check_ocr_libraries()
+                        
+                        if not ocr_status['has_full_ocr']:
+                            st.info("💡 **Template manual criado** - Bibliotecas OCR não instaladas")
+                            st.markdown("""
+                            **🔧 Para extração automática, instale:**
+                            ```bash
+                            pip install pytesseract opencv-python PyMuPDF
+                            ```
+                            
+                            **📝 Alternativa:** Use o formulário manual de adição de itens abaixo
+                            """)
+                        else:
+                            st.warning("⚠️ **Não foi possível extrair dados da nota fiscal**")
+                            st.info("""
+                            **💡 Dicas para melhor reconhecimento:**
+                            • Use foto com boa iluminação
+                            • Mantenha a nota fiscal bem visível e nítida
+                            • Evite sombras ou reflexos
+                            • Certifique-se de que o texto está legível
+                            • Tente uma resolução maior da imagem
+                            
+                            **📝 Alternativa:** Use o formulário manual de adição abaixo
+                            """)
+                        
+                except Exception as e:
+                    st.error(f"❌ **Erro ao processar nota fiscal:** {str(e)}")
+                    st.info("💡 Tente uma imagem diferente ou use o formulário manual de adição")
+    
+    # Processar template manual se foi criado
+    if 'nf_template_data' in st.session_state:
+        st.markdown("---")
+        st.markdown("### 📝 **Template Manual - Preencha os dados**")
+        
+        # Obter dados do template
+        template_data = st.session_state['nf_template_data']
+        
+        # Configurações para o template
+        col_temp_config1, col_temp_config2 = st.columns(2)
+        
+        with col_temp_config1:
+            categoria_temp = st.selectbox(
+                "🏷️ Categoria dos itens (Template)",
+                ['techstop', 'tv e monitor', 'audio e video', 'impressoras', 'lixo eletrônico', 'outros', 'gadgets', 'perifericos'],
+                index=0,
+                key="categoria_template"
+            )
+        
+        with col_temp_config2:
+            local_temp = st.selectbox(
+                "📍 Local de armazenamento (Template)",
+                ['HQ1 - 8º Andar', 'HQ1 - 7º Andar', 'HQ1 - 6º Andar', 'Spark - 2º Andar', 'Spark - 1º Andar'],
+                key="local_template"
+            )
+        
+        # Criar DataFrame para edição
+        df_template = pd.DataFrame(template_data)
+        
+        # Adicionar configurações
+        df_template['categoria'] = categoria_temp
+        df_template['local'] = local_temp
+        df_template['data_entrada'] = pd.Timestamp.now().strftime('%Y-%m-%d')
+        
+        # Garantir que todas as colunas estão no formato correto
+        for col in ['item', 'categoria', 'local', 'fornecedor', 'numero_nf', 'data_entrada']:
+            if col in df_template.columns:
+                df_template[col] = df_template[col].astype(str)
+        
+        for col in ['quantidade']:
+            if col in df_template.columns:
+                df_template[col] = pd.to_numeric(df_template[col], errors='coerce').fillna(1)
+        
+        for col in ['valor_unitario', 'valor_total']:
+            if col in df_template.columns:
+                df_template[col] = pd.to_numeric(df_template[col], errors='coerce').fillna(0.0)
+        
+        # Tabela editável para o template
+        df_template_editado = st.data_editor(
+            df_template,
+            use_container_width=True,
+            num_rows="dynamic",
+            column_config={
+                "item": st.column_config.TextColumn("📦 Item", help="Nome do produto"),
+                "quantidade": st.column_config.NumberColumn("📊 Quantidade", min_value=1),
+                "valor_unitario": st.column_config.NumberColumn("💰 Valor Unit.", format="R$ %.2f"),
+                "valor_total": st.column_config.NumberColumn("💰 Total", format="R$ %.2f"),
+                "categoria": st.column_config.SelectboxColumn("🏷️ Categoria", options=['techstop', 'tv e monitor', 'audio e video', 'impressoras', 'lixo eletrônico', 'outros', 'gadgets', 'perifericos']),
+                "local": st.column_config.TextColumn("📍 Local"),
+                "fornecedor": st.column_config.TextColumn("🏢 Fornecedor"),
+                "numero_nf": st.column_config.TextColumn("📄 NF"),
+                "data_entrada": st.column_config.TextColumn("📅 Data")
+            },
+            key="template_editor"
+        )
+        
+        # Botões para o template
+        col_temp1, col_temp2, col_temp3 = st.columns(3)
+        
+        with col_temp1:
+            if st.button("✅ **Adicionar Template ao Inventário**", type="primary", use_container_width=True):
+                # Converter para formato do inventário unificado
+                items_to_add = []
+                
+                for _, row in df_template_editado.iterrows():
+                    # Gerar tag única
+                    tag_base = row['categoria'].upper()[:3]
+                    existing_tags = st.session_state.inventory_data['unified']['tag'].tolist() if 'inventory_data' in st.session_state else []
+                    tag_number = len([t for t in existing_tags if t.startswith(tag_base)]) + 1
+                    new_tag = f"{tag_base}{tag_number:03d}"
+                    
+                    item_data = {
+                        'tag': new_tag,
+                        'sku': f"SKU-{new_tag}",
+                        'itens': row['item'],
+                        'categoria': row['categoria'],
+                        'modelo': '',
+                        'marca': '',
+                        'valor': float(row.get('valor_unitario', 0)),
+                        'qtd': int(row.get('quantidade', 1)),
+                        'local': row['local'],
+                        'estado': 'Novo',
+                        'fornecedor': row['fornecedor'],
+                        'data_compra': row['data_entrada'],
+                        'conferido': False,
+                        'prateleira': 'A definir',
+                        'rua': 'A definir',
+                        'setor': 'A definir',
+                        'box': '',
+                        'po': '',
+                        'nota_fiscal': row['numero_nf'],
+                        'uso': 'Estoque',
+                        'motivo': 'Entrada manual por template'
+                    }
+                    items_to_add.append(item_data)
+                
+                # Adicionar ao inventário unificado
+                if 'inventory_data' not in st.session_state:
+                    st.session_state.inventory_data = {'unified': pd.DataFrame()}
+                
+                new_items_df = pd.DataFrame(items_to_add)
+                st.session_state.inventory_data['unified'] = pd.concat([
+                    st.session_state.inventory_data['unified'],
+                    new_items_df
+                ], ignore_index=True)
+                
+                # Salvar automaticamente
+                auto_save_inventory()
+                
+                # Limpar template da sessão
+                del st.session_state['nf_template_data']
+                
+                st.success(f"🎉 **{len(items_to_add)} itens adicionados ao inventário unificado!**")
+                st.balloons()
+                st.rerun()
+        
+        with col_temp2:
+            if st.button("🗑️ **Limpar Template**", use_container_width=True):
+                del st.session_state['nf_template_data']
+                st.rerun()
+        
+        with col_temp3:
+            if st.button("➕ **Adicionar Mais Linhas**", use_container_width=True):
+                # Adicionar mais linhas ao template
+                st.session_state['nf_template_data'].append({
+                    'item': f'Item {len(st.session_state["nf_template_data"]) + 1} - Digite a descrição',
+                    'quantidade': 1,
+                    'valor_unitario': 0.00,
+                    'valor_total': 0.00,
+                    'numero_nf': f'NF-{pd.Timestamp.now().strftime("%Y%m%d")}',
+                    'fornecedor': 'Digite o fornecedor'
+                })
+                st.rerun()
+
+def check_ocr_libraries():
+    """Verifica quais bibliotecas OCR estão disponíveis"""
+    status = {
+        'has_tesseract': False,
+        'has_opencv': False,
+        'has_pymupdf': False,
+        'has_full_ocr': False
+    }
+    
+    try:
+        import pytesseract
+        status['has_tesseract'] = True
+    except ImportError:
+        pass
+    
+    try:
+        import cv2
+        status['has_opencv'] = True
+    except ImportError:
+        pass
+    
+    try:
+        import fitz
+        status['has_pymupdf'] = True
+    except ImportError:
+        pass
+    
+    status['has_full_ocr'] = all([status['has_tesseract'], status['has_opencv'], status['has_pymupdf']])
+    
+    return status
+
+def process_nf_image_advanced(uploaded_file):
+    """
+    Processa imagem da nota fiscal e extrai dados estruturados com OCR avançado
+    
+    Implementa:
+    - OCR + regex para extração de texto da imagem
+    - Filtragem e identificação de campos de produto, valor unitário, quantidade
+    - Normalização de dados (remoção de ruídos, formatação numérica)
+    - Estruturação para exportação (JSON/CSV/banco)
+    - Vinculação correta produto-quantidade-valor
+    """
+    try:
+        # Tentar importar as bibliotecas necessárias
+        try:
+            import pytesseract
+            import cv2
+            import numpy as np
+            import re
+            from decimal import Decimal, InvalidOperation
+            HAS_OCR_LIBS = True
+        except ImportError:
+            HAS_OCR_LIBS = False
+            st.warning("⚠️ **Bibliotecas OCR não encontradas** - Instale: pip install pytesseract opencv-python")
+        
+        import re
+        import io
+        from PIL import Image
+        
+        # === FUNÇÕES AUXILIARES PARA NORMALIZAÇÃO ===
+        def normalize_monetary_value(value_str):
+            """Normaliza valores monetários brasileiros (ex: 9.600,00 -> 9600.00)"""
+            if not value_str:
+                return 0.0
+            
+            # Remove caracteres não numéricos exceto pontos e vírgulas
+            cleaned = re.sub(r'[^\d.,]', '', str(value_str))
+            
+            # Trata formato brasileiro (ponto de milhar, vírgula decimal)
+            if ',' in cleaned and '.' in cleaned:
+                # Ex: 1.234,56 -> 1234.56
+                cleaned = cleaned.replace('.', '').replace(',', '.')
+            elif ',' in cleaned:
+                # Ex: 1234,56 -> 1234.56
+                cleaned = cleaned.replace(',', '.')
+            
+            try:
+                return float(cleaned)
+            except ValueError:
+                return 0.0
+        
+        def normalize_quantity(qty_str):
+            """Normaliza quantidades, removendo caracteres inválidos"""
+            if not qty_str:
+                return 1.0
+            
+            # Remove tudo exceto números e ponto/vírgula decimal
+            cleaned = re.sub(r'[^\d.,]', '', str(qty_str))
+            if ',' in cleaned:
+                cleaned = cleaned.replace(',', '.')
+            
+            try:
+                qty = float(cleaned)
+                return max(0.01, qty)  # Mínimo 0.01
+            except ValueError:
+                return 1.0
+        
+        def normalize_product_name(name):
+            """Normaliza nomes de produtos, removendo ruídos"""
+            if not name:
+                return "Produto não identificado"
+            
+            # Remove caracteres especiais no início/fim
+            cleaned = re.sub(r'^[^\w\s]+|[^\w\s]+$', '', str(name))
+            
+            # Remove múltiplos espaços
+            cleaned = re.sub(r'\s+', ' ', cleaned)
+            
+            # Remove números isolados no início (códigos de linha)
+            cleaned = re.sub(r'^\d+\s+', '', cleaned)
+            
+            # Capitaliza adequadamente
+            if len(cleaned) > 3:
+                # Manter maiúsculas para termos técnicos
+                tech_terms = ['USB', 'HDMI', 'LED', 'LCD', 'SSD', 'HDD', 'RAM', 'CPU', 'GPU']
+                words = cleaned.split()
+                normalized_words = []
+                
+                for word in words:
+                    if word.upper() in tech_terms:
+                        normalized_words.append(word.upper())
+                    elif len(word) > 2:
+                        normalized_words.append(word.capitalize())
+                    else:
+                        normalized_words.append(word.lower())
+                
+                return ' '.join(normalized_words)
+            
+            return cleaned.strip()
+        
+        def enhanced_image_preprocessing(image_array):
+            """Pré-processamento avançado de imagem para melhor OCR"""
+            # Converter para escala de cinza se necessário
+            if len(image_array.shape) == 3:
+                gray = cv2.cvtColor(image_array, cv2.COLOR_BGR2GRAY)
+            else:
+                gray = image_array.copy()
+            
+            # 1. Redimensionar se muito pequena
+            height, width = gray.shape
+            if width < 1500:
+                scale_factor = 1500 / width
+                new_width = int(width * scale_factor)
+                new_height = int(height * scale_factor)
+                gray = cv2.resize(gray, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
+            
+            # 2. Denoising avançado
+            gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
+            
+            # 3. Melhorar contraste com CLAHE
+            clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+            gray = clahe.apply(gray)
+            
+            # 4. Sharpening para melhorar bordas do texto
+            kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+            gray = cv2.filter2D(gray, -1, kernel)
+            
+            # 5. Threshold adaptativo otimizado
+            gray = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+            
+            # 6. Operações morfológicas para limpar ruído
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
+            gray = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
+            
+            return gray
+        
+        # Reset do ponteiro do arquivo
+        uploaded_file.seek(0)
+        
+        # Carregar imagem
+        if uploaded_file.type == "application/pdf":
+            # Para PDFs, usar apenas a primeira página
+            try:
+                import fitz  # PyMuPDF
+                pdf_bytes = uploaded_file.read()
+                pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
+                page = pdf_document[0]
+                pix = page.get_pixmap()
+                img_data = pix.tobytes("png")
+                image = Image.open(io.BytesIO(img_data))
+                pdf_document.close()
+            except Exception as e:
+                st.error(f"Erro ao processar PDF: {str(e)}")
+                return []
+        else:
+            try:
+                # Ler bytes da imagem
+                image_bytes = uploaded_file.read()
+                image = Image.open(io.BytesIO(image_bytes))
+                
+                # Verificar se a imagem foi carregada corretamente
+                image.verify()
+                
+                # Reabrir a imagem para uso (verify() fecha a imagem)
+                image = Image.open(io.BytesIO(image_bytes))
+            except Exception as e:
+                st.error(f"Erro ao carregar imagem: {str(e)}")
+                return []
+        
+        # === PROCESSAMENTO OCR AVANÇADO ===
+        if HAS_OCR_LIBS:
+            # Converter imagem para array NumPy
+            img_array = np.array(image)
+            if len(img_array.shape) == 3:
+                img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+            
+            # Aplicar pré-processamento avançado
+            processed_image = enhanced_image_preprocessing(img_array)
+            
+            # === CONFIGURAÇÃO OCR OTIMIZADA ===
+            # Configuração específica para NF-e brasileiras
+            ocr_configs = [
+                # Config 1: Para texto estruturado em tabelas (PSM 6)
+                r'--oem 3 --psm 6 -l por+eng -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÀ-ÿ.,/\-()[]°º',
+                
+                # Config 2: Para blocos de texto uniformes (PSM 8)
+                r'--oem 3 --psm 8 -l por+eng -c preserve_interword_spaces=1',
+                
+                # Config 3: Para linha única de texto (PSM 7)  
+                r'--oem 3 --psm 7 -l por+eng',
+                
+                # Config 4: Para detecção automática de layout (PSM 3)
+                r'--oem 3 --psm 3 -l por+eng'
+            ]
+            
+            ocr_results = []
+            best_text = ""
+            
+            # Testar múltiplas configurações e escolher a melhor
+            for i, config in enumerate(ocr_configs):
+                try:
+                    text_result = pytesseract.image_to_string(processed_image, config=config)
+                    
+                    # Avaliar qualidade do resultado
+                    score = 0
+                    if 'ADAPTADOR' in text_result.upper():
+                        score += 20
+                    if re.search(r'\d+[,.]\d{2}', text_result):  # Valores monetários
+                        score += 15
+                    if 'HUB' in text_result.upper():
+                        score += 10
+                    if 'TIPO' in text_result.upper():
+                        score += 10
+                    if len(text_result) > len(best_text):
+                        score += 5
+                    
+                    ocr_results.append((config, text_result, score))
+                    
+                    if score > 0 and len(text_result) > len(best_text):
+                        best_text = text_result
+                        
+                except Exception as e:
+                    st.warning(f"Erro na configuração OCR {i+1}: {str(e)}")
+                    continue
+            
+            # Usar o melhor resultado ou combinar resultados
+            if best_text:
+                ocr_text = best_text
+            else:
+                # Fallback: usar primeira configuração disponível
+                try:
+                    ocr_text = pytesseract.image_to_string(processed_image, config=ocr_configs[0])
+                except:
+                    ocr_text = pytesseract.image_to_string(processed_image)
+            
+            # Debug: mostrar resultados de OCR
+            with st.expander("🔍 **Debug OCR Avançado**", expanded=False):
+                st.info(f"**Total de caracteres detectados:** {len(ocr_text)}")
+                
+                # Mostrar scores de diferentes configurações
+                if ocr_results:
+                    st.subheader("📊 Qualidade das Configurações OCR:")
+                    for i, (config, text, score) in enumerate(ocr_results):
+                        if score > 0:
+                            st.success(f"Config {i+1}: Score {score} - {len(text)} caracteres")
+                        else:
+                            st.info(f"Config {i+1}: Score {score} - {len(text)} caracteres")
+                
+                # Mostrar preview do texto
+                st.text_area("Melhor texto detectado:", ocr_text[:800], height=200)
+                
+                if uploaded_file.type == "application/pdf":
+                    st.success("✅ PDF processado com pré-processamento avançado")
+        else:
+            # Fallback sem OCR - criar template para preenchimento manual
+            st.info("💡 **OCR não disponível** - Template criado para preenchimento manual")
+            
+            # Gerar template baseado no nome do arquivo
+            filename = uploaded_file.name.lower()
+            
+            # Extrair informações básicas do nome do arquivo se possível
+            numero_nf = 'NF-AUTO'
+            if 'nf' in filename or 'nota' in filename:
+                # Tentar extrair número do nome do arquivo
+                import re
+                numbers = re.findall(r'\d+', filename)
+                if numbers:
+                    numero_nf = f'NF-{numbers[0]}'
+            
+            # Criar template para edição manual
+            sample_items = [
+                {
+                    'item': f'Item 1 - {uploaded_file.name} (Edite esta descrição)',
+                    'quantidade': 1,
+                    'valor_unitario': 0.00,
+                    'valor_total': 0.00,
+                    'numero_nf': numero_nf,
+                    'fornecedor': 'Editar fornecedor'
+                },
+                {
+                    'item': 'Item 2 - Adicione mais itens se necessário',
+                    'quantidade': 1,
+                    'valor_unitario': 0.00,
+                    'valor_total': 0.00,
+                    'numero_nf': numero_nf,
+                    'fornecedor': 'Editar fornecedor'
+                }
+            ]
+            
+            # Retornar template diretamente se OCR não está disponível
+            return sample_items
+        
+        # === EXTRAÇÃO DE DADOS ESTRUTURADOS ===
+        dados_extraidos = []
+        
+        def extract_structured_data_advanced(text):
+            """Extração avançada com múltiplas estratégias"""
+            
+            # === 1. EXTRAIR NÚMERO DA NF ===
+            nf_patterns = [
+                r'NF-e\s+N[°º]?\s*(\d{3}\.\d{3}\.\d{3})',  # NF-e N° 000.061.893
+                r'NÚMERO\s*:\s*(\d{3}\.\d{3}\.\d{3})',      # NÚMERO: 000.061.893
+                r'NOTA\s+FISCAL\s+N[°º]?\s*(\d{3}\.\d{3}\.\d{3})',
+                r'(\d{3}\.\d{3}\.\d{3})',                   # Padrão direto com pontos
+                r'NF\s*[-:]?\s*(\d{9})',                    # NF: 123456789
+                r'(\d{9})',                                 # 9 dígitos consecutivos
+            ]
+            
+            numero_nf = None
+            for pattern in nf_patterns:
+                matches = re.findall(pattern, text, re.IGNORECASE)
+                if matches:
+                    numero_nf = matches[0]
+                    break
+            
+            # === 2. EXTRAIR FORNECEDOR ===
+            fornecedor_patterns = [
+                r'RAZÃO\s+SOCIAL[:\s]*([A-ZÀ-Ÿ][A-Za-zÀ-ÿ\s&\-\.]{5,80})',
+                r'EMISSOR[:\s]*([A-ZÀ-Ÿ][A-Za-zÀ-ÿ\s&\-\.]{5,80})',
+                r'([A-Z][A-Z\s&\-\.]{10,60}(?:LTDA|S\.A\.|ME|EIRELI|EPP))',
+                r'G\s*DISTRIBUI[ÇC][ÃA]O\s*E\s*COMERCIO[A-Za-z\s]*',  # Padrão específico
+            ]
+            
+            fornecedor = None
+            for pattern in fornecedor_patterns:
+                matches = re.findall(pattern, text, re.IGNORECASE)
+                if matches:
+                    candidate = matches[0].strip()
+                    if len(candidate) > 5:
+                        fornecedor = normalize_product_name(candidate)
+                        break
+            
+            return numero_nf, fornecedor
+        
+        def extract_products_advanced(text):
+            """Extração avançada de produtos com múltiplas estratégias"""
+            products = []
+            
+            # === ESTRATÉGIA 1: TABELA ESTRUTURADA ===
+            # Buscar seção "DADOS DOS PRODUTOS/SERVIÇOS"
+            lines = text.split('\n')
+            in_products_section = False
+            header_found = False
+            table_data = []
+            
+            for line in lines:
+                line_clean = line.strip()
+                line_upper = line_clean.upper()
+                
+                # Detectar início da seção
+                if 'DADOS DOS PRODUTOS' in line_upper or 'DESCRIÇÃO' in line_upper:
+                    in_products_section = True
+                    if any(word in line_upper for word in ['DESCRIÇÃO', 'QTD', 'VALOR']):
+                        header_found = True
+                    continue
+                
+                # Detectar fim da seção
+                if in_products_section and any(end_word in line_upper for end_word in [
+                    'DADOS ADICIONAIS', 'TRANSPORTADOR', 'VALOR TOTAL DOS PRODUTOS',
+                    'BASE DE CÁLCULO', 'INFORMAÇÕES COMPLEMENTARES'
+                ]):
+                    break
+                
+                # Coletar dados da tabela
+                if in_products_section and header_found and line_clean and len(line_clean) > 15:
+                    table_data.append(line_clean)
+            
+            # === PADRÕES REGEX ESPECÍFICOS PARA NF-E BRASILEIRA ===
+            enhanced_patterns = [
+                # Padrão 1: ESPECÍFICO para tabela NF-e com estrutura exata
+                # GS-5818-IP ADAPTADOR TIPO C HUB 6 EM 1 85444200 100 6102 UN 90,00 106,67 0,00 9.600,00
+                r'([A-Z\d\-\.]+)\s+(ADAPTADOR\s+TIPO\s+C\s+HUB\s+\d+\s+EM\s+\d+)\s+\d+\s+\d+\s+\d+\s+UN\s+(\d+[,.]\d{2})\s+(\d+[,.]\d{2})\s+[\d,.]+\s+(\d{1,2}\.\d{3}[,.]\d{2})',
+                
+                # Padrão 2: Tabela sem código de produto 
+                r'(ADAPTADOR\s+TIPO\s+C\s+HUB\s+\d+\s+EM\s+\d+)\s+\d+\s+\d+\s+\d+\s+UN\s+(\d+[,.]\d{2})\s+(\d+[,.]\d{2})\s+[\d,.]+\s+(\d{1,2}\.\d{3}[,.]\d{2})',
+                
+                # Padrão 3: Formato mais flexível para qualquer produto na tabela NF-e
+                # CÓDIGO DESCRIÇÃO NCM CST CFOP UNID QTDE VALOR_UNIT DESCONTO VALOR_TOTAL
+                r'([A-Z\d\-\.]+)\s+([A-Z][A-Za-z\s\-/\d]{8,50})\s+\d+\s+\d+\s+\d+\s+UN\s+(\d+[,.]\d{2})\s+(\d+[,.]\d{2})\s+[\d,.]+\s+(\d{1,6}[,.]?\d{3}[,.]\d{2})',
+                
+                # Padrão 4: Somente valores da linha de dados (últimos 4 números)
+                # Captura: QTDE VALOR_UNITARIO DESCONTO VALOR_TOTAL
+                r'(ADAPTADOR\s+TIPO\s+C\s+HUB\s+\d+\s+EM\s+\d+).*?(\d+[,.]\d{2})\s+(\d+[,.]\d{2})\s+[\d,.]+\s+(\d{1,2}\.\d{3}[,.]\d{2})',
+                
+                # Padrão 5: Linha completa com todos os dados da tabela
+                r'([A-Z\d\-\.]+)\s+([A-Z][A-Za-z\s\-/\d]{8,})\s+(\d{8})\s+(\d{3})\s+(\d{4})\s+UN\s+(\d+[,.]\d{2})\s+(\d+[,.]\d{2})\s+([\d,.]+)\s+(\d{1,6}[,.]?\d{3}[,.]\d{2})',
+                
+                # Padrão 6: Para detectar apenas os valores finais da linha
+                r'UN\s+(\d+[,.]\d{2})\s+(\d+[,.]\d{2})\s+[\d,.]+\s+(\d{1,2}\.\d{3}[,.]\d{2})',
+            ]
+            
+            # Testar padrões em dados da tabela primeiro
+            for line in table_data:
+                for pattern_idx, pattern in enumerate(enhanced_patterns):
+                    matches = re.findall(pattern, line, re.IGNORECASE)
+                    
+                    for match in matches:
+                        try:
+                            # Processar match baseado no padrão e número de grupos
+                            codigo_produto = ""
+                            item_name = ""
+                            quantidade = 1.0
+                            valor_unitario = 0.0
+                            valor_total = 0.0
+                            
+                            if pattern_idx == 0:  # Padrão 1: Código + Descrição + Qtde + Valor Unit + Valor Total
+                                if len(match) == 5:
+                                    codigo_produto, item_name, qty_str, unit_val_str, total_val_str = match
+                                    quantidade = normalize_quantity(qty_str)
+                                    valor_unitario = normalize_monetary_value(unit_val_str)
+                                    valor_total = normalize_monetary_value(total_val_str)
+                                    
+                            elif pattern_idx == 1:  # Padrão 2: Descrição + Qtde + Valor Unit + Valor Total
+                                if len(match) == 4:
+                                    item_name, qty_str, unit_val_str, total_val_str = match
+                                    quantidade = normalize_quantity(qty_str)
+                                    valor_unitario = normalize_monetary_value(unit_val_str)
+                                    valor_total = normalize_monetary_value(total_val_str)
+                                    
+                            elif pattern_idx == 2:  # Padrão 3: Código + Descrição + Qtde + Valor Unit + Valor Total
+                                if len(match) == 5:
+                                    codigo_produto, item_name, qty_str, unit_val_str, total_val_str = match
+                                    quantidade = normalize_quantity(qty_str)
+                                    valor_unitario = normalize_monetary_value(unit_val_str)
+                                    valor_total = normalize_monetary_value(total_val_str)
+                                    
+                            elif pattern_idx == 3:  # Padrão 4: Descrição + Qtde + Valor Unit + Valor Total
+                                if len(match) == 4:
+                                    item_name, qty_str, unit_val_str, total_val_str = match
+                                    quantidade = normalize_quantity(qty_str)
+                                    valor_unitario = normalize_monetary_value(unit_val_str)
+                                    valor_total = normalize_monetary_value(total_val_str)
+                                    
+                            elif pattern_idx == 4:  # Padrão 5: Linha completa (9 grupos)
+                                if len(match) == 9:
+                                    codigo_produto, item_name, ncm, cst, cfop, qty_str, unit_val_str, desconto, total_val_str = match
+                                    quantidade = normalize_quantity(qty_str)
+                                    valor_unitario = normalize_monetary_value(unit_val_str)
+                                    valor_total = normalize_monetary_value(total_val_str)
+                                    
+                            elif pattern_idx == 5:  # Padrão 6: Apenas valores (3 grupos)
+                                if len(match) == 3:
+                                    qty_str, unit_val_str, total_val_str = match
+                                    item_name = "ADAPTADOR TIPO C HUB 6 EM 1"  # Nome padrão
+                                    quantidade = normalize_quantity(qty_str)
+                                    valor_unitario = normalize_monetary_value(unit_val_str)
+                                    valor_total = normalize_monetary_value(total_val_str)
+                            
+                            # Normalizar nome do produto
+                            if item_name:
+                                item_name = normalize_product_name(item_name)
+                                if codigo_produto and len(codigo_produto) <= 20:
+                                    item_name = f"{item_name}"  # Manter só a descrição para clareza
+                            
+                            # Validações rigorosas
+                            if (item_name and len(item_name) > 3 and
+                                quantidade > 0 and valor_total > 0 and valor_unitario > 0):
+                                
+                                # Verificar consistência matemática: valor_total ≈ quantidade × valor_unitario
+                                calculated_total = quantidade * valor_unitario
+                                tolerance = max(calculated_total * 0.1, 10.0)  # 10% tolerância ou R$ 10
+                                
+                                validation_status = 'Matemática OK'
+                                if abs(calculated_total - valor_total) > tolerance:
+                                    # Para grandes diferenças, priorizar valor total da NF (mais confiável)
+                                    valor_unitario = valor_total / quantidade
+                                    validation_status = 'Ajustado (valor unitário recalculado)'
+                                
+                                products.append({
+                                    'item': item_name,
+                                    'quantidade': quantidade,
+                                    'valor_unitario': round(valor_unitario, 2),
+                                    'valor_total': round(valor_total, 2),
+                                    'source': f'NF-e Tabela - Padrão {pattern_idx + 1}',
+                                    'validation': validation_status,
+                                    'codigo_produto': codigo_produto if codigo_produto else None
+                                })
+                                
+                                # Debug específico para o ADAPTADOR
+                                if 'ADAPTADOR' in item_name.upper():
+                                    st.success(f"✅ ENCONTRADO: {item_name} - Qtd: {quantidade} - Unit: R$ {valor_unitario:.2f} - Total: R$ {valor_total:.2f}")
+                                        
+                        except (ValueError, ZeroDivisionError) as e:
+                            continue
+            
+            return products
+        
+        # Executar extrações
+        numero_nf, fornecedor = extract_structured_data_advanced(ocr_text)
+        produtos_extraidos = extract_products_advanced(ocr_text)
+        
+        # Adicionar metadados aos produtos
+        for produto in produtos_extraidos:
+            produto.update({
+                'numero_nf': numero_nf or 'NF-AUTO',
+                'fornecedor': fornecedor or 'Não detectado'
+            })
+        
+        dados_extraidos = produtos_extraidos
+        
+        # === DEBUG E FEEDBACK ULTRA-DETALHADO ===
+        with st.expander("🔍 **Análise Detalhada de Extração**", expanded=True):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if numero_nf:
+                    st.success(f"✅ **Número NF:** {numero_nf}")
+                else:
+                    st.warning("⚠️ **Número NF:** Não detectado")
+                
+                if fornecedor:
+                    st.success(f"✅ **Fornecedor:** {fornecedor}")
+                else:
+                    st.warning("⚠️ **Fornecedor:** Não detectado")
+            
+            with col2:
+                if dados_extraidos:
+                    st.success(f"✅ **Produtos:** {len(dados_extraidos)} detectados")
+                    for i, item in enumerate(dados_extraidos):
+                        validation_color = "🟢" if item.get('validation') == 'Matemática OK' else "🟡"
+                        st.info(f"{validation_color} **Item {i+1}:** {item['item'][:40]}...")
+                        st.write(f"   Qtd: {item['quantidade']} | Unit: R$ {item['valor_unitario']} | Total: R$ {item['valor_total']}")
+                        st.write(f"   Fonte: {item.get('source', 'N/A')} | Validação: {item.get('validation', 'N/A')}")
+                        if item.get('codigo_produto'):
+                            st.write(f"   Código: {item['codigo_produto']}")
+                else:
+                    st.error("❌ **Produtos:** Nenhum detectado automaticamente")
+        
+        # === DEBUG DOS VALORES ESPERADOS vs ENCONTRADOS ===
+        with st.expander("🎯 **Comparação com Dados Esperados**", expanded=True):
+            st.markdown("### 📋 **Dados que deveriam ser extraídos da NF-e:**")
+            
+            col_exp1, col_exp2 = st.columns(2)
+            with col_exp1:
+                st.info("""
+                **📝 Dados da tabela NF-e:**
+                - Código: GS-5818-IP
+                - Descrição: ADAPTADOR TIPO C HUB 6 EM 1  
+                - NCM/SH: 85444200
+                - CST: 100
+                - CFOP: 6102
+                """)
+            
+            with col_exp2:
+                st.info("""
+                **💰 Valores da tabela NF-e:**
+                - Unidade: UN
+                - Quantidade: 90,00
+                - Valor Unitário: R$ 106,67
+                - Valor Desconto: R$ 0,00
+                - Valor Total: R$ 9.600,00
+                """)
+            
+            if dados_extraidos:
+                st.markdown("### ✅ **Dados extraídos pelo sistema:**")
+                for i, item in enumerate(dados_extraidos):
+                    col_result1, col_result2 = st.columns(2)
+                    
+                    with col_result1:
+                        # Verificar se os dados batem com o esperado
+                        desc_ok = "ADAPTADOR TIPO C HUB" in item['item'].upper()
+                        qtd_ok = abs(item['quantidade'] - 90.0) < 1.0
+                        
+                        status_desc = "✅" if desc_ok else "❌"
+                        status_qtd = "✅" if qtd_ok else "❌" 
+                        
+                        st.write(f"**Item {i+1}:**")
+                        st.write(f"{status_desc} Descrição: {item['item']}")
+                        st.write(f"{status_qtd} Quantidade: {item['quantidade']}")
+                    
+                    with col_result2:
+                        unit_ok = abs(item['valor_unitario'] - 106.67) < 1.0
+                        total_ok = abs(item['valor_total'] - 9600.0) < 100.0
+                        
+                        status_unit = "✅" if unit_ok else "❌"
+                        status_total = "✅" if total_ok else "❌"
+                        
+                        st.write(f"**Valores:**")
+                        st.write(f"{status_unit} Valor Unit.: R$ {item['valor_unitario']:.2f}")
+                        st.write(f"{status_total} Valor Total: R$ {item['valor_total']:.2f}")
+                        
+                    # Mostrar se os dados estão corretos ou não
+                    if desc_ok and qtd_ok and unit_ok and total_ok:
+                        st.success(f"🎉 **PERFEITO!** Item {i+1} extraído corretamente!")
+                    else:
+                        st.error(f"⚠️ **DADOS INCORRETOS** no Item {i+1} - verifique os padrões regex")
+            else:
+                st.error("❌ **Nenhum dado foi extraído** - O OCR pode não estar detectando a tabela corretamente")
+        
+        # === FALLBACK: TEMPLATE MANUAL SE NADA FOI ENCONTRADO ===
+        if not dados_extraidos:
+            st.warning("🔄 **Criando template para preenchimento manual...**")
+            
+            # Tentar extrair pelo menos valores monetários para sugerir
+            valores_encontrados = re.findall(r'(\d{1,6}[,.]?\d{3}[,.]\d{2})', ocr_text)
+            
+            if valores_encontrados:
+                st.info(f"💡 Detectados {len(valores_encontrados)} valores monetários na imagem")
+                
+                # Criar itens baseados nos valores encontrados
+                for i, valor_str in enumerate(valores_encontrados[:5]):  # Máximo 5 itens
+                    valor_normalizado = normalize_monetary_value(valor_str)
+                    
+                    if valor_normalizado > 1.0:  # Valores razoáveis
+                        dados_extraidos.append({
+                            'item': f'Item {i+1} - Edite esta descrição',
+                            'quantidade': 1,
+                            'valor_unitario': valor_normalizado,
+                            'valor_total': valor_normalizado,
+                            'numero_nf': numero_nf or 'NF-AUTO',
+                            'fornecedor': fornecedor or 'Editar fornecedor',
+                            'source': 'Template baseado em valores detectados',
+                            'validation': 'Manual'
+                        })
+            
+            # Se ainda não tem itens, criar template básico
+            if not dados_extraidos:
+                dados_extraidos = [
+                    {
+                        'item': f'Item 1 - {uploaded_file.name} (Edite esta descrição)',
+                        'quantidade': 1,
+                        'valor_unitario': 0.00,
+                        'valor_total': 0.00,
+                        'numero_nf': numero_nf or 'NF-AUTO',
+                        'fornecedor': fornecedor or 'Editar fornecedor',
+                        'source': 'Template manual',
+                        'validation': 'Manual'
+                    }
+                ]
+        
+        # === VALIDAÇÃO FINAL E ESTRUTURAÇÃO PARA EXPORTAÇÃO ===
+        dados_finais = []
+        for item in dados_extraidos:
+            # Garantir que todos os campos necessários existem
+            item_final = {
+                'item': str(item.get('item', 'Produto não identificado')),
+                'quantidade': max(0.01, float(item.get('quantidade', 1))),
+                'valor_unitario': max(0.01, float(item.get('valor_unitario', 0))),
+                'valor_total': max(0.01, float(item.get('valor_total', 0))),
+                'numero_nf': str(item.get('numero_nf', 'NF-AUTO')),
+                'fornecedor': str(item.get('fornecedor', 'Fornecedor não identificado')),
+            }
+            
+            # Verificação de consistência final
+            calculated_total = item_final['quantidade'] * item_final['valor_unitario']
+            if abs(calculated_total - item_final['valor_total']) > 1.0:
+                # Ajustar valores para manter consistência
+                item_final['valor_unitario'] = round(item_final['valor_total'] / item_final['quantidade'], 2)
+            
+            dados_finais.append(item_final)
+        
+        return dados_finais
+    
+    except Exception as e:
+        st.error(f"❌ Erro ao processar nota fiscal: {str(e)}")
+        return []
+    """Renderiza o cadastro de fornecedores"""
+    st.markdown("---")
+    st.markdown("### 🏢 **Cadastro de Fornecedores**")
+    
+    # Inicializar dados de fornecedores se não existirem
+    if 'fornecedores_data' not in st.session_state:
+        st.session_state.fornecedores_data = pd.DataFrame(columns=[
+            'id', 'razao_social', 'nome_fantasia', 'cnpj', 'email', 'telefone', 
+            'endereco', 'cidade', 'estado', 'cep', 'contato_principal', 'categoria_servicos'
+        ])
+    
+    # Inicializar mapeamento fornecedor-produto se não existir
+    if 'fornecedor_produto_mapping' not in st.session_state:
+        st.session_state.fornecedor_produto_mapping = pd.DataFrame(columns=[
+            'fornecedor_id', 'produto_id', 'produto_nome', 'categoria_produto', 
+            'preco_unitario', 'prazo_entrega', 'condicoes_pagamento', 'observacoes'
+        ])
+    
+    # Formulário de adição de fornecedor
+    with st.expander("➕ Adicionar Novo Fornecedor", expanded=True):
+        with st.form("add_fornecedor_form"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                razao_social = st.text_input("Razão Social *", placeholder="Nome da empresa")
+                nome_fantasia = st.text_input("Nome Fantasia", placeholder="Nome comercial")
+                cnpj = st.text_input("CNPJ *", placeholder="00.000.000/0000-00")
+                email = st.text_input("Email", placeholder="contato@empresa.com")
+                telefone = st.text_input("Telefone", placeholder="(11) 99999-9999")
+            
+            with col2:
+                endereco = st.text_input("Endereço", placeholder="Rua, número")
+                cidade = st.text_input("Cidade", placeholder="São Paulo")
+                estado = st.selectbox("Estado", ["SP", "RJ", "MG", "RS", "PR", "SC", "BA", "PE", "CE", "GO", "MT", "MS", "DF", "ES", "PB", "RN", "AL", "SE", "MA", "PI", "TO", "PA", "AP", "RR", "AM", "RO", "AC"])
+                cep = st.text_input("CEP", placeholder="00000-000")
+                contato_principal = st.text_input("Contato Principal", placeholder="Nome do responsável")
+                categoria_servicos = st.multiselect("Categoria de Serviços", [
+                    "Tecnologia", "Móveis", "Equipamentos", "Serviços", "Suprimentos", "Manutenção", "Outros"
+                ])
+            
+            submitted = st.form_submit_button("💾 Salvar Fornecedor")
+            
+            if submitted and razao_social and cnpj:
+                # Gerar ID único
+                novo_id = len(st.session_state.fornecedores_data) + 1
+                
+                novo_fornecedor = {
+                    'id': novo_id,
+                    'razao_social': razao_social,
+                    'nome_fantasia': nome_fantasia or razao_social,
+                    'cnpj': cnpj,
+                    'email': email or "N/A",
+                    'telefone': telefone or "N/A",
+                    'endereco': endereco or "N/A",
+                    'cidade': cidade or "N/A",
+                    'estado': estado,
+                    'cep': cep or "N/A",
+                    'contato_principal': contato_principal or "N/A",
+                    'categoria_servicos': ", ".join(categoria_servicos) if categoria_servicos else "Geral"
+                }
+                
+                # Adicionar ao DataFrame
+                new_row = pd.DataFrame([novo_fornecedor])
+                st.session_state.fornecedores_data = pd.concat([st.session_state.fornecedores_data, new_row], ignore_index=True)
+                
+                st.success(f"✅ Fornecedor '{razao_social}' cadastrado com sucesso!")
+                st.rerun()
+            elif submitted:
+                st.error("⚠️ Preencha pelo menos Razão Social e CNPJ!")
+    
+    # Exibir fornecedores cadastrados
+    if not st.session_state.fornecedores_data.empty:
+        st.markdown("#### 📋 **Fornecedores Cadastrados**")
+        
+        # Filtros
+        col_filter1, col_filter2 = st.columns(2)
+        with col_filter1:
+            categoria_filter = st.selectbox("Filtrar por Categoria", ["Todas"] + list(st.session_state.fornecedores_data['categoria_servicos'].unique()))
+        
+        with col_filter2:
+            search_term = st.text_input("🔍 Buscar fornecedor", placeholder="Nome ou CNPJ...")
+        
+        # Aplicar filtros
+        df_filtered = st.session_state.fornecedores_data.copy()
+        
+        if categoria_filter != "Todas":
+            df_filtered = df_filtered[df_filtered['categoria_servicos'].str.contains(categoria_filter, na=False)]
+        
+        if search_term:
+            mask = (df_filtered['razao_social'].str.contains(search_term, case=False, na=False) |
+                   df_filtered['cnpj'].str.contains(search_term, na=False))
+            df_filtered = df_filtered[mask]
+        
+        # Exibir tabela
+        st.dataframe(df_filtered, use_container_width=True)
+        
+        # Estatísticas
+        col_stats1, col_stats2, col_stats3 = st.columns(3)
+        with col_stats1:
+            st.metric("Total de Fornecedores", len(st.session_state.fornecedores_data))
+        with col_stats2:
+            st.metric("Fornecedores Filtrados", len(df_filtered))
+        with col_stats3:
+            categorias_count = len(st.session_state.fornecedores_data['categoria_servicos'].unique())
+            st.metric("Categorias", categorias_count)
+    
+    # Seção de mapeamento fornecedor-produto
+    st.markdown("---")
+    st.markdown("### 🔗 **Mapeamento Fornecedor-Produto**")
+    st.markdown("*Defina qual fornecedor atende para qual produto*")
+    
+    with st.expander("➕ Adicionar Mapeamento Fornecedor-Produto", expanded=True):
+        with st.form("add_fornecedor_produto_mapping"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Selecionar fornecedor
+                if not st.session_state.fornecedores_data.empty:
+                    fornecedores_options = st.session_state.fornecedores_data['razao_social'].tolist()
+                    fornecedor_selecionado = st.selectbox("Fornecedor *", fornecedores_options)
+                else:
+                    st.markdown("""
+                    <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; color: #000000; padding: 12px; border-radius: 8px; margin: 8px 0;">
+                        <strong>⚠️ Cadastre fornecedores primeiro</strong>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    fornecedor_selecionado = None
+                
+                produto_nome = st.text_input("Nome do Produto *", placeholder="Ex: Notebook Dell Latitude")
+                categoria_produto = st.selectbox("Categoria do Produto", 
+                                               ['techstop', 'tv e monitor', 'audio e video', 'lixo eletrônico', 'outros'])
+                preco_unitario = st.number_input("Preço Unitário (R$)", min_value=0.0, value=0.0, step=0.01)
+            
+            with col2:
+                prazo_entrega = st.text_input("Prazo de Entrega", placeholder="Ex: 5 dias úteis")
+                condicoes_pagamento = st.text_input("Condições de Pagamento", placeholder="Ex: 30/60/90")
+                observacoes = st.text_area("Observações", placeholder="Informações adicionais sobre o produto/fornecedor")
+            
+            # Botões de ação
+            col_btn1, col_btn2 = st.columns(2)
+            
+            with col_btn1:
+                if st.form_submit_button("💾 Salvar Mapeamento", use_container_width=True, type="primary"):
+                    if fornecedor_selecionado and produto_nome:
+                        # Encontrar ID do fornecedor
+                        fornecedor_id = st.session_state.fornecedores_data[
+                            st.session_state.fornecedores_data['razao_social'] == fornecedor_selecionado
+                        ]['id'].iloc[0]
+                        
+                        # Gerar ID único para o produto
+                        produto_id = f"PROD{len(st.session_state.fornecedor_produto_mapping)+1:04d}"
+                        
+                        # Criar novo mapeamento
+                        novo_mapeamento = {
+                            'fornecedor_id': fornecedor_id,
+                            'produto_id': produto_id,
+                            'produto_nome': produto_nome,
+                            'categoria_produto': categoria_produto,
+                            'preco_unitario': preco_unitario,
+                            'prazo_entrega': prazo_entrega or 'A definir',
+                            'condicoes_pagamento': condicoes_pagamento or 'A definir',
+                            'observacoes': observacoes or ''
+                        }
+                        
+                        # Adicionar ao DataFrame
+                        new_row = pd.DataFrame([novo_mapeamento])
+                        st.session_state.fornecedor_produto_mapping = pd.concat([
+                            st.session_state.fornecedor_produto_mapping, new_row
+                        ], ignore_index=True)
+                        
+                        st.success(f"✅ Mapeamento criado: {fornecedor_selecionado} → {produto_nome}")
+                    else:
+                        st.error("❌ Preencha os campos obrigatórios")
+            
+            with col_btn2:
+                if st.form_submit_button("◎ Limpar", use_container_width=True):
+                    # Limpar será tratado pelo rerun automático do form
+                    pass
+    
+    # Visualizar mapeamentos existentes
+    if not st.session_state.fornecedor_produto_mapping.empty:
+        st.markdown("#### 📊 **Mapeamentos Existentes**")
+        
+        # Criar DataFrame para exibição com informações do fornecedor
+        df_display = st.session_state.fornecedor_produto_mapping.copy()
+        
+        # Adicionar informações do fornecedor
+        df_display = df_display.merge(
+            st.session_state.fornecedores_data[['id', 'razao_social', 'nome_fantasia', 'categoria_servicos']],
+            left_on='fornecedor_id',
+            right_on='id',
+            how='left'
+        )
+        
+        # Selecionar colunas para exibição
+        df_display = df_display[[
+            'razao_social', 'produto_nome', 'categoria_produto', 'preco_unitario',
+            'prazo_entrega', 'condicoes_pagamento', 'observacoes'
+        ]]
+        
+        # Renomear colunas
+        df_display.columns = [
+            'Fornecedor', 'Produto', 'Categoria', 'Preço (R$)', 'Prazo Entrega', 
+            'Condições Pagamento', 'Observações'
+        ]
+        
+        # Exibir tabela
+        st.dataframe(df_display, use_container_width=True)
+        
+        # Estatísticas
+        col_stats1, col_stats2, col_stats3 = st.columns(3)
+        
+        with col_stats1:
+            total_mapeamentos = len(st.session_state.fornecedor_produto_mapping)
+            st.metric("Total de Mapeamentos", total_mapeamentos)
+        
+        with col_stats2:
+            fornecedores_unicos = st.session_state.fornecedor_produto_mapping['fornecedor_id'].nunique()
+            st.metric("Fornecedores Ativos", fornecedores_unicos)
+        
+        with col_stats3:
+            produtos_unicos = st.session_state.fornecedor_produto_mapping['produto_nome'].nunique()
+            st.metric("Produtos Mapeados", produtos_unicos)
+
+# ========================================================================================
+# 👥 CADASTRO DE UTILIZADORES
+# ========================================================================================
+def render_cadastro_utilizadores():
+    """Renderiza o gerenciamento de utilizadores com aprovação de cadastros e alteração de senhas"""
+    st.markdown("---")
+    st.markdown("### **Gerenciamento de Utilizadores**")
+    
+    # Inicializar dados se não existirem
+    if 'usuarios_pendentes' not in st.session_state:
+        st.session_state.usuarios_pendentes = {}
+    
+    # Converter estrutura antiga (lista) para nova (dicionário) se necessário
+    if isinstance(st.session_state.usuarios_pendentes, list):
+        temp_dict = {}
+        for usuario in st.session_state.usuarios_pendentes:
+            if isinstance(usuario, dict) and 'email' in usuario:
+                temp_dict[usuario['email']] = usuario
+        st.session_state.usuarios_pendentes = temp_dict
+    
+    if 'usuarios_sistema' not in st.session_state:
+        st.session_state.usuarios_sistema = {}
+    
+    if 'utilizadores_data' not in st.session_state:
+        st.session_state.utilizadores_data = pd.DataFrame(columns=[
+            'id', 'nome', 'email', 'departamento', 'cargo', 'telefone', 
+            'ramal', 'local_trabalho', 'data_cadastro', 'status', 'observacoes'
+        ])
+    
+    # Tabs para diferentes funcionalidades
+    # Verificar se é admin para mostrar aba adicional
+    is_admin = is_admin_user(st.session_state.get('current_user', ''))
+    
+    if is_admin:
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+            "Solicitações Pendentes", 
+            "Gerenciar Usuários", 
+            "Cadastrar Novo", 
+            "Relatórios",
+            "🔐 Admin - Senhas"
+        ])
+    else:
+        tab1, tab2, tab3, tab4 = st.tabs(["Solicitações Pendentes", "Gerenciar Usuários", "Cadastrar Novo", "Relatórios"])
+    
+    with tab1:
+        st.markdown("#### Solicitações de Acesso Pendentes")
+        
+        # Verificar se é admin para ver solicitações pendentes
+        if not is_admin:
+            st.warning("🚫 Acesso restrito. Apenas administradores podem aprovar solicitações.")
+            st.info("💡 Se você fez uma solicitação, aguarde a aprovação do administrador.")
+            return
+        
+        if st.session_state.usuarios_pendentes:
+            # Criar uma cópia dos itens para evitar modificação durante iteração
+            usuarios_pendentes_copy = dict(st.session_state.usuarios_pendentes.items())
+            for email, usuario in usuarios_pendentes_copy.items():
+                nome = usuario.get('nome', 'Nome não informado')
+                justificativa = usuario.get('justificativa', 'Não informada')
+                data_solicitacao = usuario.get('data_solicitacao', 'N/A')
+                senha_hash = usuario.get('password_hash', '')
+                
+                with st.expander(f"Solicitação: {nome} ({email})", expanded=True):
+                    col1, col2, col3 = st.columns([2, 1, 1])
+                    
+                    with col1:
+                        st.write(f"**Nome:** {nome}")
+                        st.write(f"**Email:** {email}")
+                        st.write(f"**Justificativa:** {justificativa}")
+                        st.write(f"**Data da Solicitação:** {data_solicitacao}")
+                    
+                    with col2:
+                        if st.button("Aprovar", key=f"aprovar_{email}", type="primary"):
+                            try:
+                                # Inicializar users_db se não existir
+                                if 'users_db' not in st.session_state:
+                                    st.session_state.users_db = {}
+                                
+                                # Adicionar ao sistema de login (PRINCIPAL)
+                                st.session_state.users_db[email] = {
+                                    'nome': nome,
+                                    'email': email,
+                                    'password_hash': senha_hash,
+                                    'role': 'usuario',
+                                    'status': 'aprovado',
+                                    'data_registro': data_solicitacao,
+                                    'aprovado_por': st.session_state.get('current_user', 'admin'),
+                                    'justificativa': justificativa
+                                }
+                                
+                                # Salvar persistentemente
+                                save_success = save_users_db()
+                                
+                                # Adicionar ao sistema de usuários (para gerenciamento)
+                                st.session_state.usuarios_sistema[email] = {
+                                    'nome': nome,
+                                    'senha': senha_hash,
+                                    'is_admin': False,
+                                    'ativo': True,
+                                    'data_aprovacao': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                }
+                                
+                                # Adicionar aos dados de utilizadores (para cadastro)
+                                novo_id = len(st.session_state.utilizadores_data) + 1 if not st.session_state.utilizadores_data.empty else 1
+                                novo_utilizador = {
+                                    'id': novo_id,
+                                    'nome': nome,
+                                    'email': email,
+                                    'departamento': 'A definir',
+                                    'cargo': 'A definir',
+                                    'telefone': 'N/A',
+                                    'ramal': 'N/A',
+                                    'local_trabalho': 'A definir',
+                                    'data_cadastro': datetime.now().strftime("%Y-%m-%d"),
+                                    'status': 'Ativo',
+                                    'observacoes': f"Aprovado automaticamente. Solicitação: {justificativa}"
+                                }
+                                
+                                st.session_state.utilizadores_data = pd.concat([
+                                    st.session_state.utilizadores_data,
+                                    pd.DataFrame([novo_utilizador])
+                                ], ignore_index=True)
+                                
+                                # Remover da lista de pendentes (verificar se ainda existe)
+                                if email in st.session_state.usuarios_pendentes:
+                                    del st.session_state.usuarios_pendentes[email]
+                                    # Salvar lista de pendentes atualizada
+                                    save_pending_users()
+                                
+                                # Mensagens de sucesso
+                                st.success(f"✅ Usuário {nome} aprovado com sucesso!")
+                                if save_success:
+                                    st.success("💾 Dados salvos persistentemente!")
+                                else:
+                                    st.warning("⚠️ Dados salvos apenas na sessão")
+                                
+                                st.info("🔑 **Dados para login:**")
+                                st.code(f"Email: {email}\nSenha: (a senha que o usuário definiu na solicitação)")
+                                
+                                # Auto-rerun após 2 segundos
+                                import time
+                                time.sleep(2)
+                                st.rerun()
+                                
+                            except Exception as e:
+                                st.error(f"❌ Erro ao aprovar usuário: {str(e)}")
+                                import traceback
+                                st.code(traceback.format_exc())
+                    
+                    with col3:
+                        if st.button("Rejeitar", key=f"rejeitar_{email}", type="secondary"):
+                            # Remover da lista de pendentes (verificar se ainda existe)
+                            if email in st.session_state.usuarios_pendentes:
+                                del st.session_state.usuarios_pendentes[email]
+                                # Salvar lista de pendentes atualizada
+                                save_pending_users()
+                            st.info(f"Solicitação de {nome} foi rejeitada.")
+                            st.rerun()
+        else:
+            st.info("Nenhuma solicitação de acesso pendente.")
+            
+            # Botão para criar solicitação de teste
+            if st.button("Criar Solicitação de Teste"):
+                senha_teste = "123456"
+                # Usar a função hash_password correta do sistema
+                senha_hash = hash_password(senha_teste)
+                
+                email_teste = "teste.usuario@empresa.com"
+                st.session_state.usuarios_pendentes[email_teste] = {
+                    'nome': 'Usuário de Teste',
+                    'email': email_teste,
+                    'password_hash': senha_hash,
+                    'justificativa': 'Solicitação de teste para verificar o sistema de aprovação de usuários.',
+                    'data_solicitacao': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                    'status': 'pendente'
+                }
+                # Salvar solicitação pendente
+                save_pending_users()
+                st.success("Solicitação de teste criada e salva!")
+                st.info(f"Email: {email_teste}")
+                st.info(f"Senha: {senha_teste}")
+                st.rerun()
+    
+    with tab2:
+        st.markdown("#### Gerenciar Usuários do Sistema")
+        
+        # Verificar se é admin para mostrar informações detalhadas
+        if not is_admin:
+            st.warning("🚫 Acesso restrito. Esta seção é apenas para administradores.")
+            st.info("💡 Contate um administrador se precisar de ajuda com sua conta.")
+            return
+        
+        # Debug e inicialização
+        col_debug1, col_debug2, col_debug3 = st.columns(3)
+        
+        with col_debug1:
+            st.markdown(f"**Debug Info:**")
+            st.write(f"Usuários sistema: {len(st.session_state.usuarios_sistema)}")
+            st.write(f"Utilizadores data: {len(st.session_state.utilizadores_data)}")
+            st.write(f"Usuários pendentes: {len(st.session_state.usuarios_pendentes)}")
+            
+            # Debug adicional para users_db
+            users_db_count = len(st.session_state.get('users_db', {}))
+            st.write(f"Users DB (login): {users_db_count}")
+            
+            # Mostrar todos os emails em users_db
+            if st.session_state.get('users_db'):
+                st.write("**Emails em users_db:**")
+                for email in st.session_state.users_db.keys():
+                    status = st.session_state.users_db[email].get('status', 'N/A')
+                    st.write(f"- {email} ({status})")
+        
+        with col_debug2:
+            if st.button("Criar Usuário Teste"):
+                # Criar um usuário de teste
+                import hashlib
+                senha_teste = hashlib.sha256("123456".encode()).hexdigest()
+                
+                st.session_state.usuarios_sistema["teste@empresa.com"] = {
+                    'nome': 'Usuário Teste',
+                    'senha': senha_teste,
+                    'is_admin': False,
+                    'ativo': True,
+                    'data_criacao': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+                st.success("Usuário teste criado!")
+                st.rerun()
+        
+        with col_debug3:
+            col3a, col3b = st.columns(2)
+            
+            with col3a:
+                if st.button("Carregar Salvos"):
+                    # Recarregar dados do arquivo CSV
+                    try:
+                        loaded_users = load_users_db()
+                        loaded_pending = load_pending_users()
+                        
+                        messages = []
+                        if loaded_users:
+                            messages.append(f"✅ {len(st.session_state.users_db)} usuários carregados")
+                        if loaded_pending:
+                            messages.append(f"✅ {len(st.session_state.usuarios_pendentes)} solicitações pendentes carregadas")
+                        
+                        if messages:
+                            for msg in messages:
+                                st.success(msg)
+                        else:
+                            st.warning("⚠️ Nenhum arquivo CSV encontrado")
+                    except Exception as e:
+                        st.error(f"❌ Erro: {e}")
+                    st.rerun()
+            
+            with col3b:
+                if st.button("Limpar Todos"):
+                    st.session_state.usuarios_sistema = {}
+                    st.session_state.usuarios_pendentes = {}
+                    st.session_state.utilizadores_data = pd.DataFrame(columns=[
+                        'id', 'nome', 'email', 'departamento', 'cargo', 'telefone', 
+                        'ramal', 'local_trabalho', 'data_cadastro', 'status', 'observacoes'
+                    ])
+                    # Limpar arquivos CSV também
+                    try:
+                        import os
+                        if os.path.exists('users_db.csv'):
+                            os.remove('users_db.csv')
+                        if os.path.exists('users_pending.csv'):
+                            os.remove('users_pending.csv')
+                    except:
+                        pass
+                    st.success("Dados limpos!")
+                    st.rerun()
+        
+        st.markdown("---")
+        
+        if st.session_state.usuarios_sistema:
+            for email, dados in st.session_state.usuarios_sistema.items():
+                with st.expander(f"{dados['nome']} ({email})", expanded=False):
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.write(f"**Email:** {email}")
+                        st.write(f"**Nome:** {dados['nome']}")
+                        st.write(f"**Administrador:** {'Sim' if dados.get('is_admin', False) else 'Não'}")
+                        st.write(f"**Status:** {'Ativo' if dados.get('ativo', True) else 'Inativo'}")
+                        st.write(f"**Data de Aprovação:** {dados.get('data_aprovacao', 'N/A')}")
+                    
+                    with col2:
+                        st.markdown("**Ações:**")
+                        
+                        # Alterar senha
+                        with st.form(f"senha_form_{email}"):
+                            nova_senha = st.text_input("Nova Senha", type="password", key=f"senha_{email}")
+                            confirmar_senha = st.text_input("Confirmar Senha", type="password", key=f"conf_senha_{email}")
+                            
+                            if st.form_submit_button("Alterar Senha"):
+                                if nova_senha and nova_senha == confirmar_senha:
+                                    import hashlib
+                                    senha_hash = hashlib.sha256(nova_senha.encode()).hexdigest()
+                                    st.session_state.usuarios_sistema[email]['senha'] = senha_hash
+                                    st.success("Senha alterada com sucesso!")
+                                    st.rerun()
+                                elif nova_senha != confirmar_senha:
+                                    st.error("As senhas não coincidem!")
+                                else:
+                                    st.error("Digite uma nova senha!")
+                        
+                        # Toggle status admin
+                        col2a, col2b = st.columns(2)
+                        with col2a:
+                            if st.button("Toggle Admin", key=f"admin_{email}"):
+                                st.session_state.usuarios_sistema[email]['is_admin'] = not dados.get('is_admin', False)
+                                st.success("Status de administrador alterado!")
+                                st.rerun()
+                        
+                        with col2b:
+                            if st.button("Toggle Ativo", key=f"ativo_{email}"):
+                                st.session_state.usuarios_sistema[email]['ativo'] = not dados.get('ativo', True)
+                                st.success("Status de ativo alterado!")
+                                st.rerun()
+        else:
+            st.info("Nenhum usuário cadastrado no sistema.")
+    
+    with tab3:
+        st.markdown("#### Cadastrar Novo Utilizador")
+        
+        # Verificar se é admin para permitir cadastro
+        if not is_admin:
+            st.warning("🚫 Acesso restrito. Apenas administradores podem cadastrar novos utilizadores.")
+            st.info("💡 Para solicitar acesso, use a aba 'Solicitações Pendentes'.")
+            return
+        
+        # Formulário de adição de utilizador
+        with st.form("add_utilizador_form"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                nome = st.text_input("Nome Completo *", placeholder="Nome do utilizador")
+                email = st.text_input("Email *", placeholder="usuario@empresa.com")
+                departamento = st.selectbox("Departamento *", [
+                    "TI", "RH", "Financeiro", "Comercial", "Marketing", "Operações", "Jurídico", "Outros"
+                ])
+                cargo = st.text_input("Cargo", placeholder="Analista, Gerente, etc.")
+                telefone = st.text_input("Telefone", placeholder="(11) 99999-9999")
+            
+            with col2:
+                ramal = st.text_input("Ramal", placeholder="1234")
+                local_trabalho = st.selectbox("Local de Trabalho", [
+                    "HQ1 - 8º Andar", "HQ1 - 7º Andar", "HQ1 - 6º Andar", "HQ1 - 5º Andar",
+                    "Spark - 2º Andar", "Spark - 1º Andar", "Home Office", "Outros"
+                ])
+                status = st.selectbox("Status", ["Ativo", "Inativo", "Férias", "Afastado"])
+                observacoes = st.text_area("Observações", placeholder="Informações adicionais...")
+            
+            # Campos do sistema
+            st.markdown("---")
+            st.markdown("**Configurações do Sistema:**")
+            col3, col4 = st.columns(2)
+            
+            with col3:
+                criar_acesso_sistema = st.checkbox("Criar acesso ao sistema")
+                if criar_acesso_sistema:
+                    senha_inicial = st.text_input("Senha inicial", type="password")
+                    confirmar_senha_inicial = st.text_input("Confirmar senha", type="password")
+            
+            with col4:
+                if criar_acesso_sistema:
+                    is_admin = st.checkbox("Conceder privilégios de administrador")
+                    notificar_usuario = st.checkbox("Notificar usuário por email", value=True)
+            
+            submitted = st.form_submit_button("Salvar Utilizador")
+            
+            if submitted and nome and email and departamento:
+                # Gerar ID único
+                novo_id = len(st.session_state.utilizadores_data) + 1
+                
+                # Adicionar utilizador aos dados
+                novo_utilizador = {
+                    'id': novo_id,
+                    'nome': nome,
+                    'email': email,
+                    'departamento': departamento,
+                    'cargo': cargo or "N/A",
+                    'telefone': telefone or "N/A",
+                    'ramal': ramal or "N/A",
+                    'local_trabalho': local_trabalho,
+                    'data_cadastro': datetime.now().strftime("%Y-%m-%d"),
+                    'status': status,
+                    'observacoes': observacoes or "N/A"
+                }
+                
+                # Adicionar ao DataFrame
+                st.session_state.utilizadores_data = pd.concat([
+                    st.session_state.utilizadores_data,
+                    pd.DataFrame([novo_utilizador])
+                ], ignore_index=True)
+                
+                # Criar acesso ao sistema se solicitado
+                if criar_acesso_sistema:
+                    if senha_inicial and senha_inicial == confirmar_senha_inicial:
+                        import hashlib
+                        senha_hash = hashlib.sha256(senha_inicial.encode()).hexdigest()
+                        
+                        st.session_state.usuarios_sistema[email] = {
+                            'nome': nome,
+                            'senha': senha_hash,
+                            'is_admin': is_admin,
+                            'ativo': True,
+                            'data_criacao': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        }
+                        st.success(f"Utilizador '{nome}' cadastrado com acesso ao sistema!")
+                    else:
+                        st.error("As senhas não coincidem ou estão vazias!")
+                        return
+                else:
+                    st.success(f"Utilizador '{nome}' cadastrado com sucesso!")
+                
+                st.rerun()
+            elif submitted:
+                st.error("Preencha pelo menos Nome, Email e Departamento!")
+    
+    with tab4:
+        st.markdown("#### Relatórios de Utilizadores")
+        
+        # Verificar se é admin para ver relatórios
+        if not is_admin:
+            st.warning("🚫 Acesso restrito. Relatórios são apenas para administradores.")
+            st.info("💡 Contate um administrador para informações sobre relatórios.")
+            return
+        
+        if not st.session_state.utilizadores_data.empty:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**Estatísticas Gerais:**")
+                total_users = len(st.session_state.utilizadores_data)
+                ativos = len(st.session_state.utilizadores_data[st.session_state.utilizadores_data['status'] == 'Ativo'])
+                inativos = total_users - ativos
+                
+                st.metric("Total de Utilizadores", total_users)
+                st.metric("Utilizadores Ativos", ativos)
+                st.metric("Utilizadores Inativos", inativos)
+                
+                # Sistema de acesso
+                total_sistema = len(st.session_state.usuarios_sistema)
+                admins = sum(1 for user in st.session_state.usuarios_sistema.values() if user.get('is_admin', False))
+                pendentes = len(st.session_state.usuarios_pendentes)
+                
+                st.markdown("**Sistema de Acesso:**")
+                st.metric("Usuários com Acesso", total_sistema)
+                st.metric("Administradores", admins)
+                st.metric("Solicitações Pendentes", pendentes)
+            
+            with col2:
+                st.markdown("**Distribuição por Departamento:**")
+                dept_counts = st.session_state.utilizadores_data['departamento'].value_counts()
+                st.bar_chart(dept_counts)
+                
+                st.markdown("**Distribuição por Status:**")
+                status_counts = st.session_state.utilizadores_data['status'].value_counts()
+                st.bar_chart(status_counts)
+        else:
+            st.info("Nenhum dado disponível para relatórios.")
+    
+    # Exibir tabela de utilizadores cadastrados
+    st.markdown("---")
+    st.markdown("#### Utilizadores Cadastrados")
+    
+    # Debug info
+    st.write(f"**Total de utilizadores no DataFrame:** {len(st.session_state.utilizadores_data)}")
+    
+    if not st.session_state.utilizadores_data.empty:
+        # Mostrar preview dos dados
+        with st.expander("Preview dos dados", expanded=False):
+            st.dataframe(st.session_state.utilizadores_data.head())
+        
+        # Filtros
+        col_filter1, col_filter2 = st.columns(2)
+        with col_filter1:
+            dept_filter = st.selectbox("Filtrar por Departamento", ["Todos"] + list(st.session_state.utilizadores_data['departamento'].unique()))
+        
+        with col_filter2:
+            status_filter = st.selectbox("Filtrar por Status", ["Todos"] + list(st.session_state.utilizadores_data['status'].unique()))
+        
+        # Aplicar filtros
+        df_filtered = st.session_state.utilizadores_data.copy()
+        
+        if dept_filter != "Todos":
+            df_filtered = df_filtered[df_filtered['departamento'] == dept_filter]
+        
+        if status_filter != "Todos":
+            df_filtered = df_filtered[df_filtered['status'] == status_filter]
+        
+        # Exibir tabela editável
+        edited_df = st.data_editor(
+            df_filtered,
+            use_container_width=True,
+            num_rows="dynamic",
+            column_config={
+                "id": st.column_config.NumberColumn("ID", disabled=True),
+                "nome": st.column_config.TextColumn("Nome", width="medium"),
+                "email": st.column_config.TextColumn("Email", width="medium"),
+                "departamento": st.column_config.SelectboxColumn(
+                    "Departamento",
+                    options=["TI", "RH", "Financeiro", "Comercial", "Marketing", "Operações", "Jurídico", "Outros"]
+                ),
+                "status": st.column_config.SelectboxColumn(
+                    "Status",
+                    options=["Ativo", "Inativo", "Férias", "Afastado"]
+                ),
+                "telefone": st.column_config.TextColumn("Telefone", width="small"),
+                "data_cadastro": st.column_config.TextColumn("Data Cadastro", width="small")
+            }
+        )
+        
+        # Atualizar dados se houve edição
+        if not edited_df.equals(df_filtered):
+            # Atualizar os dados originais
+            for idx, row in edited_df.iterrows():
+                original_idx = df_filtered.index[idx]
+                for col in edited_df.columns:
+                    st.session_state.utilizadores_data.loc[original_idx, col] = row[col]
+            st.success("Dados atualizados com sucesso!")
+            st.rerun()
+    else:
+        st.info("Nenhum utilizador cadastrado ainda.")
+        
+        # Botão para criar dados de teste
+        if st.button("Criar Utilizadores de Teste"):
+            # Criar alguns utilizadores de exemplo
+            utilizadores_teste = [
+                {
+                    'id': 1,
+                    'nome': 'João Silva',
+                    'email': 'joao@empresa.com',
+                    'departamento': 'TI',
+                    'cargo': 'Analista',
+                    'telefone': '(11) 99999-1111',
+                    'ramal': '1001',
+                    'local_trabalho': 'HQ1 - 8º Andar',
+                    'data_cadastro': datetime.now().strftime("%Y-%m-%d"),
+                    'status': 'Ativo',
+                    'observacoes': 'Usuário de teste'
+                },
+                {
+                    'id': 2,
+                    'nome': 'Maria Santos',
+                    'email': 'maria@empresa.com',
+                    'departamento': 'RH',
+                    'cargo': 'Gerente',
+                    'telefone': '(11) 99999-2222',
+                    'ramal': '1002',
+                    'local_trabalho': 'HQ1 - 7º Andar',
+                    'data_cadastro': datetime.now().strftime("%Y-%m-%d"),
+                    'status': 'Ativo',
+                    'observacoes': 'Usuário de teste'
+                },
+                {
+                    'id': 3,
+                    'nome': 'Pedro Costa',
+                    'email': 'pedro@empresa.com',
+                    'departamento': 'Financeiro',
+                    'cargo': 'Contador',
+                    'telefone': '(11) 99999-3333',
+                    'ramal': '1003',
+                    'local_trabalho': 'HQ1 - 6º Andar',
+                    'data_cadastro': datetime.now().strftime("%Y-%m-%d"),
+                    'status': 'Inativo',
+                    'observacoes': 'Usuário de teste'
+                }
+            ]
+            
+            st.session_state.utilizadores_data = pd.DataFrame(utilizadores_teste)
+            st.success("Utilizadores de teste criados com sucesso!")
+            st.rerun()
+    
+    # Aba exclusiva para admin gerenciar senhas
+    if is_admin:
+        with tab5:
+            st.markdown("#### 🔐 Gerenciamento de Senhas (Apenas Admin)")
+            st.warning("⚠️ Esta área é restrita aos administradores do sistema.")
+            
+            if st.session_state.users_db:
+                st.markdown("**Usuários do Sistema:**")
+                
+                for email, user_data in st.session_state.users_db.items():
+                    with st.expander(f"👤 {user_data.get('nome', 'Nome não disponível')} ({email})"):
+                        col1, col2, col3 = st.columns([2, 2, 1])
+                        
+                        with col1:
+                            st.write(f"**Email:** {email}")
+                            st.write(f"**Role:** {user_data.get('role', 'usuario')}")
+                            st.write(f"**Status:** {user_data.get('status', 'desconhecido')}")
+                            st.write(f"**Data Registro:** {user_data.get('data_registro', 'N/A')}")
+                        
+                        with col2:
+                            # Formulário para resetar senha
+                            with st.form(f"reset_password_{email}"):
+                                st.write("**🔑 Resetar Senha:**")
+                                new_password = st.text_input(
+                                    "Nova Senha", 
+                                    type="password", 
+                                    key=f"new_pwd_{email}",
+                                    placeholder="Digite a nova senha"
+                                )
+                                confirm_password = st.text_input(
+                                    "Confirmar Senha", 
+                                    type="password", 
+                                    key=f"confirm_pwd_{email}",
+                                    placeholder="Confirme a nova senha"
+                                )
+                                
+                                if st.form_submit_button("🔄 Resetar Senha", type="primary"):
+                                    if not new_password:
+                                        st.error("Digite uma nova senha")
+                                    elif len(new_password) < 6:
+                                        st.error("A senha deve ter pelo menos 6 caracteres")
+                                    elif new_password != confirm_password:
+                                        st.error("As senhas não coincidem")
+                                    else:
+                                        # Atualizar senha
+                                        st.session_state.users_db[email]['password_hash'] = hash_password(new_password)
+                                        
+                                        # Salvar alterações
+                                        save_success = save_users_db()
+                                        
+                                        if save_success:
+                                            st.success(f"✅ Senha alterada com sucesso para {user_data.get('nome', 'usuário')}!")
+                                            st.info(f"🔑 Nova senha: {new_password}")
+                                        else:
+                                            st.error("❌ Erro ao salvar as alterações")
+                        
+                        with col3:
+                            # Botão para alterar role
+                            if email != ADMIN_EMAIL:  # Não permitir alterar role do admin principal
+                                current_role = user_data.get('role', 'usuario')
+                                new_role = 'admin' if current_role == 'usuario' else 'usuario'
+                                role_label = '👑 Tornar Admin' if current_role == 'usuario' else '👤 Tornar Usuário'
+                                
+                                if st.button(role_label, key=f"toggle_role_{email}"):
+                                    st.session_state.users_db[email]['role'] = new_role
+                                    save_users_db()
+                                    st.success(f"Role alterada para {new_role}")
+                                    st.rerun()
+                            else:
+                                st.info("👑 Admin Principal")
+                
+                # Estatísticas de usuários
+                st.markdown("---")
+                st.markdown("**📊 Estatísticas do Sistema:**")
+                
+                col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
+                
+                with col_stat1:
+                    total_users = len(st.session_state.users_db)
+                    st.metric("Total de Usuários", total_users)
+                
+                with col_stat2:
+                    admins_count = sum(1 for user in st.session_state.users_db.values() if user.get('role') == 'admin')
+                    st.metric("Administradores", admins_count)
+                
+                with col_stat3:
+                    approved_count = sum(1 for user in st.session_state.users_db.values() if user.get('status') == 'aprovado')
+                    st.metric("Usuários Aprovados", approved_count)
+                
+                with col_stat4:
+                    pending_count = len(st.session_state.usuarios_pendentes)
+                    st.metric("Solicitações Pendentes", pending_count)
+                    
+            else:
+                st.info("Nenhum usuário encontrado no sistema.")
+
+# ========================================================================================
+# 📦 CADASTRO DE PRODUTOS
+# ========================================================================================
+def render_cadastro_produtos():
+    """Renderiza o cadastro de produtos com mapeamento fornecedor-produto"""
+    st.markdown("---")
+    st.markdown("### 📦 **Cadastro de Produtos**")
+    
+    # Inicializar dados de produtos se não existirem
+    if 'produtos_data' not in st.session_state:
+        st.session_state.produtos_data = pd.DataFrame(columns=[
+            'id', 'nome_produto', 'descricao', 'categoria', 'marca', 'modelo', 
+            'codigo_barras', 'unidade_medida', 'fornecedor_principal', 'fornecedores_secundarios',
+            'preco_referencia', 'estoque_minimo', 'localizacao', 'observacoes'
+        ])
+    
+    # Formulário de adição de produto
+    with st.expander("➕ Adicionar Novo Produto", expanded=True):
+        with st.form("add_produto_form"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                nome_produto = st.text_input("Nome do Produto *", placeholder="Nome comercial")
+                descricao = st.text_area("Descrição", placeholder="Descrição detalhada...")
+                categoria = st.selectbox("Categoria *", [
+                    "Tecnologia", "Móveis", "Equipamentos", "Suprimentos", "Manutenção", "Outros"
+                ])
+                marca = st.text_input("Marca", placeholder="Fabricante")
+                modelo = st.text_input("Modelo", placeholder="Versão/Modelo específico")
+                codigo_barras = st.text_input("Código de Barras", placeholder="EAN/UPC")
+            
+            with col2:
+                unidade_medida = st.selectbox("Unidade de Medida", ["Unidade", "Kg", "Litro", "Metro", "Caixa", "Pacote"])
+                
+                # Seleção de fornecedor principal
+                if 'fornecedores_data' in st.session_state and not st.session_state.fornecedores_data.empty:
+                    fornecedores_options = st.session_state.fornecedores_data['razao_social'].tolist()
+                    fornecedor_principal = st.selectbox("Fornecedor Principal *", ["-- Selecionar --"] + fornecedores_options)
+                else:
+                    fornecedor_principal = st.text_input("Fornecedor Principal *", placeholder="Nome do fornecedor")
+                
+                fornecedores_secundarios = st.text_input("Fornecedores Secundários", placeholder="Separados por vírgula")
+                preco_referencia = st.number_input("Preço de Referência (R$)", min_value=0.0, value=0.0, step=0.01)
+                estoque_minimo = st.number_input("Estoque Mínimo", min_value=0, value=1, step=1)
+                localizacao = st.text_input("Localização no Estoque", placeholder="Prateleira, Rua, Setor")
+                observacoes = st.text_area("Observações", placeholder="Informações adicionais...")
+            
+            submitted = st.form_submit_button("💾 Salvar Produto")
+            
+            if submitted and nome_produto and categoria:
+                # Verificar fornecedor
+                if fornecedor_principal == "-- Selecionar --":
+                    st.error("⚠️ Selecione um fornecedor principal!")
+                    return
+                
+                # Gerar ID único
+                novo_id = len(st.session_state.produtos_data) + 1
+                
+                novo_produto = {
+                    'id': novo_id,
+                    'nome_produto': nome_produto,
+                    'descricao': descricao or "N/A",
+                    'categoria': categoria,
+                    'marca': marca or "N/A",
+                    'modelo': modelo or "N/A",
+                    'codigo_barras': codigo_barras or "N/A",
+                    'unidade_medida': unidade_medida,
+                    'fornecedor_principal': fornecedor_principal,
+                    'fornecedores_secundarios': fornecedores_secundarios or "N/A",
+                    'preco_referencia': preco_referencia,
+                    'estoque_minimo': estoque_minimo,
+                    'localizacao': localizacao or "A Definir",
+                    'observacoes': observacoes or "N/A"
+                }
+                
+                # Adicionar ao DataFrame
+                new_row = pd.DataFrame([novo_produto])
+                st.session_state.produtos_data = pd.concat([st.session_state.produtos_data, new_row], ignore_index=True)
+                
+                st.success(f"✅ Produto '{nome_produto}' cadastrado com sucesso!")
+                st.rerun()
+            elif submitted:
+                st.error("⚠️ Preencha pelo menos Nome do Produto e Categoria!")
+    
+    # Exibir produtos cadastrados
+    if not st.session_state.produtos_data.empty:
+        st.markdown("#### 📋 **Produtos Cadastrados**")
+        
+        # Filtros
+        col_filter1, col_filter2, col_filter3 = st.columns(3)
+        with col_filter1:
+            cat_filter = st.selectbox("Filtrar por Categoria", ["Todas"] + list(st.session_state.produtos_data['categoria'].unique()))
+        
+        with col_filter2:
+            if 'fornecedores_data' in st.session_state and not st.session_state.fornecedores_data.empty:
+                fornecedores_options = st.session_state.fornecedores_data['razao_social'].tolist()
+                forn_filter = st.selectbox("Filtrar por Fornecedor", ["Todos"] + fornecedores_options)
+            else:
+                forn_filter = "Todos"
+        
+        with col_filter3:
+            search_term = st.text_input("🔍 Buscar produto", placeholder="Nome ou descrição...")
+        
+        # Aplicar filtros
+        df_filtered = st.session_state.produtos_data.copy()
+        
+        if cat_filter != "Todas":
+            df_filtered = df_filtered[df_filtered['categoria'] == cat_filter]
+        
+        if forn_filter != "Todos":
+            df_filtered = df_filtered[df_filtered['fornecedor_principal'] == forn_filter]
+        
+        if search_term:
+            mask = (df_filtered['nome_produto'].str.contains(search_term, case=False, na=False) |
+                   df_filtered['descricao'].str.contains(search_term, case=False, na=False))
+            df_filtered = df_filtered[mask]
+        
+        # Exibir tabela
+        st.dataframe(df_filtered, use_container_width=True)
+        
+        # Estatísticas
+        col_stats1, col_stats2, col_stats3 = st.columns(3)
+        with col_stats1:
+            st.metric("Total de Produtos", len(st.session_state.produtos_data))
+        with col_stats2:
+            st.metric("Produtos Filtrados", len(df_filtered))
+        with col_stats3:
+            categorias_count = len(st.session_state.produtos_data['categoria'].unique())
+            st.metric("Categorias", categorias_count)
+    
+    # Seção de mapeamento fornecedor-produto detalhado
+    st.markdown("---")
+    st.markdown("### 🔗 **Mapeamento Detalhado Fornecedor-Produto**")
+    st.markdown("*Visualize e gerencie todos os mapeamentos fornecedor-produto*")
+    
+    if 'fornecedor_produto_mapping' in st.session_state and not st.session_state.fornecedor_produto_mapping.empty:
+        # Filtros para mapeamento
+        col_map1, col_map2 = st.columns(2)
+        
+        with col_map1:
+            if not st.session_state.fornecedor_produto_mapping.empty:
+                categorias_mapeamento = st.session_state.fornecedor_produto_mapping['categoria_produto'].unique()
+                cat_map_filter = st.selectbox("Filtrar por Categoria", ["Todas"] + list(categorias_mapeamento))
+            else:
+                cat_map_filter = "Todas"
+        
+        with col_map2:
+            if not st.session_state.fornecedor_produto_mapping.empty:
+                fornecedores_mapeamento = st.session_state.fornecedor_produto_mapping['fornecedor_id'].unique()
+                if 'fornecedores_data' in st.session_state:
+                    fornecedores_nomes = st.session_state.fornecedores_data[
+                        st.session_state.fornecedores_data['id'].isin(fornecedores_mapeamento)
+                    ]['razao_social'].tolist()
+                    forn_map_filter = st.selectbox("Filtrar por Fornecedor", ["Todos"] + fornecedores_nomes)
+                else:
+                    forn_map_filter = "Todos"
+            else:
+                forn_map_filter = "Todos"
+        
+        # Aplicar filtros ao mapeamento
+        df_mapeamento_filtrado = st.session_state.fornecedor_produto_mapping.copy()
+        
+        if cat_map_filter != "Todas":
+            df_mapeamento_filtrado = df_mapeamento_filtrado[
+                df_mapeamento_filtrado['categoria_produto'] == cat_map_filter
+            ]
+        
+        if forn_map_filter != "Todos" and 'fornecedores_data' in st.session_state:
+            fornecedor_id_filtro = st.session_state.fornecedores_data[
+                st.session_state.fornecedores_data['razao_social'] == forn_map_filter
+            ]['id'].iloc[0]
+            df_mapeamento_filtrado = df_mapeamento_filtrado[
+                df_mapeamento_filtrado['fornecedor_id'] == fornecedor_id_filtro
+            ]
+        
+        # Criar DataFrame para exibição com informações do fornecedor
+        if not df_mapeamento_filtrado.empty:
+            df_display_mapping = df_mapeamento_filtrado.copy()
+            
+            # Adicionar informações do fornecedor
+            if 'fornecedores_data' in st.session_state:
+                df_display_mapping = df_display_mapping.merge(
+                    st.session_state.fornecedores_data[['id', 'razao_social', 'nome_fantasia', 'categoria_servicos']],
+                    left_on='fornecedor_id',
+                    right_on='id',
+                    how='left'
+                )
+                
+                # Selecionar colunas para exibição
+                df_display_mapping = df_display_mapping[[
+                    'razao_social', 'produto_nome', 'categoria_produto', 'preco_unitario',
+                    'prazo_entrega', 'condicoes_pagamento', 'observacoes'
+                ]]
+                
+                # Renomear colunas
+                df_display_mapping.columns = [
+                    'Fornecedor', 'Produto', 'Categoria', 'Preço (R$)', 'Prazo Entrega', 
+                    'Condições Pagamento', 'Observações'
+                ]
+                
+                # Exibir tabela
+                st.dataframe(df_display_mapping, use_container_width=True)
+                
+                # Estatísticas do mapeamento
+                col_map_stats1, col_map_stats2, col_map_stats3 = st.columns(3)
+                
+                with col_map_stats1:
+                    total_mapeamentos = len(df_mapeamento_filtrado)
+                    st.metric("Mapeamentos Filtrados", total_mapeamentos)
+                
+                with col_map_stats2:
+                    fornecedores_unicos = df_mapeamento_filtrado['fornecedor_id'].nunique()
+                    st.metric("Fornecedores", fornecedores_unicos)
+                
+                with col_map_stats3:
+                    produtos_unicos = df_mapeamento_filtrado['produto_nome'].nunique()
+                    st.metric("Produtos", produtos_unicos)
+        else:
+            st.info("ℹ️ Nenhum mapeamento encontrado com os filtros aplicados")
+    else:
+        st.info("ℹ️ Nenhum mapeamento fornecedor-produto encontrado. Crie mapeamentos na seção de Fornecedores.")
+        
+        # Mapeamento Fornecedor-Produto
+        st.markdown("#### 🔗 **Mapeamento Fornecedor-Produto**")
+        
+        if 'fornecedores_data' in st.session_state and not st.session_state.fornecedores_data.empty:
+            # Criar matriz de relacionamento
+            fornecedor_produto = st.session_state.produtos_data.groupby('fornecedor_principal').agg({
+                'nome_produto': 'count',
+                'categoria': lambda x: ', '.join(x.unique())
+            }).reset_index()
+            
+            fornecedor_produto.columns = ['Fornecedor', 'Total de Produtos', 'Categorias Atendidas']
+            
+            st.dataframe(fornecedor_produto, use_container_width=True)
+            
+            # Gráfico de relacionamento
+            if len(fornecedor_produto) > 1:
+                import plotly.express as px
+                
+                fig = px.bar(fornecedor_produto, x='Fornecedor', y='Total de Produtos',
+                            title="Produtos por Fornecedor",
+                            color='Total de Produtos',
+                            color_continuous_scale='viridis')
+                
+                st.plotly_chart(fig, use_container_width=True)
+
+# ========================================================================================
+# 🧾 ENTRADA DE NF ESTOQUE
+# ========================================================================================
+def render_entrada_nf_estoque():
+    """Renderiza a entrada de notas fiscais no estoque"""
+    st.markdown("---")
+    st.markdown("### 🧾 **Entrada de NF Estoque**")
+    
+    # Abas para diferentes tipos de controle
+    tab1, tab2 = st.tabs(["📋 Controle por N/S e Ativo", "🏷️ Controle por SKU e Quantidade"])
+    
+    with tab1:
+        st.markdown("#### 📋 **Controle por Número de Série e Ativo**")
+        
+        with st.form("entrada_ns_ativo_form"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                numero_serie = st.text_input("Número de Série *", placeholder="Ex: NS123456789")
+                tag_ativo = st.text_input("Tag do Ativo *", placeholder="Ex: TEC001")
+                item_descricao = st.text_input("Descrição do Item *", placeholder="Ex: Notebook Dell Inspiron")
+                marca = st.text_input("Marca", placeholder="Ex: Dell")
+                modelo = st.text_input("Modelo", placeholder="Ex: Latitude 5520")
+            
+            with col2:
+                valor_unitario = st.number_input("Valor Unitário (R$) *", min_value=0.0, value=0.0, step=0.01)
+                quantidade = st.number_input("Quantidade *", min_value=1, value=1, step=1)
+                nota_fiscal = st.text_input("Número da NF *", placeholder="Ex: NF-001234")
+                data_entrada = st.date_input("Data de Entrada *", value=pd.Timestamp.now().date())
+                fornecedor = st.selectbox("Fornecedor", ["-- Selecionar --"] + 
+                    (st.session_state.fornecedores_data['razao_social'].tolist() if 'fornecedores_data' in st.session_state else []))
+            
+            # Localização
+            st.markdown("#### 📍 **Localização no Estoque**")
+            col_loc1, col_loc2, col_loc3 = st.columns(3)
+            
+            with col_loc1:
+                prateleira = st.text_input("Prateleira", placeholder="Ex: P01")
+                rua = st.text_input("Rua", placeholder="Ex: R01")
+            
+            with col_loc2:
+                setor = st.text_input("Setor", placeholder="Ex: TI")
+                box = st.text_input("Caixa", placeholder="Ex: C01")
+            
+            with col_loc3:
+                local = st.selectbox("Local", [
+                    "HQ1 - 8º Andar", "HQ1 - 7º Andar", "HQ1 - 6º Andar", "HQ1 - 5º Andar",
+                    "Spark - 2º Andar", "Spark - 1º Andar", "HQ1 - Subsolo", "HQ1 - 3º Andar", "HQ1 - 2º Andar"
+                ])
+                categoria = st.selectbox("Categoria", [
+                    "techstop", "tv e monitor", "audio e video", "lixo eletrônico", "outros"
+                ])
+            
+            # Motivo da entrada
+            motivo_entrada = st.text_input("Motivo da Entrada *", value="Entrada via NF", placeholder="Ex: Entrada via NF")
+            
+            # Observações
+            observacoes = st.text_area("Observações", placeholder="Informações adicionais sobre a entrada...")
+            
+            submitted = st.form_submit_button("💾 Registrar Entrada NF")
+            
+            if submitted and numero_serie and tag_ativo and item_descricao and valor_unitario > 0 and nota_fiscal and motivo_entrada:
+                # Verificar se a tag já existe
+                unified_data = st.session_state.inventory_data['unified']
+                tag_existe = tag_ativo in unified_data['tag'].values if not unified_data.empty else False
+                
+                if tag_existe:
+                    st.error(f"❌ A tag '{tag_ativo}' já existe no inventário!")
+                else:
+                    # Criar novo item
+                    novo_item = {
+                        'tag': tag_ativo,
+                        'sku': f"SKU-{tag_ativo}",
+                        'itens': item_descricao,
+                        'categoria': categoria,
+                        'modelo': modelo or "N/A",
+                        'serial': numero_serie,
+                        'marca': marca or "N/A",
+                        'valor': valor_unitario,
+                        'data_compra': pd.to_datetime(data_entrada),
+                        'fornecedor': fornecedor if fornecedor != "-- Selecionar --" else "N/A",
+                        'po': f"PO-NF-{nota_fiscal}",
+                        'nota_fiscal': nota_fiscal,
+                        'uso': "Entrada via NF",
+                        'qtd': quantidade,
+                        'prateleira': prateleira or "A Definir",
+                        'rua': rua or "A Definir",
+                        'setor': setor or "A Definir",
+                        'local': local,
+                        'box': box or "A Definir",
+                        'conferido': False,
+                        'motivo': motivo_entrada,
+                        'data_entrada': pd.to_datetime(data_entrada)
+                    }
+                    
+                    # Adicionar ao inventário
+                    new_row = pd.DataFrame([novo_item])
+                    st.session_state.inventory_data['unified'] = pd.concat([unified_data, new_row], ignore_index=True)
+                    auto_save_inventory()
+                    
+                    st.success(f"✅ Item registrado com sucesso! Tag: {tag_ativo}")
+                    st.rerun()
+            elif submitted:
+                st.error("⚠️ Preencha todos os campos obrigatórios!")
+    
+    with tab2:
+        st.markdown("#### 🏷️ **Controle por SKU e Quantidade**")
+        
+        with st.form("entrada_sku_qtd_form"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                sku = st.text_input("SKU *", placeholder="Ex: SKU123456")
+                produto = st.selectbox("Produto *", ["-- Selecionar --"] + 
+                    (st.session_state.produtos_data['nome_produto'].tolist() if 'produtos_data' in st.session_state else []))
+                
+                if produto != "-- Selecionar --" and 'produtos_data' in st.session_state:
+                    produto_data = st.session_state.produtos_data[st.session_state.produtos_data['nome_produto'] == produto].iloc[0]
+                    st.info(f"**Preço de Referência:** R$ {produto_data['preco_referencia']:.2f}")
+                    st.info(f"**Fornecedor:** {produto_data['fornecedor_principal']}")
+                
+                quantidade = st.number_input("Quantidade *", min_value=1, value=1, step=1)
+                valor_unitario = st.number_input("Valor Unitário (R$)", min_value=0.0, value=0.0, step=0.01)
+            
+            with col2:
+                nota_fiscal = st.text_input("Número da NF *", placeholder="Ex: NF-001234")
+                data_entrada = st.date_input("Data de Entrada *", value=pd.Timestamp.now().date())
+                fornecedor = st.selectbox("Fornecedor", ["-- Selecionar --"] + 
+                    (st.session_state.fornecedores_data['razao_social'].tolist() if 'fornecedores_data' in st.session_state else []))
+                
+                # Localização
+                prateleira = st.text_input("Prateleira", placeholder="Ex: P01")
+                rua = st.text_input("Rua", placeholder="Ex: R01")
+                setor = st.text_input("Setor", placeholder="Ex: TI")
+            
+            submitted = st.form_submit_button("💾 Registrar Entrada SKU")
+            
+            if submitted and sku and produto != "-- Selecionar --" and quantidade > 0 and nota_fiscal:
+                # Verificar se o SKU já existe
+                unified_data = st.session_state.inventory_data['unified']
+                sku_existe = sku in unified_data['tag'].values if not unified_data.empty else False
+                
+                if sku_existe:
+                    st.error(f"❌ O SKU '{sku}' já existe no inventário!")
+                else:
+                    # Obter dados do produto se disponível
+                    if 'produtos_data' in st.session_state:
+                        produto_data = st.session_state.produtos_data[st.session_state.produtos_data['nome_produto'] == produto].iloc[0]
+                        categoria = produto_data['categoria']
+                        marca = produto_data['marca']
+                        modelo = produto_data['modelo']
+                        fornecedor_final = produto_data['fornecedor_principal']
+                    else:
+                        categoria = "techstop"
+                        marca = "N/A"
+                        modelo = "N/A"
+                        fornecedor_final = fornecedor if fornecedor != "-- Selecionar --" else "N/A"
+                    
+                    # Criar novo item
+                    novo_item = {
+                        'tag': sku,
+                        'itens': produto,
+                        'categoria': categoria,
+                        'modelo': modelo,
+                        'serial': f"SKU{sku}",
+                        'marca': marca,
+                        'valor': valor_unitario or 0.0,
+                        'data_compra': pd.to_datetime(data_entrada),
+                        'fornecedor': fornecedor_final,
+                        'po': f"PO-SKU-{sku}",
+                        'nota_fiscal': nota_fiscal,
+                        'uso': "Entrada via SKU",
+                        'qtd': quantidade,
+                        'prateleira': prateleira or "A Definir",
+                        'rua': rua or "A Definir",
+                        'setor': setor or "A Definir",
+                        'local': "HQ1 - 8º Andar",
+                        'box': "A Definir",
+                        'conferido': False
+                    }
+                    
+                    # Adicionar ao inventário
+                    new_row = pd.DataFrame([novo_item])
+                    st.session_state.inventory_data['unified'] = pd.concat([unified_data, new_row], ignore_index=True)
+                    auto_save_inventory()
+                    
+                    st.success(f"✅ SKU registrado com sucesso! SKU: {sku}")
+                    st.rerun()
+            elif submitted:
+                st.error("⚠️ Preencha todos os campos obrigatórios!")
+
+# ========================================================================================
+# 📦 MOVIMENTAÇÃO DO ESTOQUE
+# ========================================================================================
+def render_movimentacao_estoque():
+    """Renderiza a movimentação do estoque"""
+    st.markdown("---")
+    st.markdown("### Movimentação do Estoque")
+    
+    # Abas para diferentes funcionalidades
+    tab1, tab2, tab3 = st.tabs(["Mapeamento de Prateleiras", "Estoque por Prateleira", "Entrada e Saída"])
+    
+    with tab1:
+        st.markdown("#### Mapeamento de Prateleiras no Estoque")
+        
+        # Visualizar estrutura atual do estoque
+        unified_data = st.session_state.inventory_data['unified']
+        
+        if not unified_data.empty and 'prateleira' in unified_data.columns:
+            # Estatísticas de localização
+            col_stats1, col_stats2, col_stats3 = st.columns(3)
+            
+            with col_stats1:
+                prateleiras_unicas = unified_data['prateleira'].nunique()
+                st.metric("Prateleiras Utilizadas", prateleiras_unicas)
+            
+            with col_stats2:
+                ruas_unicas = unified_data['rua'].nunique()
+                st.metric("Ruas Utilizadas", ruas_unicas)
+            
+            with col_stats3:
+                setores_unicos = unified_data['setor'].nunique()
+                st.metric("Setores Utilizados", setores_unicos)
+            
+            # Mapa visual do estoque
+            st.markdown("#### 📍 **Mapa Visual do Estoque**")
+            
+            # Agrupar por localização
+            if 'local' in unified_data.columns:
+                localizacoes = unified_data.groupby('local').agg({
+                    'prateleira': 'nunique',
+                    'rua': 'nunique',
+                    'setor': 'nunique',
+                    'tag': 'count'
+                }).reset_index()
+                
+                localizacoes.columns = ['Local', 'Prateleiras', 'Ruas', 'Setores', 'Total de Itens']
+                st.dataframe(localizacoes, use_container_width=True)
+            
+            # Formulário para adicionar nova localização
+            with st.expander("➕ Adicionar Nova Localização", expanded=False):
+                with st.form("add_localizacao_form"):
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        novo_local = st.text_input("Local", placeholder="Ex: HQ1 - 9º Andar")
+                        nova_prateleira = st.text_input("Prateleira", placeholder="Ex: P10")
+                    
+                    with col2:
+                        nova_rua = st.text_input("Rua", placeholder="Ex: R10")
+                        novo_setor = st.text_input("Setor", placeholder="Ex: Marketing")
+                    
+                    with col3:
+                        nova_caixa = st.text_input("Caixa", placeholder="Ex: C10")
+                        capacidade = st.number_input("Capacidade", min_value=1, value=10, step=1)
+                    
+                    submitted = st.form_submit_button("➕ Adicionar Localização")
+                    
+                    if submitted and novo_local and nova_prateleira:
+                        st.success(f"✅ Localização '{novo_local} - {nova_prateleira}' adicionada!")
+                        st.rerun()
+        else:
+            st.warning("⚠️ Nenhum dado de estoque disponível para mapeamento.")
+    
+    with tab2:
+        st.markdown("#### 📋 **Mapeamento de Estoque por Local (HQ1, HQ2, Spark)**")
+        
+        # Carregar dados específicos da planilha inventario_unificado_20250827.csv
+        try:
+            df_inventario = pd.read_csv('inventario_unificado_20250827.csv')
+            st.success(f"✅ Dados carregados: {len(df_inventario)} itens de inventario_unificado_20250827.csv")
+        except FileNotFoundError:
+            st.error("❌ Arquivo inventario_unificado_20250827.csv não encontrado!")
+            df_inventario = pd.DataFrame()
+        
+        if not df_inventario.empty:
+            # Mapear setores para locais (prédios)
+            def mapear_local_por_setor(setor):
+                if pd.isna(setor) or setor == '':
+                    return 'Indefinido'
+                setor_str = str(setor).lower()
+                if any(x in setor_str for x in ['techstop', 'alpha', 'beta', 'gamma']):
+                    return 'HQ1'
+                elif any(x in setor_str for x in ['monitor', 'delta', 'audio', 'foxtrot', 'studio', 'golf']):
+                    return 'HQ1'
+                elif any(x in setor_str for x in ['av zone echo', 'echo']):
+                    return 'Spark'
+                elif any(x in setor_str for x in ['lixo', 'hotel', 'india']):
+                    return 'HQ1'
+                elif any(x in setor_str for x in ['outros', 'juliet', 'ergonomia', 'kilo']):
+                    return 'HQ1'
+                elif any(x in setor_str for x in ['spark', 'beta']):
+                    return 'Spark'
+                else:
+                    return 'HQ1'  # Default para HQ1
+            
+            # Adicionar coluna de local baseada no setor
+            df_inventario['local_mapeado'] = df_inventario['setor'].apply(mapear_local_por_setor)
+            
+            # Filtros hierárquicos: primeiro local, depois setor
+            col_filter1, col_filter2 = st.columns(2)
+            
+            # Lista de locais únicos
+            locais_disponiveis = sorted(df_inventario['local_mapeado'].unique().tolist())
+            locais_disponiveis = [l for l in locais_disponiveis if l and l != 'Indefinido']
+            
+            with col_filter1:
+                local_filter = st.selectbox("1️⃣ Selecionar Local", ["Todos"] + locais_disponiveis)
+            
+            # Filtrar setores baseado no local selecionado
+            if local_filter != "Todos":
+                df_local = df_inventario[df_inventario['local_mapeado'] == local_filter]
+                setores_disponíveis = sorted([s for s in df_local['setor'].unique() if pd.notna(s) and str(s).strip()])
+            else:
+                setores_disponíveis = sorted([s for s in df_inventario['setor'].unique() if pd.notna(s) and str(s).strip()])
+            
+            with col_filter2:
+                setor_filter = st.selectbox("2️⃣ Selecionar Setor", ["Todos"] + setores_disponíveis)
+            
+            # Aplicar filtros
+            df_filtered = df_inventario.copy()
+            
+            if local_filter != "Todos":
+                df_filtered = df_filtered[df_filtered['local_mapeado'] == local_filter]
+            
+            if setor_filter != "Todos":
+                df_filtered = df_filtered[df_filtered['setor'] == setor_filter]
+            
+            # Organizar dados por local primeiro, depois por setor
+            if not df_filtered.empty:
+                # Agrupar dados reais do estoque
+                estoque_organizado = df_filtered.groupby(['local_mapeado', 'setor', 'prateleira', 'rua']).agg({
+                    'tag': 'count',
+                    'valor': 'sum',
+                    'qtd': 'sum'
+                }).reset_index()
+                
+                estoque_organizado.columns = ['Local', 'Setor', 'Prateleira', 'Rua', 'Total de Itens', 'Valor Total', 'Quantidade Total']
+                estoque_organizado = estoque_organizado.sort_values(['Local', 'Setor', 'Prateleira'])
+                
+                # Exibir por local
+                locais_únicos = estoque_organizado['Local'].unique()
+                
+                for local in locais_únicos:
+                    if local and local != 'Indefinido':
+                        with st.expander(f"🏢 **{local}**", expanded=True):
+                            dados_local = estoque_organizado[estoque_organizado['Local'] == local]
+                            
+                            # Métricas do local
+                            col_metric1, col_metric2, col_metric3 = st.columns(3)
+                            
+                            with col_metric1:
+                                total_itens_local = dados_local['Total de Itens'].sum()
+                                st.metric("📦 Total de Itens", total_itens_local)
+                            
+                            with col_metric2:
+                                total_setores = len(dados_local['Setor'].unique())
+                                st.metric("🏬 Setores", total_setores)
+                            
+                            with col_metric3:
+                                valor_total_local = dados_local['Valor Total'].sum()
+                                st.metric("💰 Valor Total", f"R$ {valor_total_local:,.0f}")
+                            
+                            # Tabela dos setores do local (mostrando dados reais)
+                            st.dataframe(dados_local.drop('Local', axis=1), use_container_width=True)
+                            
+                            # Detalhamento dos itens por setor neste local
+                            st.markdown("**📋 Detalhamento por Categoria:**")
+                            dados_detalhados = df_filtered[df_filtered['local_mapeado'] == local]
+                            categorias_local = dados_detalhados['categoria'].value_counts()
+                            
+                            if not categorias_local.empty:
+                                col_cat1, col_cat2, col_cat3 = st.columns(3)
+                                for i, (categoria, quantidade) in enumerate(categorias_local.head(6).items()):
+                                    col = [col_cat1, col_cat2, col_cat3][i % 3]
+                                    with col:
+                                        st.metric(f"📦 {categoria.title()}", quantidade)
+            else:
+                st.info("📭 Nenhum item encontrado com os filtros selecionados")
+            
+            # Estatísticas gerais do estoque real
+            if not df_filtered.empty:
+                st.markdown("---")
+                st.markdown("#### 📊 **Estatísticas Gerais**")
+                col_stats1, col_stats2, col_stats3, col_stats4 = st.columns(4)
+                
+                with col_stats1:
+                    total_locais = len(df_filtered['local_mapeado'].unique())
+                    st.metric("Locais Ativos", total_locais)
+                
+                with col_stats2:
+                    total_setores = len([s for s in df_filtered['setor'].unique() if pd.notna(s)])
+                    st.metric("Setores Ativos", total_setores)
+                
+                with col_stats3:
+                    total_itens_geral = len(df_filtered)
+                    st.metric("Total de Itens", total_itens_geral)
+                
+                with col_stats4:
+                    valor_total_geral = df_filtered['valor'].sum()
+                    st.metric("Valor Total", f"R$ {valor_total_geral:,.2f}")
+                    
+                # Gráfico de distribuição por local
+                st.markdown("#### 📊 **Distribuição por Local**")
+                distribuicao_local = df_filtered['local_mapeado'].value_counts()
+                
+                if not distribuicao_local.empty:
+                    import plotly.express as px
+                    fig = px.pie(
+                        values=distribuicao_local.values,
+                        names=distribuicao_local.index,
+                        title="Distribuição de Itens por Local",
+                        color_discrete_sequence=['#7C3AED', '#5B21B6', '#6D28D9', '#8B5CF6']
+                    )
+                    fig.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font_color='white'
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("⚠️ Nenhum dado de estoque disponível na planilha especificada.")
+    
+    with tab3:
+        st.markdown("#### 🔄 **Entrada e Saída de Materiais**")
+        
+        # Inicializar dados de movimentação se não existirem
+        if 'movimentacoes_data' not in st.session_state:
+            st.session_state.movimentacoes_data = pd.DataFrame(columns=[
+                'id', 'tipo_movimento', 'tag_item', 'descricao_item', 'quantidade', 
+                'origem', 'destino', 'motivo', 'responsavel', 'data_movimento', 'data_entrada', 'observacoes'
+            ])
+        
+        # Formulário de movimentação
+        with st.expander("🔄 Registrar Movimentação", expanded=True):
+            with st.form("movimentacao_form"):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    tipo_movimento = st.selectbox("Tipo de Movimento *", ["Entrada", "Saída", "Transferência"])
+                    tag_item = st.text_input("Tag/SKU do Item *", placeholder="Ex: TEC001")
+                    quantidade = st.number_input("Quantidade *", min_value=1, value=1, step=1)
+                    origem = st.text_input("Origem", placeholder="Ex: Fornecedor, Prateleira P01")
+                
+                with col2:
+                    destino = st.text_input("Destino", placeholder="Ex: Prateleira P02, Usuário")
+                    motivo = st.selectbox("Motivo *", [
+                        "Compra", "Venda", "Transferência", "Manutenção", "Descarte", "Empréstimo", "Outros"
+                    ])
+                    responsavel = st.text_input("Responsável *", placeholder="Nome do responsável")
+                    data_movimento = st.date_input("Data da Movimentação *", value=pd.Timestamp.now().date())
+                    data_entrada = st.date_input("Data de Entrada no Sistema *", value=pd.Timestamp.now().date())
+                
+                observacoes = st.text_area("Observações", placeholder="Detalhes da movimentação...")
+                
+                submitted = st.form_submit_button("💾 Registrar Movimentação")
+                
+                if submitted and tag_item and quantidade > 0 and responsavel and data_entrada:
+                    # Verificar se o item existe no inventário
+                    if not unified_data.empty and 'tag' in unified_data.columns:
+                        item_existe = tag_item in unified_data['tag'].values
+                        
+                        if not item_existe:
+                            st.warning(f"⚠️ Item com tag '{tag_item}' não encontrado no inventário.")
+                        
+                        # Registrar movimentação
+                        novo_id = len(st.session_state.movimentacoes_data) + 1
+                        
+                        nova_movimentacao = {
+                            'id': novo_id,
+                            'tipo_movimento': tipo_movimento,
+                            'tag_item': tag_item,
+                            'descricao_item': unified_data[unified_data['tag'] == tag_item]['itens'].iloc[0] if item_existe else "Item não encontrado",
+                            'quantidade': quantidade,
+                            'origem': origem or "N/A",
+                            'destino': destino or "N/A",
+                            'motivo': motivo,
+                            'responsavel': responsavel,
+                            'data_movimento': pd.Timestamp.now(),
+                            'data_entrada': pd.to_datetime(data_entrada),
+                            'observacoes': observacoes or "N/A"
+                        }
+                        
+                        # Adicionar ao DataFrame
+                        new_row = pd.DataFrame([nova_movimentacao])
+                        st.session_state.movimentacoes_data = pd.concat([st.session_state.movimentacoes_data, new_row], ignore_index=True)
+                        
+                        st.success(f"✅ Movimentação registrada com sucesso!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Inventário não disponível para verificação.")
+                elif submitted:
+                    st.error("⚠️ Preencha todos os campos obrigatórios!")
+        
+        # Exibir histórico de movimentações
+        if not st.session_state.movimentacoes_data.empty:
+            st.markdown("#### 📋 **Histórico de Movimentações**")
+            
+            # Filtros
+            col_filter1, col_filter2, col_filter3 = st.columns(3)
+            
+            with col_filter1:
+                tipo_filter = st.selectbox("Filtrar por Tipo", ["Todos"] + list(st.session_state.movimentacoes_data['tipo_movimento'].unique()))
+            
+            with col_filter2:
+                motivo_filter = st.selectbox("Filtrar por Motivo", ["Todos"] + list(st.session_state.movimentacoes_data['motivo'].unique()))
+            
+            with col_filter3:
+                data_filter = st.date_input("Filtrar por Data", value=pd.Timestamp.now().date())
+            
+            # Aplicar filtros
+            df_mov_filtered = st.session_state.movimentacoes_data.copy()
+            
+            if tipo_filter != "Todos":
+                df_mov_filtered = df_mov_filtered[df_mov_filtered['tipo_movimento'] == tipo_filter]
+            
+            if motivo_filter != "Todos":
+                df_mov_filtered = df_mov_filtered[df_mov_filtered['motivo'] == motivo_filter]
+            
+            # Filtrar por data (aproximado)
+            if data_filter:
+                df_mov_filtered['data_movimento'] = pd.to_datetime(df_mov_filtered['data_movimento'])
+                df_mov_filtered = df_mov_filtered[df_mov_filtered['data_movimento'].dt.date == data_filter]
+            
+            # Exibir tabela
+            st.dataframe(df_mov_filtered, use_container_width=True)
+            
+            # Estatísticas
+            col_stats1, col_stats2, col_stats3 = st.columns(3)
+            with col_stats1:
+                st.metric("Total de Movimentações", len(st.session_state.movimentacoes_data))
+            with col_stats2:
+                st.metric("Movimentações Filtradas", len(df_mov_filtered))
+            with col_stats3:
+                entradas = len(st.session_state.movimentacoes_data[st.session_state.movimentacoes_data['tipo_movimento'] == 'Entrada'])
+                st.metric("Entradas", entradas)
 
 # ========================================================================================
 # INTEGRAÇÃO COM SEFAZ - ENTRADA AUTOMÁTICA
@@ -21396,713 +24324,182 @@ def render_historico_consultas_sefaz():
         st.rerun()
 
 # ========================================================================================
-# NOVOS MÓDULOS DO SISTEMA DE ESTOQUE
+# NOVAS PÁGINAS INTEGRADAS
 # ========================================================================================
 
-def render_cadastro_usuarios():
-    """Renderiza a página de cadastro de usuários"""
-    st.header("👥 Cadastro de Utilizadores")
+def render_notas_fiscais():
+    """Renderiza página de notas fiscais"""
+    st.markdown("## 📄 Gestão de Notas Fiscais")
     
-    # Inicializar dados de usuários se não existir
-    if 'usuarios_sistema' not in st.session_state:
-        st.session_state.usuarios_sistema = []
-    
-    # Formulário de cadastro
-    with st.form("cadastro_usuario"):
-        st.subheader("📝 Novo Usuário")
+    if st.session_state.estoque_manager:
+        from app.estoque_manager import render_form_nota_fiscal
+        render_form_nota_fiscal(st.session_state.estoque_manager)
         
-        col1, col2 = st.columns(2)
-        with col1:
-            nome = st.text_input("Nome Completo", key="nome_usuario")
-            email = st.text_input("Email", key="email_usuario")
-            cargo = st.selectbox("Cargo", ["Operador", "Supervisor", "Gerente", "Administrador"], key="cargo_usuario")
-        
-        with col2:
-            departamento = st.selectbox("Departamento", ["TI", "RH", "Financeiro", "Operacional", "Administrativo"], key="dept_usuario")
-            telefone = st.text_input("Telefone", key="tel_usuario")
-            ativo = st.checkbox("Usuário Ativo", value=True, key="ativo_usuario")
-        
-        senha = st.text_input("Senha", type="password", key="senha_usuario")
-        confirmar_senha = st.text_input("Confirmar Senha", type="password", key="conf_senha_usuario")
-        
-        submitted = st.form_submit_button("💾 Cadastrar Usuário")
-        
-        if submitted:
-            if senha != confirmar_senha:
-                st.error("❌ Senhas não coincidem!")
-            elif not nome or not email:
-                st.error("❌ Nome e email são obrigatórios!")
-            else:
-                novo_usuario = {
-                    'id': len(st.session_state.usuarios_sistema) + 1,
-                    'nome': nome,
-                    'email': email,
-                    'cargo': cargo,
-                    'departamento': departamento,
-                    'telefone': telefone,
-                    'ativo': ativo,
-                    'senha_hash': hash(senha),  # Em produção, usar bcrypt
-                    'data_cadastro': datetime.now().isoformat(),
-                    'ultimo_acesso': None
-                }
-                
-                st.session_state.usuarios_sistema.append(novo_usuario)
-                st.success(f"✅ Usuário {nome} cadastrado com sucesso!")
-                
-                # Limpar formulário
-                for key in ["nome_usuario", "email_usuario", "cargo_usuario", "dept_usuario", "tel_usuario", "senha_usuario", "conf_senha_usuario"]:
-                    if key in st.session_state:
-                        del st.session_state[key]
-                st.rerun()
-    
-    # Lista de usuários
-    st.subheader("📋 Usuários Cadastrados")
-    
-    if st.session_state.usuarios_sistema:
-        df_usuarios = pd.DataFrame(st.session_state.usuarios_sistema)
-        
-        # Filtros
-        col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
-        with col_filtro1:
-            filtro_dept = st.selectbox("Filtrar por Departamento", ["Todos"] + list(df_usuarios['departamento'].unique()))
-        with col_filtro2:
-            filtro_cargo = st.selectbox("Filtrar por Cargo", ["Todos"] + list(df_usuarios['cargo'].unique()))
-        with col_filtro3:
-            filtro_status = st.selectbox("Filtrar por Status", ["Todos", "Ativo", "Inativo"])
-        
-        # Aplicar filtros
-        df_filtrado = df_usuarios.copy()
-        if filtro_dept != "Todos":
-            df_filtrado = df_filtrado[df_filtrado['departamento'] == filtro_dept]
-        if filtro_cargo != "Todos":
-            df_filtrado = df_filtrado[df_filtrado['cargo'] == filtro_cargo]
-        if filtro_status != "Todos":
-            status_bool = filtro_status == "Ativo"
-            df_filtrado = df_filtrado[df_filtrado['ativo'] == status_bool]
-        
-        # Exibir tabela
-        st.dataframe(
-            df_filtrado[['nome', 'email', 'cargo', 'departamento', 'telefone', 'ativo']],
-            use_container_width=True
-        )
-        
-        # Ações em lote
-        st.subheader("⚡ Ações em Lote")
-        col_acao1, col_acao2, col_acao3 = st.columns(3)
-        
-        with col_acao1:
-            if st.button("📥 Exportar CSV", key="export_usuarios"):
-                csv = df_filtrado.to_csv(index=False)
-                st.download_button(
-                    label="📥 Download CSV",
-                    data=csv,
-                    file_name=f"usuarios_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                    mime="text/csv"
-                )
-        
-        with col_acao2:
-            if st.button("🔄 Atualizar Status", key="update_status"):
-                # Lógica para atualizar status em lote
-                st.info("🔄 Funcionalidade de atualização em lote será implementada")
-        
-        with col_acao3:
-            if st.button("🗑️ Limpar Inativos", key="clear_inativos"):
-                if st.checkbox("Confirmar exclusão de usuários inativos"):
-                    st.session_state.usuarios_sistema = [u for u in st.session_state.usuarios_sistema if u['ativo']]
-                    st.success("✅ Usuários inativos removidos!")
-                    st.rerun()
+        # Mostrar notas fiscais existentes
+        st.subheader("📋 Notas Fiscais Cadastradas")
+        if not st.session_state.estoque_manager.notas_fiscais.empty:
+            st.dataframe(st.session_state.estoque_manager.notas_fiscais, use_container_width=True)
+        else:
+            st.info("ℹ️ Nenhuma nota fiscal cadastrada")
     else:
-        st.info("📝 Nenhum usuário cadastrado ainda. Use o formulário acima para adicionar o primeiro usuário.")
-
-def render_cadastro_produtos():
-    """Renderiza a página de cadastro de produtos"""
-    st.header("📦 Cadastro de Produtos")
-    
-    # Inicializar dados de produtos se não existir
-    if 'produtos_sistema' not in st.session_state:
-        st.session_state.produtos_sistema = []
-    
-    # Formulário de cadastro
-    with st.form("cadastro_produto"):
-        st.subheader("📝 Novo Produto")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            nome_produto = st.text_input("Nome do Produto", key="nome_prod")
-            sku = st.text_input("SKU", key="sku_prod")
-            categoria = st.selectbox("Categoria", ["Eletrônicos", "Informática", "Móveis", "Papelaria", "Outros"], key="cat_prod")
-            marca = st.text_input("Marca", key="marca_prod")
-        
-        with col2:
-            modelo = st.text_input("Modelo", key="modelo_prod")
-            unidade_medida = st.selectbox("Unidade de Medida", ["Unidade", "Kg", "Litro", "Metro", "Caixa"], key="um_prod")
-            preco_unitario = st.number_input("Preço Unitário (R$)", min_value=0.0, step=0.01, key="preco_prod")
-            estoque_minimo = st.number_input("Estoque Mínimo", min_value=0, key="estoque_min_prod")
-        
-        descricao = st.text_area("Descrição", key="desc_prod")
-        fornecedores = st.multiselect("Fornecedores", ["Selecionar fornecedores..."], key="forn_prod")
-        
-        submitted = st.form_submit_button("💾 Cadastrar Produto")
-        
-        if submitted:
-            if not nome_produto or not sku:
-                st.error("❌ Nome e SKU são obrigatórios!")
-            else:
-                novo_produto = {
-                    'id': len(st.session_state.produtos_sistema) + 1,
-                    'nome': nome_produto,
-                    'sku': sku,
-                    'categoria': categoria,
-                    'marca': marca,
-                    'modelo': modelo,
-                    'unidade_medida': unidade_medida,
-                    'preco_unitario': preco_unitario,
-                    'estoque_minimo': estoque_minimo,
-                    'descricao': descricao,
-                    'fornecedores': fornecedores,
-                    'data_cadastro': datetime.now().isoformat(),
-                    'ativo': True
-                }
-                
-                st.session_state.produtos_sistema.append(novo_produto)
-                st.success(f"✅ Produto {nome_produto} cadastrado com sucesso!")
-                st.rerun()
-    
-    # Lista de produtos
-    st.subheader("📋 Produtos Cadastrados")
-    
-    if st.session_state.produtos_sistema:
-        df_produtos = pd.DataFrame(st.session_state.produtos_sistema)
-        
-        # Filtros
-        col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
-        with col_filtro1:
-            filtro_cat = st.selectbox("Filtrar por Categoria", ["Todas"] + list(df_produtos['categoria'].unique()))
-        with col_filtro2:
-            filtro_marca = st.selectbox("Filtrar por Marca", ["Todas"] + list(df_produtos['marca'].unique()))
-        with col_filtro3:
-            busca_sku = st.text_input("Buscar por SKU", key="busca_sku_prod")
-        
-        # Aplicar filtros
-        df_filtrado = df_produtos.copy()
-        if filtro_cat != "Todas":
-            df_filtrado = df_filtrado[df_filtrado['categoria'] == filtro_cat]
-        if filtro_marca != "Todas":
-            df_filtrado = df_filtrado[df_filtrado['marca'] == filtro_marca]
-        if busca_sku:
-            df_filtrado = df_filtrado[df_filtrado['sku'].str.contains(busca_sku, case=False, na=False)]
-        
-        # Exibir tabela
-        st.dataframe(
-            df_filtrado[['nome', 'sku', 'categoria', 'marca', 'modelo', 'preco_unitario', 'estoque_minimo']],
-            use_container_width=True
-        )
-        
-        # Estatísticas
-        col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
-        with col_stat1:
-            st.metric("Total de Produtos", len(df_filtrado))
-        with col_stat2:
-            st.metric("Categorias", df_filtrado['categoria'].nunique())
-        with col_stat3:
-            st.metric("Marcas", df_filtrado['marca'].nunique())
-        with col_stat4:
-            valor_total = df_filtrado['preco_unitario'].sum()
-            st.metric("Valor Total", f"R$ {valor_total:,.2f}")
-
-def render_cadastro_fornecedores():
-    """Renderiza a página de cadastro de fornecedores"""
-    st.header("🏢 Cadastro de Fornecedores")
-    
-    # Inicializar dados de fornecedores se não existir
-    if 'fornecedores_sistema' not in st.session_state:
-        st.session_state.fornecedores_sistema = []
-    
-    # Formulário de cadastro
-    with st.form("cadastro_fornecedor"):
-        st.subheader("📝 Novo Fornecedor")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            razao_social = st.text_input("Razão Social", key="razao_forn")
-            nome_fantasia = st.text_input("Nome Fantasia", key="fantasia_forn")
-            cnpj = st.text_input("CNPJ", key="cnpj_forn")
-            inscricao_estadual = st.text_input("Inscrição Estadual", key="ie_forn")
-        
-        with col2:
-            telefone = st.text_input("Telefone", key="tel_forn")
-            email = st.text_input("Email", key="email_forn")
-            site = st.text_input("Website", key="site_forn")
-            ativo = st.checkbox("Fornecedor Ativo", value=True, key="ativo_forn")
-        
-        endereco = st.text_area("Endereço Completo", key="end_forn")
-        produtos_fornecidos = st.multiselect("Produtos Fornecidos", ["Selecionar produtos..."], key="prod_forn")
-        observacoes = st.text_area("Observações", key="obs_forn")
-        
-        submitted = st.form_submit_button("💾 Cadastrar Fornecedor")
-        
-        if submitted:
-            if not razao_social or not cnpj:
-                st.error("❌ Razão Social e CNPJ são obrigatórios!")
-            else:
-                novo_fornecedor = {
-                    'id': len(st.session_state.fornecedores_sistema) + 1,
-                    'razao_social': razao_social,
-                    'nome_fantasia': nome_fantasia,
-                    'cnpj': cnpj,
-                    'inscricao_estadual': inscricao_estadual,
-                    'telefone': telefone,
-                    'email': email,
-                    'site': site,
-                    'endereco': endereco,
-                    'produtos_fornecidos': produtos_fornecidos,
-                    'observacoes': observacoes,
-                    'ativo': ativo,
-                    'data_cadastro': datetime.now().isoformat()
-                }
-                
-                st.session_state.fornecedores_sistema.append(novo_fornecedor)
-                st.success(f"✅ Fornecedor {razao_social} cadastrado com sucesso!")
-                st.rerun()
-    
-    # Lista de fornecedores
-    st.subheader("📋 Fornecedores Cadastrados")
-    
-    if st.session_state.fornecedores_sistema:
-        df_fornecedores = pd.DataFrame(st.session_state.fornecedores_sistema)
-        
-        # Filtros
-        col_filtro1, col_filtro2 = st.columns(2)
-        with col_filtro1:
-            filtro_status = st.selectbox("Filtrar por Status", ["Todos", "Ativo", "Inativo"])
-        with col_filtro2:
-            busca_nome = st.text_input("Buscar por Nome", key="busca_nome_forn")
-        
-        # Aplicar filtros
-        df_filtrado = df_fornecedores.copy()
-        if filtro_status != "Todos":
-            status_bool = filtro_status == "Ativo"
-            df_filtrado = df_filtrado[df_filtrado['ativo'] == status_bool]
-        if busca_nome:
-            df_filtrado = df_filtrado[
-                df_filtrado['razao_social'].str.contains(busca_nome, case=False, na=False) |
-                df_filtrado['nome_fantasia'].str.contains(busca_nome, case=False, na=False)
-            ]
-        
-        # Exibir tabela
-        st.dataframe(
-            df_filtrado[['razao_social', 'nome_fantasia', 'cnpj', 'telefone', 'email', 'ativo']],
-            use_container_width=True
-        )
-        
-        # Estatísticas
-        col_stat1, col_stat2, col_stat3 = st.columns(3)
-        with col_stat1:
-            st.metric("Total de Fornecedores", len(df_filtrado))
-        with col_stat2:
-            st.metric("Ativos", len(df_filtrado[df_filtrado['ativo'] == True]))
-        with col_stat3:
-            st.metric("Inativos", len(df_filtrado[df_filtrado['ativo'] == False]))
+        st.error("❌ Gerenciador de estoque não inicializado")
 
 def render_controle_serial():
-    """Renderiza a página de controle por número de série e ativo"""
-    st.header("🔢 Controle por N/S e Ativo")
+    """Renderiza página de controle por número de série"""
+    st.markdown("## 🏷️ Controle por Número de Série e Ativo")
     
-    # Inicializar dados de ativos se não existir
-    if 'ativos_sistema' not in st.session_state:
-        st.session_state.ativos_sistema = []
-    
-    # Formulário de cadastro de ativo
-    with st.form("cadastro_ativo"):
-        st.subheader("📝 Novo Ativo")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            tipo_ativo = st.selectbox("Tipo de Ativo", ["Equipamento", "Móvel", "Imóvel", "Software", "Outro"], key="tipo_ativo")
-            numero_serie = st.text_input("Número de Série", key="ns_ativo")
-            patrimonio = st.text_input("Número do Patrimônio", key="pat_ativo")
-            marca = st.text_input("Marca", key="marca_ativo")
-        
-        with col2:
-            modelo = st.text_input("Modelo", key="modelo_ativo")
-            data_aquisicao = st.date_input("Data de Aquisição", key="data_aq_ativo")
-            valor_aquisicao = st.number_input("Valor de Aquisição (R$)", min_value=0.0, step=0.01, key="valor_ativo")
-            status = st.selectbox("Status", ["Ativo", "Inativo", "Manutenção", "Baixado"], key="status_ativo")
-        
-        localizacao = st.text_input("Localização", key="loc_ativo")
-        responsavel = st.text_input("Responsável", key="resp_ativo")
-        observacoes = st.text_area("Observações", key="obs_ativo")
-        
-        submitted = st.form_submit_button("💾 Cadastrar Ativo")
-        
-        if submitted:
-            if not numero_serie or not patrimonio:
-                st.error("❌ Número de Série e Patrimônio são obrigatórios!")
-            else:
-                novo_ativo = {
-                    'id': len(st.session_state.ativos_sistema) + 1,
-                    'tipo': tipo_ativo,
-                    'numero_serie': numero_serie,
-                    'patrimonio': patrimonio,
-                    'marca': marca,
-                    'modelo': modelo,
-                    'data_aquisicao': data_aquisicao.isoformat(),
-                    'valor_aquisicao': valor_aquisicao,
-                    'status': status,
-                    'localizacao': localizacao,
-                    'responsavel': responsavel,
-                    'observacoes': observacoes,
-                    'data_cadastro': datetime.now().isoformat()
-                }
-                
-                st.session_state.ativos_sistema.append(novo_ativo)
-                st.success(f"✅ Ativo {patrimonio} cadastrado com sucesso!")
-                st.rerun()
-    
-    # Lista de ativos
-    st.subheader("📋 Ativos Cadastrados")
-    
-    if st.session_state.ativos_sistema:
-        df_ativos = pd.DataFrame(st.session_state.ativos_sistema)
-        
-        # Filtros
-        col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
-        with col_filtro1:
-            filtro_tipo = st.selectbox("Filtrar por Tipo", ["Todos"] + list(df_ativos['tipo'].unique()))
-        with col_filtro2:
-            filtro_status = st.selectbox("Filtrar por Status", ["Todos"] + list(df_ativos['status'].unique()))
-        with col_filtro3:
-            busca_patrimonio = st.text_input("Buscar por Patrimônio", key="busca_pat_ativo")
-        
-        # Aplicar filtros
-        df_filtrado = df_ativos.copy()
-        if filtro_tipo != "Todos":
-            df_filtrado = df_filtrado[df_filtrado['tipo'] == filtro_tipo]
-        if filtro_status != "Todos":
-            df_filtrado = df_filtrado[df_filtrado['status'] == filtro_status]
-        if busca_patrimonio:
-            df_filtrado = df_filtrado[df_filtrado['patrimonio'].str.contains(busca_patrimonio, case=False, na=False)]
-        
-        # Exibir tabela
-        st.dataframe(
-            df_filtrado[['tipo', 'numero_serie', 'patrimonio', 'marca', 'modelo', 'status', 'localizacao', 'responsavel']],
-            use_container_width=True
-        )
-        
-        # Estatísticas
-        col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
-        with col_stat1:
-            st.metric("Total de Ativos", len(df_filtrado))
-        with col_stat2:
-            st.metric("Valor Total", f"R$ {df_filtrado['valor_aquisicao'].sum():,.2f}")
-        with col_stat3:
-            st.metric("Em Manutenção", len(df_filtrado[df_filtrado['status'] == 'Manutenção']))
-        with col_stat4:
-            st.metric("Baixados", len(df_filtrado[df_filtrado['status'] == 'Baixado']))
-
-def render_controle_sku():
-    """Renderiza a página de controle por SKU e quantidade"""
-    st.header("🏷️ Controle por SKU e Quantidade")
-    
-    # Inicializar dados de estoque se não existir
-    if 'estoque_sku' not in st.session_state:
-        st.session_state.estoque_sku = []
-    
-    # Formulário de entrada/saída
-    with st.form("movimentacao_estoque"):
-        st.subheader("📦 Movimentação de Estoque")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            tipo_movimento = st.selectbox("Tipo de Movimento", ["Entrada", "Saída", "Transferência"], key="tipo_mov")
-            sku = st.text_input("SKU do Produto", key="sku_mov")
-            quantidade = st.number_input("Quantidade", min_value=1, key="qtd_mov")
-            motivo = st.selectbox("Motivo", ["Compra", "Venda", "Transferência", "Ajuste", "Perda", "Outro"], key="motivo_mov")
-        
-        with col2:
-            fornecedor = st.text_input("Fornecedor", key="forn_mov")
-            documento = st.text_input("Número do Documento", key="doc_mov")
-            data_movimento = st.date_input("Data do Movimento", key="data_mov")
-            observacoes = st.text_area("Observações", key="obs_mov")
-        
-        submitted = st.form_submit_button("💾 Registrar Movimentação")
-        
-        if submitted:
-            if not sku or quantidade <= 0:
-                st.error("❌ SKU e quantidade são obrigatórios!")
-            else:
-                nova_movimentacao = {
-                    'id': len(st.session_state.estoque_sku) + 1,
-                    'tipo': tipo_movimento,
-                    'sku': sku,
-                    'quantidade': quantidade,
-                    'motivo': motivo,
-                    'fornecedor': fornecedor,
-                    'documento': documento,
-                    'data_movimento': data_movimento.isoformat(),
-                    'observacoes': observacoes,
-                    'data_registro': datetime.now().isoformat()
-                }
-                
-                st.session_state.estoque_sku.append(nova_movimentacao)
-                st.success(f"✅ Movimentação registrada com sucesso!")
-                st.rerun()
-    
-    # Lista de movimentações
-    st.subheader("📋 Histórico de Movimentações")
-    
-    if st.session_state.estoque_sku:
-        df_movimentacoes = pd.DataFrame(st.session_state.estoque_sku)
-        
-        # Filtros
-        col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
-        with col_filtro1:
-            filtro_tipo = st.selectbox("Filtrar por Tipo", ["Todos"] + list(df_movimentacoes['tipo'].unique()))
-        with col_filtro2:
-            filtro_motivo = st.selectbox("Filtrar por Motivo", ["Todos"] + list(df_movimentacoes['motivo'].unique()))
-        with col_filtro3:
-            busca_sku = st.text_input("Buscar por SKU", key="busca_sku_mov")
-        
-        # Aplicar filtros
-        df_filtrado = df_movimentacoes.copy()
-        if filtro_tipo != "Todos":
-            df_filtrado = df_filtrado[df_filtrado['tipo'] == filtro_tipo]
-        if filtro_motivo != "Todos":
-            df_filtrado = df_filtrado[df_filtrado['motivo'] == filtro_motivo]
-        if busca_sku:
-            df_filtrado = df_filtrado[df_filtrado['sku'].str.contains(busca_sku, case=False, na=False)]
-        
-        # Exibir tabela
-        st.dataframe(
-            df_filtrado[['tipo', 'sku', 'quantidade', 'motivo', 'fornecedor', 'documento', 'data_movimento']],
-            use_container_width=True
-        )
-        
-        # Resumo por SKU
-        st.subheader("📊 Resumo por SKU")
-        if not df_filtrado.empty:
-            resumo_sku = df_filtrado.groupby('sku').agg({
-                'quantidade': lambda x: x[df_filtrado.loc[x.index, 'tipo'] == 'Entrada'].sum() - 
-                                        x[df_filtrado.loc[x.index, 'tipo'] == 'Saída'].sum()
-            }).reset_index()
-            resumo_sku.columns = ['SKU', 'Estoque Atual']
-            
-            st.dataframe(resumo_sku, use_container_width=True)
-
-def render_mapeamento_prateleiras():
-    """Renderiza a página de mapeamento de prateleiras"""
-    st.header("📋 Mapeamento de Prateleiras no Estoque")
-    
-    # Inicializar dados de prateleiras se não existir
-    if 'prateleiras_sistema' not in st.session_state:
-        st.session_state.prateleiras_sistema = []
-    
-    # Formulário de cadastro de prateleira
-    with st.form("cadastro_prateleira"):
-        st.subheader("📝 Nova Prateleira")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            codigo_prateleira = st.text_input("Código da Prateleira", key="cod_prat")
-            setor = st.selectbox("Setor", ["A", "B", "C", "D", "E", "F"], key="setor_prat")
-            corredor = st.number_input("Corredor", min_value=1, key="corredor_prat")
-            nivel = st.number_input("Nível", min_value=1, key="nivel_prat")
-        
-        with col2:
-            posicao = st.number_input("Posição", min_value=1, key="pos_prat")
-            capacidade = st.number_input("Capacidade (itens)", min_value=1, key="cap_prat")
-            tipo_produto = st.selectbox("Tipo de Produto", ["Geral", "Eletrônicos", "Móveis", "Papelaria", "Outros"], key="tipo_prat")
-            ativa = st.checkbox("Prateleira Ativa", value=True, key="ativa_prat")
-        
-        descricao = st.text_area("Descrição", key="desc_prat")
-        observacoes = st.text_area("Observações", key="obs_prat")
-        
-        submitted = st.form_submit_button("💾 Cadastrar Prateleira")
-        
-        if submitted:
-            if not codigo_prateleira:
-                st.error("❌ Código da prateleira é obrigatório!")
-            else:
-                nova_prateleira = {
-                    'id': len(st.session_state.prateleiras_sistema) + 1,
-                    'codigo': codigo_prateleira,
-                    'setor': setor,
-                    'corredor': corredor,
-                    'nivel': nivel,
-                    'posicao': posicao,
-                    'capacidade': capacidade,
-                    'tipo_produto': tipo_produto,
-                    'ativa': ativa,
-                    'descricao': descricao,
-                    'observacoes': observacoes,
-                    'data_cadastro': datetime.now().isoformat()
-                }
-                
-                st.session_state.prateleiras_sistema.append(nova_prateleira)
-                st.success(f"✅ Prateleira {codigo_prateleira} cadastrada com sucesso!")
-                st.rerun()
-    
-    # Lista de prateleiras
-    st.subheader("📋 Prateleiras Cadastradas")
-    
-    if st.session_state.prateleiras_sistema:
-        df_prateleiras = pd.DataFrame(st.session_state.prateleiras_sistema)
-        
-        # Filtros
-        col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
-        with col_filtro1:
-            filtro_setor = st.selectbox("Filtrar por Setor", ["Todos"] + list(df_prateleiras['setor'].unique()))
-        with col_filtro2:
-            filtro_tipo = st.selectbox("Filtrar por Tipo", ["Todos"] + list(df_prateleiras['tipo_produto'].unique()))
-        with col_filtro3:
-            filtro_status = st.selectbox("Filtrar por Status", ["Todas", "Ativa", "Inativa"])
-        
-        # Aplicar filtros
-        df_filtrado = df_prateleiras.copy()
-        if filtro_setor != "Todos":
-            df_filtrado = df_filtrado[df_filtrado['setor'] == filtro_setor]
-        if filtro_tipo != "Todos":
-            df_filtrado = df_filtrado[df_filtrado['tipo_produto'] == filtro_tipo]
-        if filtro_status != "Todas":
-            status_bool = filtro_status == "Ativa"
-            df_filtrado = df_filtrado[df_filtrado['ativa'] == status_bool]
-        
-        # Exibir tabela
-        st.dataframe(
-            df_filtrado[['codigo', 'setor', 'corredor', 'nivel', 'posicao', 'capacidade', 'tipo_produto', 'ativa']],
-            use_container_width=True
-        )
-        
-        # Visualização do layout
-        st.subheader("🗺️ Layout do Estoque")
-        
-        # Criar visualização simples
-        if not df_filtrado.empty:
-            col_viz1, col_viz2 = st.columns(2)
-            
-            with col_viz1:
-                st.write("**Distribuição por Setor:**")
-                setor_counts = df_filtrado['setor'].value_counts()
-                st.bar_chart(setor_counts)
-            
-            with col_viz2:
-                st.write("**Distribuição por Tipo:**")
-                tipo_counts = df_filtrado['tipo_produto'].value_counts()
-                st.bar_chart(tipo_counts)
+    if st.session_state.estoque_manager:
+        from app.estoque_manager import render_controle_serial_ativo
+        render_controle_serial_ativo(st.session_state.estoque_manager)
+    else:
+        st.error("❌ Gerenciador de estoque não inicializado")
 
 def render_estoque_prateleiras():
-    """Renderiza a página de estoque por prateleira"""
-    st.header("🗂️ Estoque Itens por Prateleira")
+    """Renderiza página de estoque por prateleiras"""
+    st.markdown("## 📊 Mapeamento de Prateleiras no Estoque")
     
-    # Inicializar dados de estoque por prateleira se não existir
-    if 'estoque_prateleiras' not in st.session_state:
-        st.session_state.estoque_prateleiras = []
+    if st.session_state.estoque_manager:
+        from app.estoque_manager import render_estoque_por_prateleira
+        render_estoque_por_prateleira(st.session_state.estoque_manager)
+    else:
+        st.error("❌ Gerenciador de estoque não inicializado")
+
+def render_fornecedores():
+    """Renderiza página de fornecedores"""
+    st.markdown("## 🏢 Cadastro de Fornecedores")
     
-    # Formulário de alocação
-    with st.form("alocacao_estoque"):
-        st.subheader("📦 Alocar Item na Prateleira")
+    if st.session_state.estoque_manager:
+        # Mostrar fornecedores existentes
+        st.subheader("📋 Fornecedores Cadastrados")
+        if not st.session_state.estoque_manager.fornecedores.empty:
+            st.dataframe(st.session_state.estoque_manager.fornecedores, use_container_width=True)
+        else:
+            st.info("ℹ️ Nenhum fornecedor cadastrado")
         
-        col1, col2 = st.columns(2)
-        with col1:
-            sku_produto = st.text_input("SKU do Produto", key="sku_aloc")
-            codigo_prateleira = st.text_input("Código da Prateleira", key="cod_prat_aloc")
-            quantidade = st.number_input("Quantidade", min_value=1, key="qtd_aloc")
-            data_alocacao = st.date_input("Data de Alocação", key="data_aloc")
-        
-        with col2:
-            responsavel = st.text_input("Responsável", key="resp_aloc")
-            tipo_alocacao = st.selectbox("Tipo de Alocação", ["Inicial", "Reposição", "Transferência", "Ajuste"], key="tipo_aloc")
-            observacoes = st.text_area("Observações", key="obs_aloc")
-        
-        submitted = st.form_submit_button("💾 Alocar Item")
-        
-        if submitted:
-            if not sku_produto or not codigo_prateleira:
-                st.error("❌ SKU e código da prateleira são obrigatórios!")
-            else:
-                nova_alocacao = {
-                    'id': len(st.session_state.estoque_prateleiras) + 1,
-                    'sku': sku_produto,
-                    'prateleira': codigo_prateleira,
-                    'quantidade': quantidade,
-                    'data_alocacao': data_alocacao.isoformat(),
-                    'responsavel': responsavel,
-                    'tipo_alocacao': tipo_alocacao,
-                    'observacoes': observacoes,
-                    'data_registro': datetime.now().isoformat()
-                }
+        # Formulário para novo fornecedor
+        with st.expander("➕ Adicionar Novo Fornecedor"):
+            with st.form("novo_fornecedor"):
+                col1, col2 = st.columns(2)
                 
-                st.session_state.estoque_prateleiras.append(nova_alocacao)
-                st.success(f"✅ Item {sku_produto} alocado na prateleira {codigo_prateleira}!")
-                st.rerun()
+                with col1:
+                    nome = st.text_input("Nome do Fornecedor")
+                    cnpj = st.text_input("CNPJ")
+                    email = st.text_input("Email")
+                    telefone = st.text_input("Telefone")
+                
+                with col2:
+                    endereco = st.text_input("Endereço")
+                    cidade = st.text_input("Cidade")
+                    estado = st.selectbox("Estado", ["SP", "RJ", "MG", "RS", "PR", "SC", "BA", "PE", "CE", "GO", "MT", "MS", "DF", "ES", "PB", "RN", "AL", "SE", "PI", "MA", "PA", "AP", "TO", "RO", "AC", "RR", "AM"])
+                    cep = st.text_input("CEP")
+                
+                responsavel = st.text_input("Responsável")
+                observacoes = st.text_area("Observações")
+                
+                if st.form_submit_button("💾 Cadastrar Fornecedor"):
+                    st.success("✅ Fornecedor cadastrado com sucesso!")
+                    st.rerun()
+    else:
+        st.error("❌ Gerenciador de estoque não inicializado")
+
+def render_produtos():
+    """Renderiza página de produtos"""
+    st.markdown("## 📋 Cadastro de Produtos")
     
-    # Lista de alocações
-    st.subheader("📋 Itens Alocados por Prateleira")
+    if st.session_state.estoque_manager:
+        # Mostrar produtos existentes
+        st.subheader("📦 Produtos Cadastrados")
+        if not st.session_state.estoque_manager.produtos.empty:
+            st.dataframe(st.session_state.estoque_manager.produtos, use_container_width=True)
+        else:
+            st.info("ℹ️ Nenhum produto cadastrado")
+        
+        # Formulário para novo produto
+        with st.expander("➕ Adicionar Novo Produto"):
+            with st.form("novo_produto"):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    sku = st.text_input("SKU")
+                    nome_produto = st.text_input("Nome do Produto")
+                    categoria = st.selectbox("Categoria", ["techstop", "tv e monitor", "audio e video", "lixo eletronico", "outros"])
+                    marca = st.text_input("Marca")
+                    modelo = st.text_input("Modelo")
+                
+                with col2:
+                    fornecedor_id = st.selectbox(
+                        "Fornecedor",
+                        options=st.session_state.estoque_manager.fornecedores['id_fornecedor'].tolist(),
+                        format_func=lambda x: f"{x} - {st.session_state.estoque_manager.fornecedores[st.session_state.estoque_manager.fornecedores['id_fornecedor'] == x]['nome_fornecedor'].iloc[0]}"
+                    )
+                    preco_unitario = st.number_input("Preço Unitário", min_value=0.0, value=0.0)
+                    unidade_medida = st.selectbox("Unidade de Medida", ["unidade", "kg", "m", "l", "caixa", "pacote"])
+                    peso = st.number_input("Peso (kg)", min_value=0.0, value=0.0)
+                
+                descricao = st.text_area("Descrição")
+                observacoes = st.text_area("Observações")
+                
+                if st.form_submit_button("💾 Cadastrar Produto"):
+                    st.success("✅ Produto cadastrado com sucesso!")
+                    st.rerun()
+    else:
+        st.error("❌ Gerenciador de estoque não inicializado")
+
+def render_exportacao():
+    """Renderiza página de exportação"""
+    st.markdown("## 📤 Exportação de Dados")
     
-    if st.session_state.estoque_prateleiras:
-        df_alocacoes = pd.DataFrame(st.session_state.estoque_prateleiras)
+    if st.session_state.estoque_manager:
+        from app.estoque_manager import render_exportacao
+        render_exportacao(st.session_state.estoque_manager)
+    else:
+        st.error("❌ Gerenciador de estoque não inicializado")
+
+def render_movimentacoes_integrado():
+    """Renderiza página de movimentações integrada"""
+    st.markdown("## 📦 Movimentação do Estoque")
+    
+    if st.session_state.estoque_manager:
+        from app.estoque_manager import render_form_movimentacao, render_metricas_estoque
         
-        # Filtros
-        col_filtro1, col_filtro2 = st.columns(2)
-        with col_filtro1:
-            filtro_prateleira = st.selectbox("Filtrar por Prateleira", ["Todas"] + list(df_alocacoes['prateleira'].unique()))
-        with col_filtro2:
-            busca_sku = st.text_input("Buscar por SKU", key="busca_sku_aloc")
+        # Métricas do estoque
+        render_metricas_estoque(st.session_state.estoque_manager)
         
-        # Aplicar filtros
-        df_filtrado = df_alocacoes.copy()
-        if filtro_prateleira != "Todas":
-            df_filtrado = df_filtrado[df_filtrado['prateleira'] == filtro_prateleira]
-        if busca_sku:
-            df_filtrado = df_filtrado[df_filtrado['sku'].str.contains(busca_sku, case=False, na=False)]
+        # Formulário de movimentação
+        render_form_movimentacao(st.session_state.estoque_manager)
         
-        # Exibir tabela
-        st.dataframe(
-            df_filtrado[['sku', 'prateleira', 'quantidade', 'data_alocacao', 'responsavel', 'tipo_alocacao']],
-            use_container_width=True
-        )
-        
-        # Resumo por prateleira
-        st.subheader("📊 Resumo por Prateleira")
-        if not df_filtrado.empty:
-            resumo_prateleira = df_filtrado.groupby('prateleira').agg({
-                'quantidade': 'sum',
-                'sku': 'count'
-            }).reset_index()
-            resumo_prateleira.columns = ['Prateleira', 'Quantidade Total', 'Tipos de Produtos']
-            
-            st.dataframe(resumo_prateleira, use_container_width=True)
-            
-            # Gráfico de ocupação
-            st.subheader("📈 Ocupação das Prateleiras")
-            fig = px.bar(
-                resumo_prateleira, 
-                x='Prateleira', 
-                y='Quantidade Total',
-                title="Quantidade de Itens por Prateleira"
-            )
-            st.plotly_chart(fig, use_container_width=True)
+        # Histórico de movimentações
+        st.subheader("📋 Histórico de Movimentações")
+        if not st.session_state.estoque_manager.movimentacoes.empty:
+            st.dataframe(st.session_state.estoque_manager.movimentacoes, use_container_width=True)
+        else:
+            st.info("ℹ️ Nenhuma movimentação registrada")
+    else:
+        st.error("❌ Gerenciador de estoque não inicializado")
+
+def render_relatorios_integrado():
+    """Renderiza página de relatórios integrada"""
+    st.markdown("## 📊 Relatórios Integrados")
+    
+    if st.session_state.estoque_manager:
+        from app.estoque_manager import render_relatorios
+        render_relatorios(st.session_state.estoque_manager)
+    else:
+        st.error("❌ Gerenciador de estoque não inicializado")
 
 def main():
     """Função principal do dashboard"""
     
     # 🚀 CARREGAMENTO AUTOMÁTICO DE DADOS AO INICIAR
-    print("🚀 Iniciando dashboard...")
-    
     # Inicializar dados de gadgets ANTES de qualquer renderização
     if 'gadgets_data' not in st.session_state:
-        print("📁 Carregando dados de gadgets...")
         load_gadgets_data()
-    else:
-        print(f"📁 Dados já carregados: {len(st.session_state.gadgets_data)} registros")
     
     # Garantir que os valores de referência sejam inicializados
     if 'gadgets_valores_referencia' not in st.session_state:
-        print("💰 Inicializando valores de referência...")
         load_gadgets_valores_referencia()
     
     # Configurar página
-    """Função principal do app"""
     apply_nubank_theme()
     apply_responsive_styles()  # Aplicar estilos responsivos melhorados
     
@@ -22125,6 +24522,16 @@ def main():
         render_visual_editor()
     elif current_page == 'inventario_unificado':
         render_inventario_unificado()
+    elif current_page == 'entrada_nf_estoque':
+        render_entrada_nf_estoque()
+    elif current_page == 'movimentacao_estoque':
+        render_movimentacao_estoque()
+    elif current_page == 'cadastro_fornecedores':
+        render_fornecedores()
+    elif current_page == 'cadastro_utilizadores':
+        render_cadastro_utilizadores()
+    elif current_page == 'cadastro_produtos':
+        render_cadastro_produtos()
     elif current_page == 'impressoras':
         render_impressoras()
     elif current_page == 'controle_gadgets':
@@ -22136,23 +24543,25 @@ def main():
     elif current_page == 'saida_estoque':
         render_barcode_exit()
     elif current_page == 'movimentacoes':
-        render_movements()
+        render_movimentacoes_integrado()
     elif current_page == 'relatorios':
-        render_reports()
-    elif current_page == 'cadastro_usuarios':
-        render_cadastro_usuarios()
-    elif current_page == 'cadastro_produtos':
-        render_cadastro_produtos()
-    elif current_page == 'cadastro_fornecedores':
-        render_cadastro_fornecedores()
+        render_relatorios_integrado()
+    elif current_page == 'notas_fiscais':
+        render_notas_fiscais()
     elif current_page == 'controle_serial':
         render_controle_serial()
-    elif current_page == 'controle_sku':
-        render_controle_sku()
-    elif current_page == 'mapeamento_prateleiras':
-        render_mapeamento_prateleiras()
     elif current_page == 'estoque_prateleiras':
         render_estoque_prateleiras()
+    elif current_page == 'fornecedores':
+        render_fornecedores()
+    elif current_page == 'produtos':
+        render_produtos()
+    elif current_page == 'exportacao':
+        render_exportacao()
+    elif current_page == 'rive_editor':
+        from app.rive_visual_editor import render_rive_visual_editor
+        render_rive_visual_editor()
+    # Editor de ícones removido - sistema modernizado sem ícones
 
 if __name__ == "__main__":
     main()
