@@ -1,0 +1,2 @@
+email,nome,password_hash,role,status,data_registro,aprovado_por,justificativa
+danilo.fukuyama.digisystem@nubank.com.br,Danilo Fukuyama,66d68db55bd999a516233a35c806652f7dec4d1e73aa06b15057bd7de8658a7fed4a7df0309f9ccb9e3608d9a7767675,admin,aprovado,2024-01-01,sistema,

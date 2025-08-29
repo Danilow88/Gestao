@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Rive</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        #rive-canvas {
+            width: 400px;
+            height: 300px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+        .status {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4CAF50;
+        }
+        .error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 1px solid #F44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Teste Rive</h1>
+        <p>Verificando se o Rive está funcionando corretamente...</p>
+        
+        <canvas id="rive-canvas"></canvas>
+        
+        <div id="status" class="status">Carregando...</div>
+        
+        <div style="margin-top: 2rem;">
+            <h3>📦 Pacotes instalados:</h3>
+            <ul style="text-align: left; display: inline-block;">
+                <li>@rive-app/canvas: <span id="canvas-version">-</span></li>
+                <li>@rive-app/react-canvas: <span id="react-version">-</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Rive } from '@rive-app/canvas';
+        
+        const canvas = document.getElementById('rive-canvas');
+        const status = document.getElementById('status');
+        const canvasVersion = document.getElementById('canvas-version');
+        const reactVersion = document.getElementById('react-version');
+        
+        // Mostrar versões dos pacotes
+        try {
+            const packageInfo = await fetch('./node_modules/@rive-app/canvas/package.json');
+            const canvasPackage = await packageInfo.json();
+            canvasVersion.textContent = canvasPackage.version;
+            
+            const reactPackageInfo = await fetch('./node_modules/@rive-app/react-canvas/package.json');
+            const reactPackage = await reactPackageInfo.json();
+            reactVersion.textContent = reactPackage.version;
+        } catch (error) {
+            console.log('Erro ao carregar informações dos pacotes:', error);
+        }
+        
+        try {
+            // Criar uma animação simples de teste
+            const rive = new Rive({
+                src: 'data:application/octet-stream;base64,AAABAAIAAwAEAAUABgAHAAgACQAKAAsADAANAA4ADwAQABEAEgATABQAFQAWABcAGAAZABoAGwAcAB01AA==',
+                canvas: canvas,
+                autoplay: true,
+                onLoad: () => {
+                    status.textContent = '✅ Rive funcionando perfeitamente!';
+                    status.className = 'status success';
+                },
+                onError: (error) => {
+                    status.textContent = '⚠️ Erro ao carregar animação: ' + error.message;
+                    status.className = 'status error';
+                }
+            });
+        } catch (error) {
+            status.textContent = '❌ Erro ao inicializar Rive: ' + error.message;
+            status.className = 'status error';
+            console.error('Erro Rive:', error);
+        }
+    </script>
+</body>
+</html>

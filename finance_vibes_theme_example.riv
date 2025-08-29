@@ -1,0 +1,293 @@
+# Finance-Vibes Theme Example
+# Arquivo de exemplo para criar no Rive Web Editor
+
+# Configurações do Projeto
+project_name: "Finance-Vibes Theme"
+canvas_size: "400x300"
+fps: 60
+background: "transparent"
+
+# Elementos para Criar
+
+## 1. Loading Spinner
+element: "loading_spinner"
+type: "circle"
+properties:
+  - radius: 30
+  - stroke_width: 4
+  - stroke_color: "#9333EA"
+  - fill_color: "transparent"
+  - center_x: 200
+  - center_y: 150
+
+animation: "loading_rotation"
+keyframes:
+  - frame: 0
+    rotation: 0
+  - frame: 60
+    rotation: 360
+duration: 2.0
+loop: true
+easing: "linear"
+
+## 2. Success Check
+element: "success_check"
+type: "path"
+properties:
+  - path: "M 50 150 L 150 250 L 350 50"
+  - stroke_width: 8
+  - stroke_color: "#10B981"
+  - fill_color: "transparent"
+  - center_x: 200
+  - center_y: 150
+
+animation: "success_animation"
+keyframes:
+  - frame: 0
+    scale: 0
+    opacity: 0
+  - frame: 15
+    scale: 1.2
+    opacity: 1
+  - frame: 30
+    scale: 1.0
+    opacity: 1
+duration: 0.8
+loop: false
+easing: "ease-out"
+
+## 3. Metric Card
+element: "metric_card"
+type: "rectangle"
+properties:
+  - width: 80
+  - height: 60
+  - corner_radius: 10
+  - fill_color: "rgba(147, 51, 234, 0.1)"
+  - stroke_color: "#9333EA"
+  - stroke_width: 2
+  - center_x: 200
+  - center_y: 150
+
+animation: "card_entrance"
+keyframes:
+  - frame: 0
+    scale: 0.8
+    opacity: 0
+    y: -20
+  - frame: 15
+    scale: 1.0
+    opacity: 1
+    y: 0
+duration: 0.5
+loop: false
+easing: "ease-out"
+
+## 4. Navigation Icon
+element: "nav_icon"
+type: "icon"
+properties:
+  - icon: "dashboard"
+  - size: 24
+  - color: "#9333EA"
+  - center_x: 200
+  - center_y: 150
+
+animation: "nav_rotation"
+keyframes:
+  - frame: 0
+    rotation: 0
+  - frame: 90
+    rotation: 360
+duration: 3.0
+loop: true
+easing: "ease-in-out"
+
+## 5. Interactive Button
+element: "interactive_button"
+type: "button"
+properties:
+  - width: 120
+  - height: 40
+  - corner_radius: 20
+  - fill_color: "#06B6D4"
+  - stroke_color: "#06B6D4"
+  - stroke_width: 0
+  - center_x: 200
+  - center_y: 150
+
+states:
+  - name: "idle"
+    properties:
+      scale: 1.0
+      opacity: 1.0
+  
+  - name: "hover"
+    properties:
+      scale: 1.05
+      opacity: 0.9
+      fill_color: "#22D3EE"
+  
+  - name: "click"
+    properties:
+      scale: 0.95
+      opacity: 1.0
+
+transitions:
+  - from: "idle"
+    to: "hover"
+    duration: 0.2
+    easing: "ease-out"
+  
+  - from: "hover"
+    to: "idle"
+    duration: 0.3
+    easing: "ease-in"
+  
+  - from: "idle"
+    to: "click"
+    duration: 0.1
+    easing: "ease-out"
+  
+  - from: "click"
+    to: "idle"
+    duration: 0.2
+    easing: "ease-in"
+
+## 6. Data Flow Indicator
+element: "data_flow"
+type: "dots"
+properties:
+  - dot_count: 5
+  - dot_size: 6
+  - dot_color: "#10B981"
+  - spacing: 20
+  - center_x: 200
+  - center_y: 150
+
+animation: "flow_pulse"
+keyframes:
+  - frame: 0
+    opacity: 0.3
+    scale: 0.8
+  - frame: 15
+    opacity: 1.0
+    scale: 1.2
+  - frame: 30
+    opacity: 0.3
+    scale: 0.8
+duration: 1.5
+loop: true
+easing: "ease-in-out"
+
+# Instruções de Criação
+
+## Passo 1: Criar o Projeto
+1. Acesse https://rive.app/community
+2. Clique em "Create New Animation"
+3. Configure:
+   - Nome: "Finance-Vibes Theme"
+   - Canvas: 400x300
+   - FPS: 60
+   - Background: Transparent
+
+## Passo 2: Criar Elementos
+1. **Loading Spinner**:
+   - Desenhe um círculo
+   - Configure stroke e fill
+   - Adicione animação de rotação
+
+2. **Success Check**:
+   - Desenhe um check mark (✓)
+   - Configure cores e espessura
+   - Adicione animação de entrada
+
+3. **Metric Card**:
+   - Desenhe um retângulo arredondado
+   - Configure cores e bordas
+   - Adicione animação de entrada
+
+4. **Navigation Icon**:
+   - Use ícone de dashboard
+   - Configure cor e tamanho
+   - Adicione rotação suave
+
+5. **Interactive Button**:
+   - Desenhe um botão
+   - Configure estados (idle, hover, click)
+   - Adicione transições
+
+6. **Data Flow**:
+   - Crie pontos conectados
+   - Configure animação de pulse
+   - Adicione loop infinito
+
+## Passo 3: Configurar Animações
+1. **Timing**:
+   - Loading: 2s (loop infinito)
+   - Success: 0.8s (uma vez)
+   - Card: 0.5s (uma vez)
+   - Navigation: 3s (loop infinito)
+   - Button: 0.2s (transições)
+   - Data Flow: 1.5s (loop infinito)
+
+2. **Easing**:
+   - Entradas: ease-out
+   - Saídas: ease-in
+   - Transições: ease-in-out
+   - Rotação: linear
+
+## Passo 4: Testar e Ajustar
+1. Use o preview
+2. Teste diferentes velocidades
+3. Verifique loop e timing
+4. Ajuste cores e tamanhos
+5. Teste responsividade
+
+## Passo 5: Exportar
+1. Salve o projeto
+2. Clique em "Export"
+3. Escolha formato .riv
+4. Baixe o arquivo
+
+## Passo 6: Usar no Projeto
+1. Substitua no rive_components.py
+2. Teste no dashboard
+3. Ajuste se necessário
+
+# Cores Recomendadas
+
+## Primárias:
+- Roxo: #9333EA
+- Azul: #06B6D4
+- Verde: #10B981
+
+## Secundárias:
+- Amarelo: #F59E0B
+- Vermelho: #EF4444
+- Cinza: #6B7280
+
+## Transparências:
+- Fundo: rgba(147, 51, 234, 0.1)
+- Sombra: rgba(0, 0, 0, 0.1)
+- Overlay: rgba(255, 255, 255, 0.1)
+
+# Dicas Finais
+
+1. **Mantenha consistência** nas cores e timing
+2. **Use easing functions** apropriadas
+3. **Teste em diferentes dispositivos**
+4. **Considere acessibilidade**
+5. **Otimize para performance**
+6. **Documente suas animações**
+
+# Resultado Esperado
+
+Após seguir este guia, você terá:
+- ✅ Tema personalizado Finance-Vibes
+- ✅ Animações consistentes com Nubank
+- ✅ Elementos interativos e responsivos
+- ✅ Arquivo .riv funcional
+- ✅ Experiência visual profissional
+
+**Agora é sua vez de criar! Use o Rive Web Editor e deixe sua criatividade fluir! 🎨✨**

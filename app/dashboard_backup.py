@@ -14497,20 +14497,20 @@ def render_categoria_table(df_categoria, categoria_nome):
                         df_filtered = df_current[~df_current['tag'].isin(selected_tags)]
                         st.session_state.inventory_data['unified'] = df_filtered
                         st.success(f"✅ {len(selected_tags)} itens excluídos!")
-                        st.rerun()
+                st.rerun()
             
             with col_del2:
                 new_category = st.text_input(f"Nova categoria para {len(selected_rows)} itens:", 
-                                           key=f"new_cat_{categoria_nome.replace(' ', '_')}")
+                key=f"new_cat_{categoria_nome.replace(' ', '_')}")
                 if st.button("📝 **Aplicar Nova Categoria**", key=f"apply_cat_{categoria_nome.replace(' ', '_')}"):
-                    if new_category and 'inventory_data' in st.session_state:
-                        # Implementar edição de categoria em massa real
-                        df_current = st.session_state.inventory_data['unified']
-                        selected_tags = [row.get('Tag', '') for row in selected_rows]
-                        df_current.loc[df_current['tag'].isin(selected_tags), 'categoria'] = new_category.lower()
-                        st.session_state.inventory_data['unified'] = df_current
-                        st.success(f"✅ Categoria alterada para: {new_category}")
-                        st.rerun()
+                if new_category and 'inventory_data' in st.session_state:
+                # Implementar edição de categoria em massa real
+                df_current = st.session_state.inventory_data['unified']
+                selected_tags = [row.get('Tag', '') for row in selected_rows]
+                df_current.loc[df_current['tag'].isin(selected_tags), 'categoria'] = new_category.lower()
+                st.session_state.inventory_data['unified'] = df_current
+                st.success(f"✅ Categoria alterada para: {new_category}")
+                st.rerun()
     
     # Atualizar dados se houve edição
     edited_data = grid_response['data'] if grid_response and 'data' in grid_response else df_display
@@ -14519,32 +14519,32 @@ def render_categoria_table(df_categoria, categoria_nome):
     if edit_mode and grid_response and 'data' in grid_response and not grid_response['data'].equals(df_display):
         # Sincronizar alterações com o session_state
         if 'inventory_data' in st.session_state:
-            try:
+        try:
                 # Mapear de volta para as colunas originais usando o mesmo mapeamento
                 edited_original = edited_data.copy()
                 
                 # Definir mapeamento de colunas display -> internal
                 display_to_internal = {
-                    'Tag': 'tag', 'SKU': 'sku', 'Item': 'itens', 'Modelo': 'modelo', 
-                    'Serial': 'serial', 'Marca': 'marca', 'Valor (R$)': 'valor', 'Qtd': 'qtd',
-                    'Prateleira': 'prateleira', 'Rua': 'rua', 'Setor': 'setor', 'Local': 'local', 
-                    'Caixa': 'box', 'Conferido': 'conferido', 'Fornecedor': 'fornecedor', 
-                    'PO': 'po', 'Nota Fiscal': 'nota_fiscal', 'Uso': 'uso', 
-                    'Motivo': 'motivo', 'Data Entrada': 'data_entrada'
+                'Tag': 'tag', 'SKU': 'sku', 'Item': 'itens', 'Modelo': 'modelo', 
+                'Serial': 'serial', 'Marca': 'marca', 'Valor (R$)': 'valor', 'Qtd': 'qtd',
+                'Prateleira': 'prateleira', 'Rua': 'rua', 'Setor': 'setor', 'Local': 'local', 
+                'Caixa': 'box', 'Conferido': 'conferido', 'Fornecedor': 'fornecedor', 
+                'PO': 'po', 'Nota Fiscal': 'nota_fiscal', 'Uso': 'uso', 
+                'Motivo': 'motivo', 'Data Entrada': 'data_entrada'
                 }
                 
                 # Mapear colunas automaticamente
                 current_cols = list(edited_original.columns)
                 new_columns = []
                 for col in current_cols:
-                    if col in display_to_internal:
-                        new_columns.append(display_to_internal[col])
-                    else:
-                        new_columns.append(col.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('$', ''))
+                if col in display_to_internal:
+                new_columns.append(display_to_internal[col])
+                else:
+                new_columns.append(col.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('$', ''))
                 
                 edited_original.columns = new_columns
                     
-                    # Adicionar categoria ao DataFrame editado
+                # Adicionar categoria ao DataFrame editado
                 edited_original['categoria'] = categoria_nome.lower()
                     
                 # Atualizar apenas as linhas desta categoria de forma segura
@@ -14564,7 +14564,8 @@ def render_categoria_table(df_categoria, categoria_nome):
                     
                 # Mostrar feedback de salvamento automático
                 st.success("💾 Alterações salvas automaticamente!")
-            except Exception as e:
+                    
+        except Exception as e:
                 st.warning(f"⚠️ Erro no salvamento automático: {str(e)}")
                 st.info("💡 Use o botão 'Salvar Todas as Alterações' para forçar o salvamento")
     
@@ -14576,85 +14577,85 @@ def render_categoria_table(df_categoria, categoria_nome):
         if st.button(f"◇ Editar Item - {categoria_nome}", key=f"btn_edit_{categoria_nome}"):
             st.session_state[f"show_edit_form_{categoria_nome}"] = True
     
-    with col_action2:
-        if st.button(f"⊗ Deletar Item - {categoria_nome}", key=f"btn_delete_{categoria_nome}"):
-            st.session_state[f'show_delete_form_{categoria_nome}'] = True
+                with col_action2:
+                if st.button(f"⊗ Deletar Item - {categoria_nome}", key=f"btn_delete_{categoria_nome}"):
+                st.session_state[f'show_delete_form_{categoria_nome}'] = True
     
-    with col_action3:
+                with col_action3:
         # Botão principal de salvamento manual
-        if st.button(f"💾 Salvar Todas as Alterações", key=f"btn_save_main_{categoria_nome}"):
+                if st.button(f"💾 Salvar Todas as Alterações", key=f"btn_save_main_{categoria_nome}"):
             # Atualizar dados originais com as edições
-            if not edited_data.empty:
+                if not edited_data.empty:
                 # Converter de volta para o formato original
                 df_updated = edited_data.copy()
                 
                 # Definir mapeamento de colunas display -> internal
                 display_to_internal = {
-                    'Tag': 'tag', 'SKU': 'sku', 'Item': 'itens', 'Modelo': 'modelo', 
-                    'Serial': 'serial', 'Marca': 'marca', 'Valor (R$)': 'valor', 'Qtd': 'qtd',
-                    'Prateleira': 'prateleira', 'Rua': 'rua', 'Setor': 'setor', 'Local': 'local', 
-                    'Caixa': 'box', 'Conferido': 'conferido', 'Fornecedor': 'fornecedor', 
-                    'PO': 'po', 'Nota Fiscal': 'nota_fiscal', 'Uso': 'uso', 
-                    'Motivo': 'motivo', 'Data Entrada': 'data_entrada'
+                'Tag': 'tag', 'SKU': 'sku', 'Item': 'itens', 'Modelo': 'modelo', 
+                'Serial': 'serial', 'Marca': 'marca', 'Valor (R$)': 'valor', 'Qtd': 'qtd',
+                'Prateleira': 'prateleira', 'Rua': 'rua', 'Setor': 'setor', 'Local': 'local', 
+                'Caixa': 'box', 'Conferido': 'conferido', 'Fornecedor': 'fornecedor', 
+                'PO': 'po', 'Nota Fiscal': 'nota_fiscal', 'Uso': 'uso', 
+                'Motivo': 'motivo', 'Data Entrada': 'data_entrada'
                 }
                 
                 # Mapear colunas automaticamente
                 current_cols = list(df_updated.columns)
                 new_columns = []
                 for col in current_cols:
-                    if col in display_to_internal:
-                        new_columns.append(display_to_internal[col])
-                    else:
-                        new_columns.append(col.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('$', ''))
+                if col in display_to_internal:
+                new_columns.append(display_to_internal[col])
+                else:
+                new_columns.append(col.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('$', ''))
                 
                 df_updated.columns = new_columns
                 
                 # Garantir que todas as colunas necessárias existem
                 expected_columns = [
                 'tag', 'sku', 'itens', 'modelo', 'serial', 'marca', 'valor', 'qtd',
-                    'prateleira', 'rua', 'setor', 'local', 'box', 'conferido',
-                    'fornecedor', 'po', 'nota_fiscal', 'uso', 'motivo', 'data_entrada'
+                'prateleira', 'rua', 'setor', 'local', 'box', 'conferido',
+                'fornecedor', 'po', 'nota_fiscal', 'uso', 'motivo', 'data_entrada'
                 ]
                 
                 for col in expected_columns:
-                    if col not in df_updated.columns:
-                        if col == 'serial':
-                            df_updated[col] = [f"SER{i:06d}" for i in range(1, len(df_updated) + 1)]
-                        elif col in ['valor', 'qtd']:
-                            df_updated[col] = 0
-                        elif col == 'conferido':
-                            df_updated[col] = False
-                        else:
-                            df_updated[col] = 'N/A'
+                if col not in df_updated.columns:
+                if col == 'serial':
+                df_updated[col] = [f"SER{i:06d}" for i in range(1, len(df_updated) + 1)]
+                elif col in ['valor', 'qtd']:
+                df_updated[col] = 0
+                elif col == 'conferido':
+                df_updated[col] = False
+                else:
+                df_updated[col] = 'N/A'
                     
                 # Adicionar categoria e reconstruir dados
-                    df_updated['categoria'] = categoria_nome.lower()
+                df_updated['categoria'] = categoria_nome.lower()
                 
                 # Atualizar session_state usando método robusto
                 try:
-                    # Remover dados antigos da categoria
-                    unified_data = st.session_state.inventory_data['unified']
-                    unified_data = unified_data[unified_data['categoria'] != categoria_nome.lower()]
+                # Remover dados antigos da categoria
+                unified_data = st.session_state.inventory_data['unified']
+                unified_data = unified_data[unified_data['categoria'] != categoria_nome.lower()]
                     
-                    # Adicionar dados atualizados
-                    unified_data = pd.concat([unified_data, df_updated], ignore_index=True)
+                # Adicionar dados atualizados
+                unified_data = pd.concat([unified_data, df_updated], ignore_index=True)
                     
-                    # Atualizar session_state
-                    st.session_state.inventory_data['unified'] = unified_data
+                # Atualizar session_state
+                st.session_state.inventory_data['unified'] = unified_data
                 
                 # Salvar automaticamente em CSV
-                    success = auto_save_inventory()
+                success = auto_save_inventory()
                     
-                    if success:
-                        st.success(f"✅ Alterações salvas para {categoria_nome}! (Incluindo campos Serial)")
-                    else:
-                        st.warning("⚠️ Dados atualizados na sessão, mas houve problema no salvamento em arquivo")
+                if success:
+                st.success(f"✅ Alterações salvas para {categoria_nome}! (Incluindo campos Serial)")
+                else:
+                st.warning("⚠️ Dados atualizados na sessão, mas houve problema no salvamento em arquivo")
                     
-                    st.rerun()
+                st.rerun()
                     
                 except Exception as e:
-                    st.error(f"❌ Erro ao salvar alterações: {str(e)}")
-                    st.info("💡 Tente novamente ou use o modo de edição direta na tabela")
+                st.error(f"❌ Erro ao salvar alterações: {str(e)}")
+                st.info("💡 Tente novamente ou use o modo de edição direta na tabela")
     
     # Formulário de edição
     if st.session_state.get(f'show_edit_form_{categoria_nome}', False):
@@ -24527,7 +24528,7 @@ def main():
     elif current_page == 'movimentacao_estoque':
         render_movimentacao_estoque()
     elif current_page == 'cadastro_fornecedores':
-        render_fornecedores()
+        render_cadastro_fornecedores()
     elif current_page == 'cadastro_utilizadores':
         render_cadastro_utilizadores()
     elif current_page == 'cadastro_produtos':

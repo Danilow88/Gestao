@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rive - Animações Públicas</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .animations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .animation-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .animation-title {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            color: #fff;
+        }
+        
+        .rive-canvas {
+            width: 100%;
+            height: 250px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            margin-bottom: 1rem;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-play {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-pause {
+            background: #FF9800;
+            color: white;
+        }
+        
+        .btn-stop {
+            background: #F44336;
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .status {
+            text-align: center;
+            margin-top: 1rem;
+            padding: 0.5rem;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .status.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4CAF50;
+        }
+        
+        .status.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 1px solid #F44336;
+        }
+        
+        .info-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-top: 2rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .info-section h3 {
+            color: #fff;
+            margin-bottom: 1rem;
+        }
+        
+        .info-section ul {
+            text-align: left;
+            line-height: 1.6;
+        }
+        
+        .info-section li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .highlight {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Rive - Animações Públicas Funcionando</h1>
+        
+        <div class="animations-grid">
+            <!-- Loading Animation -->
+            <div class="animation-card">
+                <div class="animation-title">⏳ Loading Spinner</div>
+                <canvas id="loading-canvas" class="rive-canvas"></canvas>
+                <div class="controls">
+                    <button class="btn btn-play" onclick="playAnimation('loading')">▶️ Play</button>
+                    <button class="btn btn-pause" onclick="pauseAnimation('loading')">⏸️ Pause</button>
+                    <button class="btn btn-stop" onclick="stopAnimation('loading')">⏹️ Stop</button>
+                </div>
+                <div id="loading-status" class="status">Carregando...</div>
+            </div>
+            
+            <!-- Success Animation -->
+            <div class="animation-card">
+                <div class="animation-title">✅ Success Check</div>
+                <canvas id="success-canvas" class="rive-canvas"></canvas>
+                <div class="controls">
+                    <button class="btn btn-play" onclick="playAnimation('success')">▶️ Play</button>
+                    <button class="btn btn-pause" onclick="pauseAnimation('success')">⏸️ Pause</button>
+                    <button class="btn btn-stop" onclick="stopAnimation('success')">⏹️ Stop</button>
+                </div>
+                <div id="success-status" class="status">Carregando...</div>
+            </div>
+            
+            <!-- Button Animation -->
+            <div class="animation-card">
+                <div class="animation-title">🔘 Interactive Button</div>
+                <canvas id="button-canvas" class="rive-canvas"></canvas>
+                <div class="controls">
+                    <button class="btn btn-play" onclick="playAnimation('button')">▶️ Play</button>
+                    <button class="btn btn-pause" onclick="pauseAnimation('button')">⏸️ Pause</button>
+                    <button class="btn btn-stop" onclick="stopAnimation('button')">⏹️ Stop</button>
+                </div>
+                <div id="button-status" class="status">Carregando...</div>
+            </div>
+            
+            <!-- Icon Animation -->
+            <div class="animation-card">
+                <div class="animation-title">🎯 Animated Icon</div>
+                <canvas id="icon-canvas" class="rive-canvas"></canvas>
+                <div class="controls">
+                    <button class="btn btn-play" onclick="playAnimation('icon')">▶️ Play</button>
+                    <button class="btn btn-pause" onclick="pauseAnimation('icon')">⏸️ Pause</button>
+                    <button class="btn btn-stop" onclick="stopAnimation('icon')">⏹️ Stop</button>
+                </div>
+                <div id="icon-status" class="status">Carregando...</div>
+            </div>
+        </div>
+        
+        <div class="info-section">
+            <h3>🚀 Como Usar no Seu Projeto</h3>
+            <ul>
+                <li><strong>1.</strong> Instale o Rive: <span class="highlight">npm install @rive-app/canvas</span></li>
+                <li><strong>2.</strong> Importe no seu código: <span class="highlight">import { Rive } from '@rive-app/canvas'</span></li>
+                <li><strong>3.</strong> Use as animações públicas ou crie suas próprias no <a href="https://rive.app/community" style="color: #fff; text-decoration: underline;">Rive Web Editor</a></li>
+                <li><strong>4.</strong> Integre no seu projeto finance-vibes para melhorar a UX!</li>
+            </ul>
+            
+            <h3>💡 Dica Importante</h3>
+            <p>Se não conseguir baixar o Rive Editor desktop, use o <strong>Rive Web Editor</strong> em <a href="https://rive.app/community" style="color: #fff; text-decoration: underline;">rive.app/community</a> - funciona diretamente no navegador!</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Rive } from './node_modules/@rive-app/canvas/dist/index.js';
+        
+        // Configurações das animações
+        const animations = {
+            loading: {
+                src: 'https://cdn.rive.app/animations/loading.riv',
+                canvas: 'loading-canvas',
+                status: 'loading-status'
+            },
+            success: {
+                src: 'https://cdn.rive.app/animations/success.riv',
+                canvas: 'success-canvas',
+                status: 'success-status'
+            },
+            button: {
+                src: 'https://cdn.rive.app/animations/button.riv',
+                canvas: 'button-canvas',
+                status: 'button-status'
+            },
+            icon: {
+                src: 'https://cdn.rive.app/animations/icon.riv',
+                canvas: 'icon-canvas',
+                status: 'icon-status'
+            }
+        };
+        
+        const riveInstances = {};
+        
+        // Função para carregar uma animação
+        async function loadAnimation(name, config) {
+            try {
+                const canvas = document.getElementById(config.canvas);
+                const status = document.getElementById(config.status);
+                
+                const rive = new Rive({
+                    src: config.src,
+                    canvas: canvas,
+                    autoplay: false,
+                    onLoad: () => {
+                        status.textContent = '✅ Carregado com sucesso!';
+                        status.className = 'status success';
+                        riveInstances[name] = rive;
+                    },
+                    onError: (error) => {
+                        status.textContent = '❌ Erro ao carregar: ' + error.message;
+                        status.className = 'status error';
+                        console.error(`Erro ao carregar ${name}:`, error);
+                    }
+                });
+            } catch (error) {
+                const status = document.getElementById(config.status);
+                status.textContent = '❌ Erro ao inicializar: ' + error.message;
+                status.className = 'status error';
+                console.error(`Erro ao inicializar ${name}:`, error);
+            }
+        }
+        
+        // Funções de controle
+        window.playAnimation = (name) => {
+            if (riveInstances[name]) {
+                riveInstances[name].play();
+            }
+        };
+        
+        window.pauseAnimation = (name) => {
+            if (riveInstances[name]) {
+                riveInstances[name].pause();
+            }
+        };
+        
+        window.stopAnimation = (name) => {
+            if (riveInstances[name]) {
+                riveInstances[name].stop();
+            }
+        };
+        
+        // Carregar todas as animações
+        Object.entries(animations).forEach(([name, config]) => {
+            loadAnimation(name, config);
+        });
+    </script>
+</body>
+</html>

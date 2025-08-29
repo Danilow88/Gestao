@@ -1,0 +1,31 @@
+{
+  "metric_card": {
+    "type": "click",
+    "duration": 0.5,
+    "easing": "bounce",
+    "loop": false,
+    "properties": [
+      "scale",
+      "opacity",
+      "y"
+    ]
+  },
+  "loading_spinner": {
+    "type": "loading",
+    "duration": 2.0,
+    "easing": "linear",
+    "properties": [
+      "rotation"
+    ],
+    "loop": true
+  },
+  "success_check": {
+    "type": "success",
+    "duration": 0.8,
+    "easing": "ease-out",
+    "properties": [
+      "scale",
+      "opacity"
+    ]
+  }
+}

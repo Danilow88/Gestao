@@ -1,0 +1,64 @@
+{
+  "id": "c8634336-cb8a-46a3-ad5c-e1cc2f82cd55",
+  "name": "Finance-Vibes-Theme",
+  "date": "2025-08-25 22:34:32",
+  "animations": {
+    "metric_card": {
+      "type": "entrance",
+      "duration": 0.5,
+      "easing": "ease-out",
+      "properties": [
+        "scale",
+        "opacity",
+        "y"
+      ]
+    },
+    "loading_spinner": {
+      "type": "loading",
+      "duration": 2.0,
+      "easing": "linear",
+      "properties": [
+        "rotation"
+      ],
+      "loop": true
+    },
+    "success_check": {
+      "type": "success",
+      "duration": 0.8,
+      "easing": "ease-out",
+      "properties": [
+        "scale",
+        "opacity"
+      ]
+    }
+  },
+  "editor_config": {
+    "theme_colors": {
+      "primary": "#9333EA",
+      "secondary": "#06B6D4",
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444",
+      "background": "#1F2937",
+      "text": "#FFFFFF"
+    },
+    "animation_types": [
+      "loading",
+      "success",
+      "error",
+      "hover",
+      "click",
+      "entrance",
+      "exit"
+    ],
+    "easing_functions": [
+      "linear",
+      "ease-in",
+      "ease-out",
+      "ease-in-out",
+      "bounce"
+    ],
+    "default_duration": 1.0,
+    "default_fps": 60
+  }
+}

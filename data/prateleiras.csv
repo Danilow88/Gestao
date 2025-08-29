@@ -1,0 +1,26 @@
+id_prateleira,nome_prateleira,local,setor,rua,posicao,capacidade_total,capacidade_utilizada,capacidade_disponivel,status,responsavel,data_cadastro,observacoes
+PRAT001,Prateleira A,HQ1 - 8º Andar,TechStop Alpha,Rua A1,1,100,85,15,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira principal para notebooks e desktops
+PRAT002,Prateleira A,HQ1 - 8º Andar,TechStop Alpha,Rua A2,2,100,78,22,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira secundária para equipamentos
+PRAT003,Prateleira B,HQ1 - 8º Andar,TechStop Beta,Rua B1,1,80,65,15,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para workstations e equipamentos pesados
+PRAT004,Prateleira B,HQ1 - 8º Andar,TechStop Beta,Rua B2,2,80,72,8,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para equipamentos especiais
+PRAT005,Prateleira C,HQ1 - 7º Andar,TechStop Gamma,Rua C1,1,120,95,25,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para periféricos e acessórios
+PRAT006,Prateleira C,HQ1 - 7º Andar,TechStop Gamma,Rua C2,2,120,88,32,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para equipamentos de conectividade
+PRAT007,Prateleira D,HQ1 - 6º Andar,Monitor Zone Delta,Rua D1,1,150,120,30,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para monitores e displays
+PRAT008,Prateleira D,HQ1 - 6º Andar,Monitor Zone Delta,Rua D2,2,150,135,15,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para monitores de reposição
+PRAT009,Prateleira E,Spark - 1º Andar,AV Zone Echo,Rua E1,1,100,85,15,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para TVs e projetores
+PRAT010,Prateleira E,Spark - 1º Andar,AV Zone Echo,Rua E2,2,100,92,8,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para equipamentos de áudio/vídeo
+PRAT011,Prateleira F,HQ1 - 5º Andar,Audio Zone Foxtrot,Rua F1,1,120,98,22,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para headsets e microfones
+PRAT012,Prateleira F,HQ1 - 5º Andar,Audio Zone Foxtrot,Rua F2,2,120,105,15,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para equipamentos de áudio
+PRAT013,Prateleira G,HQ1 - 4º Andar,Studio Zone Golf,Rua G1,1,80,65,15,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para equipamentos de estúdio
+PRAT014,Prateleira H,HQ1 - Subsolo,Lixo Zone Hotel,Rua H1,1,200,180,20,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para equipamentos para descarte
+PRAT015,Prateleira H,HQ1 - Subsolo,Lixo Zone Hotel,Rua H2,2,200,175,25,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para equipamentos obsoletos
+PRAT016,Prateleira I,HQ1 - Subsolo,Lixo Zone India,Rua I1,1,150,130,20,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para equipamentos antigos
+PRAT017,Prateleira I,HQ1 - Subsolo,Lixo Zone India,Rua I2,2,150,140,10,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para equipamentos de descarte
+PRAT018,Prateleira J,HQ1 - 3º Andar,Outros Zone Juliet,Rua J1,1,100,85,15,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para cabos e conectores
+PRAT019,Prateleira J,HQ1 - 3º Andar,Outros Zone Juliet,Rua J2,2,100,90,10,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para acessórios diversos
+PRAT020,Prateleira K,HQ1 - 2º Andar,Ergonomia Zone Kilo,Rua K1,1,80,65,15,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para suportes e ergonomia
+PRAT021,Prateleira L,Spark - 2º Andar,TechStop Beta,Rua L1,1,100,85,15,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para equipamentos premium
+PRAT022,Prateleira L,Spark - 2º Andar,TechStop Beta,Rua L2,2,100,78,22,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para equipamentos especiais
+PRAT023,Prateleira M,HQ1 - 1º Andar,Recepção,Rua M1,1,60,45,15,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para equipamentos de recepção
+PRAT024,Prateleira N,HQ1 - Térreo,Manutenção,Rua N1,1,80,60,20,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para equipamentos em manutenção
+PRAT025,Prateleira O,HQ1 - 9º Andar,Executivo,Rua O1,1,50,35,15,Ativa,danilo.fukuyama.digisystem@nubank.com.br,2024-01-01,Prateleira para equipamentos executivos

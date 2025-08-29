@@ -1,0 +1,61 @@
+id_estoque_prateleira,prateleira_id,sku,quantidade,posicao_na_prateleira,data_entrada,data_ultima_movimentacao,status,observacoes
+EST001,PRAT001,SKU001,10,1-10,2024-01-16,2024-01-20,Ativo,Notebooks Dell na prateleira principal
+EST002,PRAT001,SKU002,7,11-17,2024-01-21,2024-01-25,Ativo,Desktops HP na prateleira principal
+EST003,PRAT001,SKU005,4,18-21,2024-03-02,2024-03-05,Ativo,iPads na prateleira principal
+EST004,PRAT001,SKU008,8,22-29,2024-01-31,2024-01-30,Ativo,SSDs Samsung na prateleira principal
+EST005,PRAT002,SKU001,2,1-2,2024-01-18,2024-01-18,Ativo,Notebooks Dell transferidos
+EST006,PRAT002,SKU002,1,3,2024-02-12,2024-02-12,Ativo,Desktop HP transferido
+EST007,PRAT002,SKU008,2,4-5,2024-03-08,2024-03-08,Ativo,SSDs Samsung transferidos
+EST008,PRAT003,SKU004,2,1-2,2024-02-26,2024-02-28,Ativo,Workstations Lenovo na prateleira B
+EST009,PRAT004,SKU004,0,1,2024-02-26,2024-02-28,Inativo,Workstation Lenovo entregue
+EST010,PRAT005,SKU006,22,1-22,2024-02-21,2024-02-22,Ativo,Mouses Logitech na prateleira C
+EST011,PRAT005,SKU007,5,23-27,2024-03-11,2024-03-12,Ativo,Teclados Corsair na prateleira C
+EST012,PRAT005,SKU018,13,28-40,2024-01-29,2024-01-30,Ativo,Adaptadores Anker na prateleira C
+EST013,PRAT006,SKU018,2,1-2,2024-01-30,2024-01-30,Ativo,Adaptadores Anker transferidos
+EST014,PRAT006,SKU023,40,3-42,2024-02-06,2024-02-07,Ativo,Cabos HDMI na prateleira C
+EST015,PRAT006,SKU024,17,43-59,2024-01-13,2024-01-15,Ativo,Hubs USB na prateleira C
+EST016,PRAT006,SKU026,20,60-79,2024-02-19,2024-02-20,Ativo,Mousepads Corsair na prateleira C
+EST017,PRAT006,SKU027,25,80-104,2024-01-23,2024-01-25,Ativo,Filtros de linha na prateleira C
+EST018,PRAT007,SKU009,13,1-13,2024-01-26,2024-01-27,Ativo,Monitores LG na prateleira D
+EST019,PRAT007,SKU011,17,14-30,2024-03-06,2024-03-07,Ativo,Monitores Dell na prateleira D
+EST020,PRAT007,SKU013,5,31-35,2024-03-16,2024-03-17,Ativo,Apple TVs na prateleira D
+EST021,PRAT008,SKU009,2,1-2,2024-01-27,2024-01-27,Ativo,Monitores LG transferidos
+EST022,PRAT008,SKU011,3,3-5,2024-03-07,2024-03-07,Ativo,Monitores Dell transferidos
+EST023,PRAT009,SKU010,3,1-3,2024-02-16,2024-02-17,Ativo,TVs Samsung na prateleira E
+EST024,PRAT009,SKU012,2,4-5,2024-02-29,2024-03-01,Ativo,Projetores BenQ na prateleira E
+EST025,PRAT010,SKU010,1,1,2024-02-17,2024-02-17,Ativo,TV Samsung instalada
+EST026,PRAT010,SKU012,1,2,2024-03-01,2024-03-01,Ativo,Projetor BenQ instalado
+EST027,PRAT011,SKU014,25,1-25,2024-01-19,2024-01-22,Ativo,Headsets Plantronics na prateleira F
+EST028,PRAT011,SKU015,6,26-31,2024-02-23,2024-02-25,Ativo,Caixas de som JBL na prateleira F
+EST029,PRAT011,SKU017,15,32-46,2024-02-13,2024-02-14,Ativo,Webcams Logitech na prateleira F
+EST030,PRAT012,SKU014,5,1-5,2024-01-22,2024-01-22,Ativo,Headsets Plantronics entregues
+EST031,PRAT012,SKU015,2,6-7,2024-02-25,2024-02-25,Ativo,Caixas de som JBL entregues
+EST032,PRAT012,SKU017,3,8-10,2024-02-14,2024-02-14,Ativo,Webcams Logitech entregues
+EST033,PRAT013,SKU016,3,1-3,2024-03-09,2024-03-10,Ativo,Microfones Blue na prateleira G
+EST034,PRAT013,SKU016,1,4,2024-03-10,2024-03-10,Ativo,Microfone Blue entregue
+EST035,PRAT014,SKU019,5,1-5,2023-01-11,2023-01-11,Inativo,Impressoras HP para descarte
+EST036,PRAT014,SKU020,3,6-8,2022-05-16,2022-05-16,Inativo,Monitores CRT para descarte
+EST037,PRAT015,SKU019,0,1,2023-01-11,2023-01-11,Inativo,Impressora HP descartada
+EST038,PRAT015,SKU020,0,2,2022-05-16,2022-05-16,Inativo,Monitor CRT descartado
+EST039,PRAT016,SKU021,8,1-8,2021-03-21,2021-03-21,Inativo,CPUs Pentium 4 para descarte
+EST040,PRAT016,SKU022,12,9-20,2020-08-11,2020-08-11,Inativo,Teclados PS/2 para descarte
+EST041,PRAT017,SKU021,0,1,2021-03-21,2021-03-21,Inativo,CPU Pentium 4 descartada
+EST042,PRAT017,SKU022,0,2,2020-08-11,2020-08-11,Inativo,Teclado PS/2 descartado
+EST043,PRAT018,SKU023,10,1-10,2024-02-06,2024-02-07,Ativo,Cabos HDMI na prateleira J
+EST044,PRAT018,SKU024,17,11-27,2024-01-13,2024-01-15,Ativo,Hubs USB na prateleira J
+EST045,PRAT018,SKU027,25,28-52,2024-01-23,2024-01-25,Ativo,Filtros de linha na prateleira J
+EST046,PRAT019,SKU023,0,1,2024-02-07,2024-02-07,Ativo,Cabo HDMI entregue
+EST047,PRAT019,SKU024,0,2,2024-01-15,2024-01-15,Ativo,Hub USB entregue
+EST048,PRAT019,SKU027,0,3,2024-01-25,2024-01-25,Ativo,Filtro de linha entregue
+EST049,PRAT020,SKU025,13,1-13,2024-03-13,2024-03-14,Ativo,Suportes Herman Miller na prateleira K
+EST050,PRAT020,SKU025,2,14-15,2024-03-14,2024-03-14,Ativo,Suportes Herman Miller entregues
+EST051,PRAT021,SKU003,2,1-2,2024-02-11,2024-02-15,Ativo,MacBooks na prateleira L
+EST052,PRAT021,SKU004,0,1,2024-02-26,2024-02-28,Ativo,Workstation Lenovo entregue
+EST053,PRAT022,SKU003,1,1,2024-02-15,2024-02-15,Ativo,MacBook entregue
+EST054,PRAT022,SKU004,1,2,2024-02-28,2024-02-28,Ativo,Workstation Lenovo entregue
+EST055,PRAT023,SKU001,0,1,2024-01-20,2024-01-20,Ativo,Notebook Dell entregue
+EST056,PRAT023,SKU002,0,2,2024-01-25,2024-01-25,Ativo,Desktop HP entregue
+EST057,PRAT024,SKU001,0,1,2024-01-20,2024-01-20,Ativo,Notebook Dell em manutenção
+EST058,PRAT024,SKU002,0,2,2024-01-25,2024-01-25,Ativo,Desktop HP em manutenção
+EST059,PRAT025,SKU003,0,1,2024-02-15,2024-02-15,Ativo,MacBook executivo entregue
+EST060,PRAT025,SKU004,0,2,2024-02-28,2024-02-28,Ativo,Workstation executiva entregue

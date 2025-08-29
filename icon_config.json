@@ -1,0 +1,16 @@
+{
+  "custom_colors": {},
+  "default_colors": {
+    "primary": "#FFFFFF",
+    "secondary": "#CCCCCC",
+    "accent": "#FFD700",
+    "success": "#00FF00",
+    "warning": "#FFA500",
+    "error": "#FF0000",
+    "info": "#00BFFF",
+    "dark": "#000000",
+    "light": "#FFFFFF",
+    "muted": "#cbcaca"
+  },
+  "timestamp": "2025-08-27T15:47:47.333137"
+}

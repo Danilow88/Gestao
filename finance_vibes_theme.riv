@@ -1,0 +1,218 @@
+# Finance-Vibes Theme - Rive Animation File
+# Este arquivo contém o tema visual do seu app para edição no Rive
+
+# Configurações do Tema
+theme_name: "Finance-Vibes"
+version: "1.0.0"
+description: "Tema personalizado para o dashboard Finance-Vibes com animações Rive"
+
+# Cores Principais (Tema Nubank)
+primary_color: "#9333EA"      # Roxo principal
+secondary_color: "#06B6D4"    # Azul ciano
+success_color: "#10B981"      # Verde sucesso
+warning_color: "#F59E0B"      # Amarelo aviso
+error_color: "#EF4444"        # Vermelho erro
+background_color: "#1F2937"   # Fundo escuro
+text_color: "#FFFFFF"         # Texto branco
+
+# Elementos de Interface
+elements:
+  - name: "metric_card"
+    type: "container"
+    animation: "fade_in"
+    duration: 0.5
+    easing: "ease_out"
+    
+  - name: "loading_spinner"
+    type: "animation"
+    source: "https://cdn.rive.app/animations/loading.riv"
+    loop: true
+    autoplay: true
+    
+  - name: "success_check"
+    type: "animation"
+    source: "https://cdn.rive.app/animations/success.riv"
+    loop: false
+    autoplay: false
+    
+  - name: "navigation_indicator"
+    type: "icon"
+    animation: "rotate"
+    duration: 2.0
+    loop: true
+    
+  - name: "data_flow"
+    type: "animation"
+    source: "https://cdn.rive.app/animations/loading.riv"
+    loop: true
+    autoplay: true
+    
+  - name: "interactive_button"
+    type: "button"
+    animation: "scale"
+    duration: 0.2
+    hover_effect: true
+    
+  - name: "chart_enhancement"
+    type: "decoration"
+    animation: "pulse"
+    duration: 1.5
+    loop: true
+
+# Estados de Animação
+states:
+  - name: "idle"
+    description: "Estado padrão dos elementos"
+    
+  - name: "hover"
+    description: "Estado quando o mouse passa por cima"
+    
+  - name: "click"
+    description: "Estado quando clicado"
+    
+  - name: "loading"
+    description: "Estado de carregamento"
+    
+  - name: "success"
+    description: "Estado de sucesso"
+    
+  - name: "error"
+    description: "Estado de erro"
+
+# Transições
+transitions:
+  - from: "idle"
+    to: "hover"
+    duration: 0.2
+    easing: "ease_out"
+    
+  - from: "hover"
+    to: "idle"
+    duration: 0.3
+    easing: "ease_in"
+    
+  - from: "idle"
+    to: "click"
+    duration: 0.1
+    easing: "ease_out"
+    
+  - from: "click"
+    to: "idle"
+    duration: 0.2
+    easing: "ease_in"
+
+# Animações Personalizadas
+custom_animations:
+  - name: "metric_card_entrance"
+    type: "sequence"
+    steps:
+      - scale: [0.8, 1.0]
+        duration: 0.3
+        easing: "ease_out"
+      - opacity: [0, 1]
+        duration: 0.2
+        easing: "ease_out"
+        
+  - name: "success_celebration"
+    type: "sequence"
+    steps:
+      - scale: [1.0, 1.2]
+        duration: 0.2
+        easing: "ease_out"
+      - scale: [1.2, 1.0]
+        duration: 0.3
+        easing: "ease_in"
+      - rotation: [0, 360]
+        duration: 0.5
+        easing: "ease_out"
+
+# Responsividade
+responsive:
+  mobile:
+    scale: 0.8
+    duration_multiplier: 1.2
+    
+  tablet:
+    scale: 0.9
+    duration_multiplier: 1.1
+    
+  desktop:
+    scale: 1.0
+    duration_multiplier: 1.0
+
+# Performance
+performance:
+  max_fps: 60
+  optimize_memory: true
+  reduce_motion: false
+  
+# Acessibilidade
+accessibility:
+  high_contrast: true
+  reduce_motion_support: true
+  screen_reader_friendly: true
+
+# Instruções de Edição
+editing_instructions: |
+  Para editar este tema no Rive Web Editor:
+  
+  1. Acesse: https://rive.app/community
+  2. Clique em "Create" ou "New Animation"
+  3. Importe este arquivo ou crie do zero
+  4. Use as cores e configurações acima
+  5. Crie suas próprias animações
+  6. Exporte como .riv
+  7. Substitua no seu projeto
+  
+  Elementos principais para animar:
+  - Cards de métricas
+  - Indicadores de navegação
+  - Botões interativos
+  - Gráficos
+  - Estados de loading/success
+  
+  Dicas de design:
+  - Mantenha consistência com o tema Nubank
+  - Use transições suaves
+  - Animações não devem ser muito longas
+  - Considere a acessibilidade
+  - Teste em diferentes dispositivos
+
+# Exemplo de Uso no Código
+code_example: |
+  # No seu dashboard.py
+  from app.rive_components import create_rive_metric_card
+  
+  # Usar o tema personalizado
+  create_rive_metric_card(
+      title="Total de Itens",
+      value="150",
+      delta="+5 este mês",
+      icon="■",
+      animation_type="custom_metric_card_entrance"
+  )
+
+# Versões e Atualizações
+changelog:
+  - version: "1.0.0"
+    date: "2025-08-25"
+    changes:
+      - "Tema inicial criado"
+      - "Cores do Nubank definidas"
+      - "Animações básicas configuradas"
+      - "Responsividade implementada"
+      - "Acessibilidade configurada"
+
+# Contato e Suporte
+support:
+  author: "Finance-Vibes Team"
+  email: "support@finance-vibes.com"
+  documentation: "https://rive.app/docs"
+  community: "https://rive.app/community"
+
+# Licença
+license: "MIT"
+copyright: "© 2025 Finance-Vibes. Todos os direitos reservados."
+
+# Fim do arquivo de tema
+# Use este arquivo como base para criar suas animações no Rive Web Editor

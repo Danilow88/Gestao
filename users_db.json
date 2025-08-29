@@ -1,0 +1,11 @@
+{
+  "danilo.fukuyama.digisystem@nubank.com.br": {
+    "nome": "Danilo Fukuyama",
+    "email": "danilo.fukuyama.digisystem@nubank.com.br",
+    "password_hash": "df5e238ce52eb13771dd87715ad733f249adcd2dced132ddf57597e130d53b6e5ab91b84ecf2e969c96c85bf934d2aaa",
+    "role": "admin",
+    "status": "aprovado",
+    "data_registro": "2024-01-01",
+    "aprovado_por": "sistema"
+  }
+}

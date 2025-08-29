@@ -1,0 +1,28 @@
+sku,nome_produto,categoria,marca,modelo,descricao,fornecedor_id,preco_unitario,unidade_medida,peso,volume,status,data_cadastro,observacoes
+SKU001,Notebook Dell Latitude,techstop,Dell,Latitude 5520,Notebook empresarial 15.6" Intel i7 16GB 512GB SSD,FOR001,3500.00,unidade,2.5,0.003,Ativo,2024-01-01,Produto padrão para desenvolvedores
+SKU002,Desktop HP Elite,techstop,HP,Elite Desk 800 G8,Desktop empresarial Intel i5 8GB 256GB SSD,FOR002,2800.00,unidade,8.0,0.008,Ativo,2024-01-02,Produto padrão para escritório
+SKU003,MacBook Pro M2,techstop,Apple,MacBook Pro 14",Notebook Apple M2 14" 16GB 512GB SSD,FOR003,8500.00,unidade,1.6,0.002,Ativo,2024-01-03,Produto premium para design
+SKU004,Workstation Lenovo,techstop,Lenovo,ThinkStation P520,Workstation Intel Xeon 32GB 1TB SSD,FOR004,12000.00,unidade,12.0,0.012,Ativo,2024-01-04,Produto para engenharia 3D
+SKU005,Tablet iPad Pro,techstop,Apple,iPad Pro 12.9",Tablet Apple 12.9" M2 256GB,FOR003,4200.00,unidade,0.7,0.001,Ativo,2024-01-05,Produto para design mobile
+SKU006,Mouse Logitech MX,techstop,Logitech,MX Master 3S,Mouse sem fio ergonômico para produtividade,FOR005,450.00,unidade,0.14,0.0001,Ativo,2024-01-06,Produto para produtividade
+SKU007,Teclado Mecânico,techstop,Corsair,K70 RGB MK.2,Teclado mecânico gaming com RGB,FOR008,850.00,unidade,1.2,0.001,Ativo,2024-01-07,Produto para gaming/dev
+SKU008,SSD Externo Samsung,techstop,Samsung,T7 Shield 2TB,SSD externo portátil 2TB USB 3.2,FOR006,800.00,unidade,0.1,0.0001,Ativo,2024-01-08,Produto para backup
+SKU009,Monitor LG 27",tv e monitor,LG,27GL850-B,Monitor 27" 1440p 144Hz IPS,FOR006,2200.00,unidade,5.8,0.006,Ativo,2024-01-09,Produto para design/video
+SKU010,TV Samsung 55",tv e monitor,Samsung,UN55AU7000,Smart TV 55" 4K UHD,FOR006,3500.00,unidade,18.0,0.018,Ativo,2024-01-10,Produto para sala de reunião
+SKU011,Monitor Dell 24",tv e monitor,Dell,P2422H,Monitor 24" 1080p IPS,FOR001,1800.00,unidade,4.2,0.004,Ativo,2024-01-11,Produto para escritório geral
+SKU012,Projetor BenQ,tv e monitor,BenQ,MW632ST,Projetor 3200 lumens 1280x800,FOR004,4500.00,unidade,2.8,0.003,Ativo,2024-01-12,Produto para apresentações
+SKU013,Apple TV 4K,tv e monitor,Apple,MXGY2LL/A,Streaming device 4K HDR,FOR003,800.00,unidade,0.4,0.0004,Ativo,2024-01-13,Produto para streaming
+SKU014,Headset Plantronics,audio e video,Plantronics,Voyager 4220,Headset Bluetooth para call center,FOR009,1200.00,unidade,0.18,0.0002,Ativo,2024-01-14,Produto para call center
+SKU015,Caixa de Som JBL,audio e video,JBL,Charge 5,Caixa de som portátil Bluetooth,FOR010,600.00,unidade,0.9,0.001,Ativo,2024-01-15,Produto para eventos
+SKU016,Microfone Blue Yeti,audio e video,Blue Microphones,Blue Yeti Nano,Microfone USB para podcast,FOR009,400.00,unidade,0.5,0.0005,Ativo,2024-01-16,Produto para podcast
+SKU017,Webcam Logitech C920,audio e video,Logitech,C920 HD Pro,Webcam HD 1080p,FOR005,350.00,unidade,0.15,0.0002,Ativo,2024-01-17,Produto para videoconferência
+SKU018,Adaptador USB-C Hub,audio e video,Anker,PowerExpand 11-in-1,Hub USB-C com múltiplas portas,FOR007,300.00,unidade,0.08,0.0001,Ativo,2024-01-18,Produto para conectividade
+SKU019,Impressora HP Antiga,lixo eletronico,HP,LaserJet 1320,Impressora laser antiga para descarte,FOR002,50.00,unidade,8.5,0.009,Inativo,2024-01-19,Produto para descarte
+SKU020,Monitor CRT Dell,lixo eletronico,Dell,UltraSharp 1901FP,Monitor CRT antigo para descarte,FOR001,100.00,unidade,15.0,0.015,Inativo,2024-01-20,Produto para descarte
+SKU021,CPU Pentium 4,lixo eletronico,Dell,OptiPlex GX280,CPU antiga para descarte,FOR001,80.00,unidade,2.0,0.002,Inativo,2024-01-21,Produto para descarte
+SKU022,Teclado PS/2 Antigo,lixo eletronico,Dell,QuietKey KB212-B,Teclado antigo para descarte,FOR001,30.00,unidade,0.8,0.001,Inativo,2024-01-22,Produto para descarte
+SKU023,Cabo HDMI Premium,outros,Cabo Premium,HDMI 2.1 Ultra High Speed,Cabo HDMI premium 2.1,FOR007,80.00,unidade,0.2,0.0002,Ativo,2024-01-23,Produto para conectividade
+SKU024,Hub USB 3.0,outros,Anker,Anker 10-Port USB 3.0,Hub USB 3.0 com 10 portas,FOR007,150.00,unidade,0.3,0.0003,Ativo,2024-01-24,Produto para expansão USB
+SKU025,Suporte Monitor Ajustável,outros,Herman Miller,Ollin,Suporte ergonômico para monitor,FOR007,900.00,unidade,3.5,0.004,Ativo,2024-01-25,Produto para ergonomia
+SKU026,Mousepad Gamer RGB,outros,Corsair,MM800 RGB,Mousepad gaming com RGB,FOR008,120.00,unidade,0.4,0.0004,Ativo,2024-01-26,Produto para gaming
+SKU027,Filtro de Linha,outros,Fortrek,Fortrek 8 Tomadas,Filtro de linha com 8 tomadas,FOR007,200.00,unidade,0.8,0.001,Ativo,2024-01-27,Produto para proteção elétrica
