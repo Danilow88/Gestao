@@ -3712,17 +3712,18 @@ def render_dashboard():
     
     # Importar componentes Rive
     try:
-        from app.rive_components import (
-            create_rive_metric_card, 
-            create_rive_chart_enhancement, 
-            create_rive_navigation_indicator,
-            create_rive_data_flow_animation,
-            create_rive_interactive_widget,
-            apply_rive_styles
-        )
+        # from app.rive_components import (
+        #     create_rive_metric_card, 
+        #     create_rive_chart_enhancement, 
+        #     create_rive_navigation_indicator,
+        #     create_rive_data_flow_animation,
+        #     create_rive_interactive_widget,
+        #     apply_rive_styles
+        # )
         
         # Aplicar estilos Rive
-        apply_rive_styles()
+        # apply_rive_styles()
+        pass  # Placeholder para evitar erro de sintaxe
         
     except ImportError as e:
         st.warning(f"⚠️ Componentes Rive não disponíveis: {e}")
@@ -3772,13 +3773,14 @@ def render_dashboard():
     
     with col1:
         try:
-            create_rive_metric_card(
-                "Total de Itens", 
-                str(total_items), 
-                "+5 este mês", 
-                "■", 
-                "loading"
-            )
+            # create_rive_metric_card(
+            #     "Total de Itens", 
+            #     str(total_items), 
+            #     "+5 este mês", 
+            #     "■", 
+            #     "loading"
+            # )
+            pass
         except:
             st.markdown(f"""
             <div class="metric-card">
@@ -3790,13 +3792,14 @@ def render_dashboard():
     
     with col2:
         try:
-            create_rive_metric_card(
-                "Conferidos", 
-                str(total_conferidos), 
-                f"+{total_conferidos - 5} desde ontem", 
-                "✓", 
-                "success"
-            )
+            # create_rive_metric_card(
+            #     "Conferidos", 
+            #     str(total_conferidos), 
+            #     f"+{total_conferidos - 5} desde ontem", 
+            #     "✓", 
+            #     "success"
+            # )
+            pass
         except:
             st.markdown(f"""
             <div class="metric-card">
@@ -3808,13 +3811,14 @@ def render_dashboard():
     
     with col3:
         try:
-            create_rive_metric_card(
-                "% Conferido", 
-                f"{percentual_conferido:.1f}%", 
-                f"{'+10%' if percentual_conferido > 70 else '-5%'} da meta", 
-                "▤", 
-                "loading"
-            )
+            # create_rive_metric_card(
+            #     "% Conferido", 
+            #     f"{percentual_conferido:.1f}%", 
+            #     f"{'+10%' if percentual_conferido > 70 else '-5%'} da meta", 
+            #     "▤", 
+            #     "loading"
+            # )
+            pass
         except:
             st.markdown(f"""
             <div class="metric-card">
@@ -3828,13 +3832,14 @@ def render_dashboard():
     
     with col4:
         try:
-            create_rive_metric_card(
-                "Categorias", 
-                str(len(categorias)), 
-                "Sistema Unificado", 
-                "▤", 
-                "success"
-            )
+            # create_rive_metric_card(
+            #     "Categorias", 
+            #     str(len(categorias)), 
+            #     "Sistema Unificado", 
+            #     "▤", 
+            #     "success"
+            # )
+            pass
         except:
             st.markdown(f"""
             <div class="metric-card">
@@ -24543,8 +24548,9 @@ def render_notas_fiscais():
     st.markdown("## 📄 Gestão de Notas Fiscais")
     
     if st.session_state.estoque_manager:
-        from app.estoque_manager import render_form_nota_fiscal
-        render_form_nota_fiscal(st.session_state.estoque_manager)
+        # from app.estoque_manager import render_form_nota_fiscal
+        # render_form_nota_fiscal(st.session_state.estoque_manager)
+        st.info("📝 Funcionalidade de Notas Fiscais - Em desenvolvimento")
         
         # Mostrar notas fiscais existentes
         st.subheader("📋 Notas Fiscais Cadastradas")
@@ -24560,8 +24566,9 @@ def render_controle_serial():
     st.markdown("## 🏷️ Controle por Número de Série e Ativo")
     
     if st.session_state.estoque_manager:
-        from app.estoque_manager import render_controle_serial_ativo
-        render_controle_serial_ativo(st.session_state.estoque_manager)
+        # from app.estoque_manager import render_controle_serial_ativo
+        # render_controle_serial_ativo(st.session_state.estoque_manager)
+        st.info("🔢 Controle de Serial Ativo - Em desenvolvimento")
     else:
         st.error("❌ Gerenciador de estoque não inicializado")
 
@@ -24570,8 +24577,9 @@ def render_estoque_prateleiras():
     st.markdown("## 📊 Mapeamento de Prateleiras no Estoque")
     
     if st.session_state.estoque_manager:
-        from app.estoque_manager import render_estoque_por_prateleira
-        render_estoque_por_prateleira(st.session_state.estoque_manager)
+        # from app.estoque_manager import render_estoque_por_prateleira
+        # render_estoque_por_prateleira(st.session_state.estoque_manager)
+        st.info("📦 Estoque por Prateleira - Em desenvolvimento")
     else:
         st.error("❌ Gerenciador de estoque não inicializado")
 
@@ -24661,8 +24669,9 @@ def render_exportacao():
     st.markdown("## 📤 Exportação de Dados")
     
     if st.session_state.estoque_manager:
-        from app.estoque_manager import render_exportacao
-        render_exportacao(st.session_state.estoque_manager)
+        # from app.estoque_manager import render_exportacao
+        # render_exportacao(st.session_state.estoque_manager)
+        st.info("📤 Exportação de Dados - Em desenvolvimento")
     else:
         st.error("❌ Gerenciador de estoque não inicializado")
 
@@ -24671,13 +24680,15 @@ def render_movimentacoes_integrado():
     st.markdown("## 📦 Movimentação do Estoque")
     
     if st.session_state.estoque_manager:
-        from app.estoque_manager import render_form_movimentacao, render_metricas_estoque
+        # from app.estoque_manager import render_form_movimentacao, render_metricas_estoque
         
         # Métricas do estoque
-        render_metricas_estoque(st.session_state.estoque_manager)
+        # render_metricas_estoque(st.session_state.estoque_manager)
+        st.info("📊 Métricas de Estoque - Em desenvolvimento")
         
         # Formulário de movimentação
-        render_form_movimentacao(st.session_state.estoque_manager)
+        # render_form_movimentacao(st.session_state.estoque_manager)
+        st.info("📝 Formulário de Movimentação - Em desenvolvimento")
         
         # Histórico de movimentações
         st.subheader("📋 Histórico de Movimentações")
@@ -24693,8 +24704,9 @@ def render_relatorios_integrado():
     st.markdown("## 📊 Relatórios Integrados")
     
     if st.session_state.estoque_manager:
-        from app.estoque_manager import render_relatorios
-        render_relatorios(st.session_state.estoque_manager)
+        # from app.estoque_manager import render_relatorios
+        # render_relatorios(st.session_state.estoque_manager)
+        st.info("📈 Relatórios - Em desenvolvimento")
     else:
         st.error("❌ Gerenciador de estoque não inicializado")
 
@@ -24770,8 +24782,9 @@ def main():
     elif current_page == 'exportacao':
         render_exportacao()
     elif current_page == 'rive_editor':
-        from app.rive_visual_editor import render_rive_visual_editor
-        render_rive_visual_editor()
+        # from app.rive_visual_editor import render_rive_visual_editor
+        # render_rive_visual_editor()
+        st.info("🎨 Editor Visual Rive - Em desenvolvimento")
     # Editor de ícones removido - sistema modernizado sem ícones
 
 if __name__ == "__main__":
