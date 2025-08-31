@@ -1726,6 +1726,119 @@ def apply_modern_defi_theme():
         margin: 0 auto;
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
     }
+
+    /* ===== MELHORIAS PARA TABELAS DO ESTOQUE UNIFICADO ===== */
+    
+    /* Aumentar o tamanho das tabelas do Streamlit */
+    [data-testid="stDataFrame"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 400px !important;
+    }
+
+    [data-testid="stDataFrame"] > div {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+    }
+
+    /* Melhorar tamanho das células e texto */
+    [data-testid="stDataFrame"] table {
+        font-size: 14px !important;
+        line-height: 1.5 !important;
+        width: 100% !important;
+    }
+
+    [data-testid="stDataFrame"] th {
+        font-size: 14px !important;
+        font-weight: bold !important;
+        padding: 12px 8px !important;
+        min-height: 45px !important;
+        background-color: #8B5CF6 !important;
+        color: white !important;
+        border: 1px solid #7C3AED !important;
+    }
+
+    [data-testid="stDataFrame"] td {
+        font-size: 14px !important;
+        padding: 10px 8px !important;
+        min-height: 40px !important;
+        border: 1px solid #e5e7eb !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+    /* Responsividade específica para diferentes telas */
+    @media (min-width: 1200px) {
+        [data-testid="stDataFrame"] {
+            min-height: 500px !important;
+        }
+        [data-testid="stDataFrame"] th,
+        [data-testid="stDataFrame"] td {
+            font-size: 15px !important;
+            padding: 12px 10px !important;
+        }
+    }
+
+    @media (max-width: 1199px) and (min-width: 768px) {
+        [data-testid="stDataFrame"] {
+            min-height: 450px !important;
+        }
+        [data-testid="stDataFrame"] th,
+        [data-testid="stDataFrame"] td {
+            font-size: 13px !important;
+            padding: 8px 6px !important;
+        }
+    }
+
+    @media (max-width: 767px) {
+        [data-testid="stDataFrame"] {
+            min-height: 350px !important;
+        }
+        [data-testid="stDataFrame"] th,
+        [data-testid="stDataFrame"] td {
+            font-size: 12px !important;
+            padding: 6px 4px !important;
+        }
+    }
+
+    /* Melhorar aparência do data editor também */
+    [data-testid="stDataEditor"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 400px !important;
+    }
+
+    [data-testid="stDataEditor"] table th {
+        font-size: 14px !important;
+        font-weight: bold !important;
+        padding: 12px 8px !important;
+        background-color: #8B5CF6 !important;
+        color: white !important;
+    }
+
+    [data-testid="stDataEditor"] table td {
+        font-size: 14px !important;
+        padding: 10px 8px !important;
+        min-height: 40px !important;
+    }
+    
+    /* Garantir que as colunas sejam redimensionáveis */
+    [data-testid="stDataFrame"] .col-header,
+    [data-testid="stDataEditor"] .col-header {
+        resize: horizontal !important;
+        overflow: auto !important;
+    }
+
+    /* Melhorar scroll horizontal em dispositivos móveis */
+    @media (max-width: 768px) {
+        [data-testid="stDataFrame"] > div,
+        [data-testid="stDataEditor"] > div {
+            overflow-x: scroll !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -8057,19 +8170,42 @@ def display_table_with_filters(df: pd.DataFrame, key: str = "table", editable: b
             if editable:
                 gb.configure_grid_options(editable=True, stopEditingWhenCellsLoseFocus=True)
             
-            # Configurar colunas específicas
+            # Configurar colunas específicas com larguras responsivas
             for col in df.columns:
+                # Configurar larguras baseadas no tipo de coluna
+                if col.lower() in ['tag', 'sku']:
+                    width = 120
+                elif col.lower() in ['qtd', 'quantidade']:
+                    width = 80
+                elif col.lower() in ['valor', 'preco', 'cost']:
+                    width = 130
+                elif col.lower() in ['conferido', 'ativo']:
+                    width = 100
+                elif col.lower() in ['categoria', 'prateleira', 'rua']:
+                    width = 150
+                elif col.lower() in ['item', 'itens', 'nome', 'name']:
+                    width = 250
+                elif col.lower() in ['modelo', 'marca', 'fornecedor']:
+                    width = 180
+                elif col.lower() in ['local', 'localizacao']:
+                    width = 200
+                else:
+                    width = 160  # largura padrão
+                
                 if df[col].dtype in ['int64', 'float64']:
-                    gb.configure_column(col, type=["numericColumn"], precision=2)
+                    gb.configure_column(col, type=["numericColumn"], precision=2, width=width, minWidth=80, maxWidth=300)
                 elif df[col].dtype == 'bool':
-                    gb.configure_column(col, type=["booleanColumn"])
+                    gb.configure_column(col, type=["booleanColumn"], width=width, minWidth=80, maxWidth=150)
                 elif 'data' in col.lower() or 'date' in col.lower():
-                    gb.configure_column(col, type=["dateColumn"])
+                    gb.configure_column(col, type=["dateColumn"], width=width, minWidth=120, maxWidth=200)
                 elif col.lower() == 'categoria':
                     # Configurar coluna categoria com destaque
                     gb.configure_column(
                         col, 
                         pinned='left',  # Fixar à esquerda
+                        width=width,
+                        minWidth=120,
+                        maxWidth=200,
                         cellStyle={
                             "backgroundColor": "#f3e8ff",
                             "color": "#7c3aed",
@@ -8083,24 +8219,44 @@ def display_table_with_filters(df: pd.DataFrame, key: str = "table", editable: b
                             "defaultOption": "contains"
                         }
                     )
+                else:
+                    gb.configure_column(col, width=width, minWidth=80, maxWidth=300, wrapText=True, autoHeight=True)
             
             gridOptions = gb.build()
             
-            # Configurações adicionais do grid
+            # Configurações adicionais do grid - MELHORADAS para responsividade
             gridOptions["animateRows"] = True
             gridOptions["enableRangeSelection"] = True
             gridOptions["enableFillHandle"] = editable
             gridOptions["suppressRowClickSelection"] = False
+            gridOptions["suppressColumnMoveAnimation"] = False
+            gridOptions["enableCellTextSelection"] = True
+            gridOptions["ensureDomOrder"] = True
+            gridOptions["suppressHorizontalScroll"] = False
+            gridOptions["alwaysShowHorizontalScroll"] = True if len(df.columns) > 8 else False
+            gridOptions["suppressScrollOnNewData"] = True
+            gridOptions["suppressAnimationFrame"] = False
             
             # Exibir informações sobre filtros
             st.info("🔍 **Filtros disponíveis:** Use os campos de filtro no cabeçalho das colunas ou o painel lateral para filtrar os dados")
             
-            # Configurar altura responsiva
-            default_height = min(600, 200 + len(df) * 35)
+            # Configurar altura responsiva - MELHORADA para tabelas maiores
+            # Aumentar altura máxima para 900px e altura mínima para 400px
+            min_height = 400
+            max_height = 900
+            calculated_height = 250 + len(df) * 45  # Linhas mais altas
+            default_height = max(min_height, min(max_height, calculated_height))
             table_height = height if height else default_height
             
-            # Aplicar responsividade para diferentes tamanhos de tela
-            gridOptions["domLayout"] = "autoHeight" if len(df) < 20 else "normal"
+            # Aplicar responsividade melhorada para diferentes tamanhos de tela
+            if len(df) < 10:
+                gridOptions["domLayout"] = "autoHeight"
+            elif len(df) < 50:
+                gridOptions["domLayout"] = "normal"
+                gridOptions["pagination"] = False
+            else:
+                gridOptions["domLayout"] = "normal"
+                gridOptions["pagination"] = True
             
             grid_response = AgGrid(
                 df,
@@ -8115,22 +8271,56 @@ def display_table_with_filters(df: pd.DataFrame, key: str = "table", editable: b
                 reload_data=False,
                 custom_css={
                     ".ag-theme-streamlit": {
-                        "font-size": "13px",
-                        "--ag-font-size": "13px",
-                        "--ag-header-height": "40px",
-                        "--ag-row-height": "35px",
-                        "--ag-list-item-height": "35px"
+                        "font-size": "14px",
+                        "--ag-font-size": "14px",
+                        "--ag-header-height": "50px",
+                        "--ag-row-height": "45px",
+                        "--ag-list-item-height": "45px",
+                        "width": "100% !important",
+                        "max-width": "100% !important"
                     },
                     ".ag-header-cell-text": {
                         "font-weight": "bold !important",
-                        "color": "#1f2937 !important"
+                        "color": "#1f2937 !important",
+                        "font-size": "14px !important"
+                    },
+                    ".ag-cell": {
+                        "font-size": "14px !important",
+                        "padding": "8px !important",
+                        "line-height": "1.4 !important"
+                    },
+                    ".ag-row": {
+                        "border-bottom": "1px solid #e5e7eb !important"
+                    },
+                    "@media (max-width: 1200px)": {
+                        ".ag-theme-streamlit": {
+                            "font-size": "13px",
+                            "--ag-font-size": "13px",
+                            "--ag-header-height": "45px",
+                            "--ag-row-height": "42px"
+                        },
+                        ".ag-cell": {
+                            "font-size": "13px !important"
+                        }
                     },
                     "@media (max-width: 768px)": {
+                        ".ag-theme-streamlit": {
+                            "font-size": "12px",
+                            "--ag-font-size": "12px",
+                            "--ag-header-height": "40px",
+                            "--ag-row-height": "38px"
+                        },
+                        ".ag-cell": {
+                            "font-size": "12px !important",
+                            "padding": "6px !important"
+                        }
+                    },
+                    "@media (max-width: 480px)": {
                         ".ag-theme-streamlit": {
                             "font-size": "11px",
                             "--ag-font-size": "11px",
                             "--ag-header-height": "35px",
-                            "--ag-row-height": "30px"
+                            "--ag-row-height": "35px"
                         }
                     }
                 }
@@ -8165,10 +8355,17 @@ def display_table_with_filters(df: pd.DataFrame, key: str = "table", editable: b
         return {"data": edited_df, "selected_rows": []}
     else:
         if not df.empty:
-            # Aplicar altura personalizada se especificada
-            dataframe_kwargs = {"use_container_width": True, "hide_index": True}
-            if height:
-                dataframe_kwargs["height"] = height
+            # Aplicar altura personalizada se especificada - MELHORADA para tabelas maiores
+            min_height = 400
+            max_height = 800
+            calculated_height = 250 + len(df) * 40
+            fallback_height = max(min_height, min(max_height, calculated_height))
+            
+            dataframe_kwargs = {
+                "use_container_width": True, 
+                "hide_index": True,
+                "height": height if height else fallback_height
+            }
                 
             st.dataframe(df, **dataframe_kwargs)
         else:
@@ -14224,6 +14421,83 @@ def render_inventario_unificado():
     
     st.divider()
     
+    # ===== CAMPO DE BUSCA GLOBAL COM LUPA =====
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 1.5rem; border-radius: 12px; margin: 1rem 0; border: 1px solid #cbd5e1;">
+        <h4 style="color: #8B5CF6; margin: 0 0 1rem 0; font-weight: 600;">🔍 Busca Inteligente</h4>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Campo de busca com lupa
+    col_search, col_clear = st.columns([4, 1])
+    
+    with col_search:
+        search_term = st.text_input(
+            "🔍 Pesquisar em todos os campos",
+            placeholder="Digite para buscar por tag, item, categoria, modelo, marca, fornecedor...",
+            key="global_search_inventory",
+            help="A busca funciona em tempo real em todas as colunas da tabela"
+        )
+    
+    with col_clear:
+        st.write("")  # Espaçamento
+        if st.button("🗑️ Limpar", key="clear_search_inventory", help="Limpar busca"):
+            st.session_state.global_search_inventory = ""
+            st.rerun()
+    
+    # Aplicar filtro global de busca
+    if search_term:
+        # Filtro global que busca em todas as colunas de texto
+        search_mask = pd.Series([False] * len(unified_data))
+        
+        # Colunas de texto para buscar
+        text_columns = ['tag', 'sku', 'itens', 'categoria', 'modelo', 'marca', 'fornecedor', 'local', 'po', 'nota_fiscal', 'uso', 'setor']
+        
+        for col in text_columns:
+            if col in unified_data.columns:
+                try:
+                    # Busca case-insensitive
+                    col_mask = unified_data[col].astype(str).str.contains(search_term, case=False, na=False)
+                    search_mask = search_mask | col_mask
+                except:
+                    continue
+        
+        # Aplicar máscara de busca
+        unified_data = unified_data[search_mask]
+        
+        # Mostrar resultados da busca
+        if len(unified_data) > 0:
+            st.success(f"🎯 **{len(unified_data)} itens encontrados** para: '{search_term}'")
+        else:
+            st.warning(f"🔍 **Nenhum item encontrado** para: '{search_term}'. Tente termos diferentes.")
+    else:
+        # Mostrar dicas quando não há busca ativa
+        with st.expander("💡 **Dicas de Busca** - Como usar a funcionalidade de pesquisa", expanded=False):
+            st.markdown("""
+            **🔍 Busca Global:**
+            - Pesquise por **qualquer campo**: tag, nome do item, modelo, marca, categoria, fornecedor, etc.
+            - A busca é **case-insensitive** (não diferencia maiúsculas/minúsculas)
+            - Use termos parciais: "dell" encontrará "Dell Latitude", "Dell Optiplex", etc.
+            
+            **🎯 Exemplos de busca:**
+            - `NB001` - Encontrar item por tag específica
+            - `dell` - Encontrar todos os equipamentos Dell
+            - `notebook` - Encontrar todos os notebooks
+            - `techstop` - Encontrar itens da categoria TechStop
+            - `spark` - Encontrar itens localizados no Spark
+            
+            **💫 Funcionalidades extras:**
+            - **Busca por categoria**: Use os campos específicos em cada tab
+            - **Combinação**: Busca global + filtros por prateleira/rua/status
+            - **Botão limpar**: Remove rapidamente todos os filtros de busca
+            
+            **⚡ Busca em tempo real**: Os resultados aparecem automaticamente conforme você digita!
+            """)
+    
+    # Separador visual
+    if search_term:
+        st.divider()
+    
     # Informações sobre migração de gadgets
     if 'gadgets_valores_csv' in st.session_state and not st.session_state.gadgets_valores_csv.empty:
         with st.expander("📦 **Migração de Dados de Gadgets** - Integre sua planilha ao inventário"):
@@ -14308,34 +14582,53 @@ def render_inventario_unificado():
         ])
         
         with tab_techstop:
-            render_categoria_table(unified_data[unified_data['categoria'] == 'techstop'], "TechStop")
+            data_techstop = unified_data[unified_data['categoria'] == 'techstop']
+            render_categoria_table(data_techstop, "TechStop", search_term)
         
         with tab_monitor:
-            render_categoria_table(unified_data[unified_data['categoria'] == 'tv e monitor'], "TV e Monitor")
+            data_monitor = unified_data[unified_data['categoria'] == 'tv e monitor']
+            render_categoria_table(data_monitor, "TV e Monitor", search_term)
         
         with tab_audio:
-            render_categoria_table(unified_data[unified_data['categoria'] == 'audio e video'], "Audio e Video")
+            data_audio = unified_data[unified_data['categoria'] == 'audio e video']
+            render_categoria_table(data_audio, "Audio e Video", search_term)
         
         with tab_lixo:
-            render_categoria_table(unified_data[unified_data['categoria'] == 'lixo eletrônico'], "Lixo Eletrônico")
+            data_lixo = unified_data[unified_data['categoria'] == 'lixo eletrônico']
+            render_categoria_table(data_lixo, "Lixo Eletrônico", search_term)
         
         with tab_outros:
-            render_categoria_table(unified_data[unified_data['categoria'] == 'outros'], "Outros")
+            data_outros = unified_data[unified_data['categoria'] == 'outros']
+            render_categoria_table(data_outros, "Outros", search_term)
     else:
         # Exibir apenas a categoria selecionada
-        render_categoria_table(df_filtrado, categoria_selecionada.title())
+        render_categoria_table(df_filtrado, categoria_selecionada.title(), search_term)
 
-def render_categoria_table(df_categoria, categoria_nome):
+def render_categoria_table(df_categoria, categoria_nome, search_term=""):
     """Renderiza tabela de uma categoria específica"""
     if df_categoria.empty:
-        st.info(f"◯ Nenhum item encontrado na categoria {categoria_nome}")
+        if search_term:
+            st.info(f"🔍 Nenhum item encontrado na categoria **{categoria_nome}** para a busca: '{search_term}'")
+        else:
+            st.info(f"◯ Nenhum item encontrado na categoria {categoria_nome}")
         return
     
     # Garantir que a coluna SKU existe
     if 'sku' not in df_categoria.columns:
         df_categoria['sku'] = df_categoria['tag'].apply(lambda x: f"SKU-{x}")
     
-    st.subheader(f"▤ {categoria_nome} ({len(df_categoria)} itens)")
+    # Título com indicador de busca
+    if search_term:
+        st.subheader(f"🔍 {categoria_nome} ({len(df_categoria)} itens) - Resultados para: '{search_term}'")
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 0.5rem 1rem; border-radius: 8px; margin: 0.5rem 0; border-left: 4px solid #3b82f6;">
+            <small style="color: #1e40af; font-weight: 500;">
+                🎯 Exibindo {len(df_categoria)} de todos os itens da categoria {categoria_nome} que correspondem à sua busca
+            </small>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.subheader(f"▤ {categoria_nome} ({len(df_categoria)} itens)")
     
     # Métricas da categoria
     col1, col2, col3, col4 = st.columns(4)
@@ -14356,8 +14649,17 @@ def render_categoria_table(df_categoria, categoria_nome):
     with col4:
         st.metric("▤ Prateleiras", prateleiras_categoria)
     
-    # Filtros adicionais
-    col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
+    # Filtros adicionais + busca específica da categoria
+    col_filtro1, col_filtro2, col_filtro3, col_search_cat = st.columns([2, 2, 2, 3])
+    
+    # Campo de busca específico da categoria
+    with col_search_cat:
+        category_search = st.text_input(
+            f"🔍 Busca em {categoria_nome}",
+            placeholder=f"Buscar dentro de {categoria_nome}...",
+            key=f"search_{categoria_nome.replace(' ', '_').lower()}",
+            help=f"Busca específica dentro da categoria {categoria_nome}"
+        )
     
     with col_filtro1:
         prateleiras_disponiveis = ['Todas'] + sorted(df_categoria['prateleira'].unique().tolist())
@@ -14372,6 +14674,27 @@ def render_categoria_table(df_categoria, categoria_nome):
     
     # Aplicar filtros
     df_exibicao = df_categoria.copy()
+    
+    # Aplicar busca específica da categoria (além da busca global)
+    if category_search:
+        search_mask_cat = pd.Series([False] * len(df_exibicao))
+        text_columns = ['tag', 'sku', 'itens', 'modelo', 'marca', 'fornecedor', 'local', 'po', 'nota_fiscal', 'uso', 'setor']
+        
+        for col in text_columns:
+            if col in df_exibicao.columns:
+                try:
+                    col_mask = df_exibicao[col].astype(str).str.contains(category_search, case=False, na=False)
+                    search_mask_cat = search_mask_cat | col_mask
+                except:
+                    continue
+        
+        df_exibicao = df_exibicao[search_mask_cat]
+        
+        if len(df_exibicao) == 0:
+            st.warning(f"🔍 Nenhum resultado encontrado em **{categoria_nome}** para: '{category_search}'")
+            return
+        else:
+            st.info(f"🎯 {len(df_exibicao)} itens encontrados em **{categoria_nome}** para: '{category_search}'")
     
     if prateleira_filtro != 'Todas':
         df_exibicao = df_exibicao[df_exibicao['prateleira'] == prateleira_filtro]
